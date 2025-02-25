@@ -1,19 +1,19 @@
 <script lang="ts">
 
     import { ButtonGroup, Button, Search, Modal, Label, Input, Radio } from 'flowbite-svelte';
-    import { ChevronDownOutline, UserRemoveSolid, UserAddSolid } from 'flowbite-svelte-icons';
+    import { ChevronDownOutline, UserRemoveSolid, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
     import { Dropdown } from 'flowbite-svelte';
     import ScatterPlot from './ScatterPlot.svelte';
     import { Footer } from 'flowbite-svelte';
     import EditIcon from './EditIcon.svelte';
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
-    //import addEmployee from './InsertEmployeePage.svelte'; 
-    import { sql } from '@vercel/postgres';
-    import { onMount } from 'svelte';
-
-    import type { Employee } from './MyTypes';
+    import { AnomalyStatus } from "./interpret";
+    import type { Employee, EmployeeSearchable } from './MyTypes';
     import { invalidateAll } from '$app/navigation';
 	import { controllers } from 'chart.js';
+	import InsertEmployeePage from './InsertEmployeePage.svelte';
+    import { extractFrequencies } from './utility';
+	import InsertDataPage from './InsertDataPage.svelte';
 
     let chart: any;
 
@@ -33,34 +33,29 @@
     let selectedYear = $state("No year selected");
     let selectedEmail = $state("No data selected");
     let selectedDOB = $state("No data selected");
-    let selectAge = $state("No data selected");
     let selectedStatus = $state("No data selected");
-    let STSstatus = "No data selection";
+    let STSstatusRight = $state("No data selected");
+    let STSstatusLeft = $state("No data selected");
+    let selectedSex = $state("No data selected");
 
-    let modifiedLeftFrequencies = $state({
-        hz500: '',
-        hz1000: '',
-        hz2000: '',
-        hz3000: '',
-        hz4000: '',
-        hz6000: '',
-        hz8000: ''
-    });
-    let modifiedRightFrequencies = $state({
-        hz500: '',
-        hz1000: '',
-        hz2000: '',
-        hz3000: '',
-        hz4000: '',
-        hz6000: '',
-        hz8000: ''
-    });
+    const blankFrequencies = {
+        hz500: "",
+        hz1000: "",
+        hz2000: "",
+        hz3000: "",
+        hz4000: "",
+        hz6000: "",
+        hz8000: ""
+    };
+
+    let modifiedLeftFrequencies = $state(blankFrequencies);
+    let modifiedRightFrequencies = $state(blankFrequencies);
 
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
 
     let success = true;
-    let errorMessage = "";
+    let errorMessage = $state("");
 
     // Dropdown menu state
     let nameMenuOpen = $state(false);
@@ -83,14 +78,9 @@
         lastName: "Undefined",
         email: "Undefined",
         dob: "Undefined",
-        activeStatus: "Undefined"
+        activeStatus: "Undefined",
+        sex: "Undefined"
     };
-
-    // used to make it easier to access employees from their full name
-    type EmployeeSearchable = {
-        name: string, // full name
-        data: Employee
-    }
 
     // employee map that is search friendly
     // name will hold first and last so it's easier to search
@@ -100,13 +90,13 @@
         data: employee
     })) as Array<EmployeeSearchable>);
 
+    // When the user types into the selection text box, the employees list should filter
+    let filteredEmployees = $derived(employee_dict.filter(item => item.name.toLowerCase().includes(inputValueName.toLowerCase())));
+
     let selectedEmployee: EmployeeSearchable = $state({
         name: "No employee selected", 
         data: undefinedEmployee
     });
-
-    // When the user types into the selection text box, the employees list should filter
-    let filteredEmployees = $derived(employee_dict.filter(item => item.name.toLowerCase().includes(inputValueName.toLowerCase())));
     
     const toggleChart = (ear: string) => {
         if (ear === 'both') {
@@ -134,7 +124,7 @@
         LeftBaselineHearingData.length = 0;
         LeftNewHearingData.length = 0;
 
-        formData.append('employee', selectedEmployee.name);
+        formData.append('employeeID', selectedEmployee.data.employeeID);
 
         // Fetch employee details from the server and years for other dropdown
         try {
@@ -153,9 +143,9 @@
                 selectedDOB = dataResult.employee.dob
                     ? new Date(dataResult.employee.dob).toISOString().split('T')[0]
                     : "No selection made";
-                selectAge = calculateAge(selectedDOB);
+                selectedSex = dataResult.employee.sex;
             }
-            else {
+            else { 
                 selectedEmail = "Error fetching data: not a data success";
                 selectedDOB = "Error fetching data: not a data success";
                 selectedStatus = "Error fetching data: not a data success";
@@ -190,30 +180,9 @@
         }
     };
 
-    const calculateAge = (dobString: string | null): string => {
-        if (!dobString) return "No selection made";
-
-        const today = new Date();
-        const dob = new Date(dobString);
-
-        if (isNaN(dob.getTime())) return "Invalid Date";
-
-        let age = today.getFullYear() - dob.getFullYear();
-
-        // Check if the birthday has occurred this year
-        if (
-            today.getMonth() < dob.getMonth() || 
-            (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())
-        ) {
-            age--;
-        }
-
-        return age.toString();
-    };
-
     let filteredYears = $derived.by(() => {
         let filterable = yearItems;
-        let filter = inputValueYear
+        let filter = inputValueYear;
 
         return filterable.filter(item => item.includes(filter));
     });
@@ -224,24 +193,60 @@
 
         try {
             await fetchUpdatedHearingData(selectedEmployee.name, year);
-        } 
-        catch (error) {
-            console.error('Error fetching hearing data:', error);
+
+            const formData = new FormData();
+            formData.append('employeeID', selectedEmployee.data.employeeID);
+            formData.append('year', selectedYear);
+            formData.append('sex', selectedEmployee.data.sex);
+
+            const response = await fetch('/dashboard?/calculateSTS', { 
+                method: 'POST',
+                body: formData,
+            });
+
+            const serverResponse = await response.json();
+            console.log(response);
+
+            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
+    
+            if (result["success"]) {
+                success = true;
+
+                // Find the test result that matches the selected year
+                const selectedYearReport = result.hearingReport.find((report: any) => report.reportYear === parseInt(year, 10));
+
+                if (selectedYearReport) {
+                    STSstatusRight = GetAnomalyStatusText(selectedYearReport.rightStatus);
+                    STSstatusLeft = GetAnomalyStatusText(selectedYearReport.leftStatus);
+
+                    console.log(`STS Report for ${year} - RIGHT:`, STSstatusRight);
+                    console.log(`STS Report for ${year} - LEFT:`, STSstatusLeft);
+                } else {
+                    console.warn(`No hearing report found for year: ${year}`);
+                    STSstatusRight = "No Data";
+                    STSstatusLeft = "No Data";
+                }
+            } else {
+                throw new Error(serverResponse.error ?? "Failed to calculate STS");
+            }
+
+        } catch (error) {
+            console.error('Error fetching hearing JOE data:', error);
             displayError('Error fetching hearing data');
         }
     };
 
-    // Helper function to extract frequencies
-    const extractFrequencies = (earData: Record<string, any>): number[] => {
-        const { ear, ...frequencies } = earData; // Exclude the 'ear' property
-        return Object.values(frequencies) as number[];  // Return all frequency values as an array of numbers
+    // Helper function to get the readable status
+    const GetAnomalyStatusText = (status: AnomalyStatus): string => {
+        return AnomalyStatus[status] ?? "Unknown";
     };
 
-    //DATA CHANGE STUFF
+    //DATA MODIFICATION STUFF
     let nameModal = $state(false); // controls the appearance of the employee name change window
     let emailModal = $state(false);
     let DOBmodal = $state(false);
     let activeStatusModal = $state(false);
+    let addDataModal = $state(false);
     let editDataModal = $state(false);
     let addEmployeeModal = $state(false);
 
@@ -276,39 +281,22 @@
         addEmployeeModal = true;
     }
 
-    function showEditDataModal(employee: EmployeeSearchable) {
+    function showEditDataModal() {
         if (!selectedYear || selectedYear === "No year selected") {
             displayError("Please select a year first.");
             return;
         }
 
-        // Populate modal with existing hearing data (if available)
-        modifiedLeftFrequencies = {
-            hz500: LeftNewHearingData[0]?.toString() || '',
-            hz1000: LeftNewHearingData[1]?.toString() || '',
-            hz2000: LeftNewHearingData[2]?.toString() || '',
-            hz3000: LeftNewHearingData[3]?.toString() || '',
-            hz4000: LeftNewHearingData[4]?.toString() || '',
-            hz6000: LeftNewHearingData[5]?.toString() || '',
-            hz8000: LeftNewHearingData[6]?.toString() || ''
-        };
-
-        modifiedRightFrequencies = {
-            hz500: RightNewHearingData[0]?.toString() || '',
-            hz1000: RightNewHearingData[1]?.toString() || '',
-            hz2000: RightNewHearingData[2]?.toString() || '',
-            hz3000: RightNewHearingData[3]?.toString() || '',
-            hz4000: RightNewHearingData[4]?.toString() || '',
-            hz6000: RightNewHearingData[5]?.toString() || '',
-            hz8000: RightNewHearingData[6]?.toString() || ''
-        };``
-
         editDataModal = true;
     }
 
-    async function modifyEmployeeName(employee: EmployeeSearchable): Promise<void> {
+    function showAddDataModal() {
+        addDataModal = true;
+    }
+
+    async function modifyEmployeeName(): Promise<void> {
         const formData = new FormData();
-        formData.append('employee', selectedEmployee.name);
+        formData.append('employeeID', selectedEmployee.data.employeeID);
         formData.append('newFirstName', newFirstName);
         formData.append('newLastName', newLastName);
 
@@ -338,9 +326,9 @@
             displayError(errorMessage);
         }
     }
-    async function modifyEmployeeEmail(employee: EmployeeSearchable): Promise<void> {
+    async function modifyEmployeeEmail(): Promise<void> {
         const formData = new FormData();
-        formData.append('employee', selectedEmployee.name);
+        formData.append('employeeID', selectedEmployee.data.employeeID);
         formData.append('newEmail', newEmail);
 
         const response = await fetch('/dashboard?/modifyEmployeeEmail', {
@@ -368,9 +356,9 @@
             displayError(errorMessage);
         }
     }
-    async function modifyEmployeeDOB(employee: EmployeeSearchable): Promise<void> {
+    async function modifyEmployeeDOB(): Promise<void> {
         const formData = new FormData();
-        formData.append('employee', selectedEmployee.name);
+        formData.append('employeeID', selectedEmployee.data.employeeID);
         formData.append('newDOB', newDOB);
 
         const response = await fetch('/dashboard?/modifyEmployeeDOB', {
@@ -390,7 +378,6 @@
                 selectedDOB = selectedEmployee.data.dob
                     ? new Date(selectedEmployee.data.dob).toISOString().split('T')[0]
                     : "No selection made";
-                selectAge = calculateAge(selectedDOB);
             }
             else {
                 displayError(result["message"]);
@@ -401,9 +388,9 @@
             displayError(errorMessage);
         }
     }
-    async function modifyEmploymentStatus(employee: EmployeeSearchable): Promise<void> {
+    async function modifyEmploymentStatus(): Promise<void> {
         const formData = new FormData();
-        formData.append('employee', selectedEmployee.name);
+        formData.append('employeeID', selectedEmployee.data.employeeID);
         formData.append('newActiveStatus', newActiveStatus === "Active" ? "" : newActiveStatus); // Ensures the form key matches what backend expects
 
         const response = await fetch('/dashboard?/modifyEmployeeStatus', {
@@ -436,43 +423,12 @@
         }
     }
 
-    async function modifyHearingData(employee: EmployeeSearchable, selectedYear: string): Promise<void> {
-        const formData = new FormData();
-        formData.append('user', selectedEmployee.name);
-        formData.append('year', selectedYear);
-        formData.append('leftEarFrequencies', JSON.stringify(modifiedLeftFrequencies)); // Left ear data
-        formData.append('rightEarFrequencies', JSON.stringify(modifiedRightFrequencies)); // Right ear data
-
-        try {
-        const response = await fetch('/dashboard?/modifyHearingData', {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            throw new Error(`Server returned error: ${response.statusText}`);
-        }
-            
-        const serverResponse = await response.json();
-        const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-
-        if (result["success"]) {
-            // Refresh data state after update
-            await fetchUpdatedHearingData(selectedEmployee.name, selectedYear); //This should update the chart??
-            editDataModal = false;
-        } else {
-            throw new Error(serverResponse.message);
-        }
-        } catch (error: any) {
-            console.error('Error updating hearing data:', error);
-            displayError(error.message || 'An error occurred');
-        }
-    }
 
     async function fetchUpdatedHearingData(employeeID: string, year: string) {
+        // ! employeeID and year from the parameters are unused
         try {
             const formData = new FormData();
-            formData.append('employeeID', selectedEmployee.name);
+            formData.append('employeeID', selectedEmployee.data.employeeID);
             formData.append('year', selectedYear);
             const response = await fetch('/dashboard?/fetchHearingData', {
                 method: 'POST',
@@ -522,52 +478,11 @@
         }
     }
 
-    async function addEmployee(first: string, last: string, email: string, dateOfBirth: string, isInactive: string, lastActive: string) {
-        const formData = new FormData();
-        formData.append('firstName', first);
-        formData.append('lastName', last);
-        formData.append('email', email);
-        formData.append('dateOfBirth', dateOfBirth);
-        formData.append('isInactive', isInactive.toString());
-
-        if (isInactive) {
-            formData.append('lastActive', lastActive);
-        }
-        try {
-            const response = await fetch('/dashboard?/addEmployee', {
-                method: 'POST',
-                body: formData,
-        });
-    
-        // Debug: Log raw response
-        console.log('Raw server response:', response);
-
-        if (!response.ok) {
-            throw new Error(`Server returned error: ${response.statusText}`);
-        }
-
-        let serverResponse;
-        try {
-            serverResponse = await response.json();
-        } 
-        catch (e) {
-            console.error('Failed to parse JSON:', e);
-            throw new Error('Invalid JSON response from server');
-        }
-
-        console.log('Server Response:', serverResponse);
-        } 
-        catch (error: any) {
-        console.error('Error during fetch or JSON parsing:', error);
-        displayError(error.message || 'An error occurred');
-        }
-    }
-
 </script>
 
 <div class="relative dropdown-container flex space-x-4" style="margin-top: 20px; margin-left: 20px;"> 
     <!-- User Dropdown -->
-    <Button class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-base flex justify-between items-center" style="width:300px">{selectedEmployee.name}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
+    <Button color="primary" style="width:300px">{selectedEmployee.name}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
     <Dropdown bind:open={nameMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
         <div  class="p-3">
             <Search size="md" bind:value={inputValueName}/>
@@ -582,7 +497,7 @@
     </Dropdown>
 
     <!-- Year Dropdown -->
-    <Button class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-base flex justify-between items-center" style="width:300px">{selectedYear}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
+    <Button color="primary" style="width:300px">{selectedYear}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
     <Dropdown bind:open={yearMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
         <div  class="p-3">
             <Search size="md" bind:value={inputValueYear}/>
@@ -596,10 +511,13 @@
         {/each}
     </Dropdown>
 
-    <Button on:click={() => showAddEmployeeModal()} class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-base flex justify-between items-center" style="width:55px"><UserAddSolid/></Button>
+    <Button on:click={() => showAddEmployeeModal()} color="primary"><UserAddSolid /></Button>
     
+    {#if selectedEmployee.name !== "No employee selected"} 
+        <Button on:click={() => showAddDataModal()} color="primary"><CirclePlusSolid /></Button>
+    {/if} 
     {#if selectedYear !== "No year selected"} 
-        <Button on:click={() => showEditDataModal(selectedEmployee)} class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-base flex justify-between items-center" style="width:200px">Edit Employee's Data</Button>
+        <Button on:click={() => showEditDataModal()} color="primary"><EditSolid /></Button>
     {/if} 
 </div>
 
@@ -617,10 +535,10 @@
         <Input type="text" id="lastName" placeholder={selectedEmployee.data.lastName} bind:value={newLastName} required />
     
     </p>
-    
-    <!-- TODO: CHANGE THESE COLORS -->
-    <Button class="bg-blue-200 hover:bg-blue-300 text-black" on:click={() => modifyEmployeeName(selectedEmployee)}>Confirm</Button>
+    <svelte:fragment slot="footer">
+    <Button color="primary" on:click={() => modifyEmployeeName()}>Confirm</Button>
     <Button class="bg-red-200 hover:bg-red-300 text-black">Cancel</Button>
+    </svelte:fragment>
 </Modal>
 
 <Modal title="Change Employee Email" bind:open={emailModal} autoclose>
@@ -631,10 +549,10 @@
         <Label for="newEmail" class="mb-2">New Email</Label>
         <Input type="text" id="email" placeholder={selectedEmployee.data.email} bind:value={newEmail} required />
     </p>
-    
-    <!-- TODO: CHANGE THESE COLORS -->
-    <Button class="bg-blue-200 hover:bg-blue-300 text-black" on:click={() => modifyEmployeeEmail(selectedEmployee)}>Confirm</Button>
-    <Button class="bg-red-200 hover:bg-red-300 text-black">Cancel</Button>
+    <svelte:fragment slot="footer">
+    <Button color="primary" on:click={() => modifyEmployeeEmail()}>Confirm</Button>
+    <Button color="red">Cancel</Button>
+    </svelte:fragment>
 </Modal>
 
 <Modal title="Change Employee Date of Birth" bind:open={DOBmodal} autoclose>
@@ -645,10 +563,10 @@
         <Label for="newEmail" class="mb-2">New Date</Label>
         <Input type="date" id="dob" placeholder={selectedEmployee.data.dob} bind:value={newDOB} required />
     </p>
-    
-    <!-- TODO: CHANGE THESE COLORS -->
-    <Button class="bg-blue-200 hover:bg-blue-300 text-black" on:click={() => modifyEmployeeDOB(selectedEmployee)}>Confirm</Button>
-    <Button class="bg-red-200 hover:bg-red-300 text-black">Cancel</Button>
+    <svelte:fragment slot="footer">
+    <Button color="primary" on:click={() => modifyEmployeeDOB()}>Confirm</Button>
+    <Button color="red">Cancel</Button>
+    </svelte:fragment>
 </Modal>
 
 <Modal title="Change Employee Active Status" bind:open={activeStatusModal} autoclose>
@@ -665,93 +583,42 @@
             <Input id="lastActive" type="date" bind:value={newActiveStatus} />
         {/if}
     </p>
-    
-    <!-- TODO: CHANGE THESE COLORS -->
-    <Button class="bg-blue-200 hover:bg-blue-300 text-black" on:click={() => modifyEmploymentStatus(selectedEmployee)}>Confirm</Button>
-    <Button class="bg-red-200 hover:bg-red-300 text-black">Cancel</Button>
+    <svelte:fragment slot="footer">
+    <Button color="primary" on:click={() => modifyEmploymentStatus()}>Confirm</Button>
+    <Button color="red">Cancel</Button>
+    </svelte:fragment>
 </Modal>
 
-<Modal size = 'xl' title="Change Employee Hearing Data" bind:open={editDataModal} autoclose> 
-    <p>
-        <span>Please provide updated data points for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName} during year {selectedYear}</span>
-        <br>
-        <br>
-        <Table>
-            <TableHead>
-                <TableHeadCell></TableHeadCell>
-                <TableHeadCell>500 Hz</TableHeadCell>
-                <TableHeadCell>1000 Hz</TableHeadCell>
-                <TableHeadCell>2000 Hz</TableHeadCell>
-                <TableHeadCell>3000 Hz</TableHeadCell>
-                <TableHeadCell>4000 Hz</TableHeadCell>
-                <TableHeadCell>6000 Hz</TableHeadCell>
-                <TableHeadCell>8000 Hz</TableHeadCell>
-            </TableHead>
-            <TableBody tableBodyClass="divide-y">
-                <TableBodyRow>
-                    <TableBodyCell>Left Ear</TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedLeftFrequencies.hz500} placeholder={`${LeftBaselineHearingData[0]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedLeftFrequencies.hz1000} placeholder={`${LeftBaselineHearingData[1]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedLeftFrequencies.hz2000} placeholder={`${LeftBaselineHearingData[2]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedLeftFrequencies.hz3000} placeholder={`${LeftBaselineHearingData[3]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedLeftFrequencies.hz4000} placeholder={`${LeftBaselineHearingData[4]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedLeftFrequencies.hz6000} placeholder={`${LeftBaselineHearingData[5]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedLeftFrequencies.hz8000} placeholder={`${LeftBaselineHearingData[6]}`} required /></TableBodyCell>
-                </TableBodyRow>
-                <TableBodyRow>
-                    <TableBodyCell>Right Ear</TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedRightFrequencies.hz500} placeholder={`${RightBaselineHearingData[0]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedRightFrequencies.hz1000} placeholder={`${RightBaselineHearingData[1]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedRightFrequencies.hz2000} placeholder={`${RightBaselineHearingData[2]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedRightFrequencies.hz3000} placeholder={`${RightBaselineHearingData[3]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedRightFrequencies.hz4000} placeholder={`${RightBaselineHearingData[4]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedRightFrequencies.hz6000} placeholder={`${RightBaselineHearingData[5]}`} required /></TableBodyCell>
-                    <TableBodyCell><Input bind:value={modifiedRightFrequencies.hz8000} placeholder={`${RightBaselineHearingData[6]}`} required /></TableBodyCell>
-                </TableBodyRow>
-            </TableBody>
-        </Table>
-    </p>
-    <!-- TODO: CHANGE THESE COLORS -->
-    <Button class="bg-blue-200 hover:bg-blue-300 text-black" on:click={() => modifyHearingData(selectedEmployee, selectedYear)}>Confirm</Button>
-    <Button class="bg-red-200 hover:bg-red-300 text-black">Cancel</Button>
+<Modal size="xl" title={`Change ${selectedYear} Hearing Data for ${selectedEmployee.name}`} bind:open={editDataModal}> 
+    <InsertDataPage employee={selectedEmployee.data} year={selectedYear} allowModify />
+
+    <svelte:fragment slot="footer">
+        <Button color="red"
+            on:click={() => editDataModal = false}>
+            Cancel
+        </Button>
+    </svelte:fragment>
 </Modal>
 
-<Modal title="Add Employee" bind:open={addEmployeeModal} autoclose>
-    <p>
-        <span>Please provide new employee information</span>
-        <br>
-        <br>
-            <Label for="firstName" class="block mb-2">Employee First Name</Label>
-            <Input id="firstName" bind:value={newFirstName} placeholder="First Name" required />
-          
-            <Label for="lastName" class="block mb-2">Employee Last Name</Label>
-            <Input id="lastName" bind:value={newLastName} placeholder="Last Name" required />
+<Modal size="xl" title={`Add Hearing Data for ${selectedEmployee.name}`} bind:open={addDataModal}> 
+    <InsertDataPage employee={selectedEmployee.data} />
 
-            <Label for="email" class="block mb-2">Employee Email</Label>
-            <Input id="email" type="email" bind:value={newEmail} placeholder="email@company.com" required />
-          
-            <Label for="dateOfBirth" class="block mb-2">Employee Date of Birth</Label>
-            <Input id="dateOfBirth" type="date" bind:value={newDOB} required />
-          
-            <Label for="employmentStatus" class="block mb-2">Employment Status</Label>
-            <Radio name="employmentStatus" bind:checked={isInactive} on:change={() => isInactive = false}>Active</Radio>
-            <Radio name="employmentStatus" bind:checked={isInactive} on:change={() => isInactive = true}>Inactive</Radio>
-          
-          {#if isInactive}
-              <Label for="lastActive" class="block mb-2">Last Active Date</Label>
-              <Input id="lastActive" type="date" bind:value={newActiveStatus} />
-          {/if}
-    </p>
-    
-    <!-- TODO: CHANGE THESE COLORS -->
-    <Button 
-        class="bg-blue-200 hover:bg-blue-300 text-black" 
-        on:click={() => addEmployee(newFirstName, newLastName, newEmail, newDOB, isInactive.toString(), newActiveStatus)}
-        >
-        Confirm
-    </Button>
+    <svelte:fragment slot="footer">
+        <Button color="red"
+            on:click={() => addDataModal = false}>
+            Cancel
+        </Button>
+    </svelte:fragment>
+</Modal>
 
-    <Button class="bg-red-200 hover:bg-red-300 text-black">Cancel</Button>
+<Modal title="Add Employee" bind:open={addEmployeeModal}>
+    <InsertEmployeePage />
+    <svelte:fragment slot="footer">
+        <Button color="red"
+            on:click={() => addEmployeeModal = false}>
+            Cancel
+        </Button>
+    </svelte:fragment>
 </Modal>
 
 <div class="flex-container">
@@ -774,25 +641,14 @@
                 <EditIcon on:edit={() => showDOBChangeModal(selectedEmployee.data)}/> 
             {/if} 
         </p> <br>
-        <p>Age: {selectAge}</p> <br>
-        <p>Employment Status: {selectedStatus} <!-- inactive to active is not working -->
+        <p>Sex: {selectedSex}</p> <br>
+        <p>Employment Status: {selectedStatus} <!-- inactive to active is not working // double check --> 
             {#if selectedEmployee.data.employeeID !== "-1"} 
                 <EditIcon on:edit={() => showActiveStatusChangeModal(selectedEmployee.data)}/>
             {/if} 
         </p> <br>
-        <p class="text-3xl">STS Status: {STSstatus}</p> <br>
-
-        <!-- Testing Purposes -->
-        <!-- <br><br><br>
-        <p>Testing Output</p>
-        <p>HEARING DATA TEST NEW R: {RightNewHearingData}</p> <br>
-        <p>HEARING DATA TEST NEW L: {LeftNewHearingData}</p> <br>
-        <p>HEARING DATA TEST BL R: {RightBaselineHearingData}</p> <br>
-        <p>HEARING DATA TEST BL L: {LeftBaselineHearingData}</p> <br>
-
-        <p>HEARING DATA TEST MODIFIED R: {modifiedRightFrequencies.hz500}</p> <br> 
-        <p>HEARING DATA TEST MODIFIED L: {modifiedLeftFrequencies.hz500}</p> <br> -->
-       
+        <p class="text-3xl">STS Status Left: {STSstatusLeft}</p> <br>
+        <p class="text-3xl">STS Status Right: {STSstatusRight}</p> <br>
     </section>
 
     <!-- Chart Section -->
@@ -820,9 +676,9 @@
             />
         {/if}
         <ButtonGroup class="*:!ring-primary-700">
-            <Button class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-base" style="width:175px" on:click={() => toggleChart('left')}>Left</Button>
-            <Button class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-base" style="width:175px" on:click={() => toggleChart('right')}>Right</Button> 
-            <Button class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-base" style="width:175px" on:click={() => toggleChart('both')}>Both</Button> 
+            <Button color="blue" style="width:175px" on:click={() => toggleChart('left')}>Left</Button>
+            <Button color="red" style="width:175px" on:click={() => toggleChart('right')}>Right</Button> 
+            <Button color="purple" style="width:175px" on:click={() => toggleChart('both')}>Both</Button> 
         </ButtonGroup>
     </div>
 </div>
@@ -831,8 +687,8 @@
     <hr class="my-6 border-gray-200 sm:mx-auto dark:border-gray-700 lg:my-8" />
     <div class="sm:flex sm:items-center sm:justify-between">
         <ButtonGroup class="*:!ring-primary-700" style="width:100%">
-            <Button class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-lg" style="width:50%">Print</Button>
-            <Button class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-lg" style="width:50%">Send Letter</Button>
+            <Button color="primary" style="width:50%">Print</Button>
+            <Button color="primary" style="width:50%">Send Letter</Button>
         </ButtonGroup>
     </div>
  </Footer>

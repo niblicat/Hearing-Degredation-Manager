@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+/* IF YOU'RE RECEIVING ERRORS IN VSCODE
+    1. Add a .vscode directory to the project
+    2. Add a settings.json within that new directory
+    3. Include the following:
+        {
+        "files.associations": {
+            "*.css": "tailwindcss"
+        }
+    4. Use the Tailwind extension in VSCode
+    5. Make sure you do not add this hidden directory to git!
+}
+*/
+@plugin 'flowbite/plugin';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+	--color-primary-50: #f2fbfa;
+	--color-primary-100: #d2f5f1;
+	--color-primary-200: #a6e9e4;
+	--color-primary-300: #71d7d4;
+	--color-primary-400: #4bc0c0;
+	--color-primary-500: #2aa0a2;
+	--color-primary-600: #1f7f82;
+	--color-primary-700: #1d6568;
+	--color-primary-800: #1b5154;
+	--color-primary-900: #1b4446;
+	--color-primary-950: #0a2629;
+}
+
+@source "../node_modules/flowbite-svelte/dist";

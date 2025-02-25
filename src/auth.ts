@@ -24,6 +24,6 @@ export const { handle } = SvelteKitAuth({
       return session;
     }
   },
-  secret: process.env.AUTH_SECRET || 'defaultSecret',
+  secret: process.env.AUTH_SECRET ?? 'defaultSecret',
   trustHost: true
 });

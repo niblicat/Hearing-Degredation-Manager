@@ -4,7 +4,8 @@ export type Employee = {
     lastName: string,
     email: string,
     dob: string,
-    activeStatus: string
+    activeStatus: string,
+    sex: string
 };
 
 export type EmployeeSelectable = {
@@ -36,4 +37,14 @@ export type UserSimple = {
     name: string,
     email: string,
     avatar: string
+}
+
+export type HearingDataSingle = {
+    hz500: string,
+    hz1000: string,
+    hz2000: string,
+    hz3000: string,
+    hz4000: string,
+    hz6000: string,
+    hz8000: string
 }

@@ -1,7 +1,5 @@
-import { sql } from '@vercel/postgres'
-import { page } from '$app/stores';
 import { redirect } from '@sveltejs/kit'
-import { addUserToAdminDatabase, checkAdminStatus, obtainLoginStatus, LoginStatus } from '$lib/utility';
+import { obtainLoginStatus, LoginStatus } from '$lib/utility';
 import { AdminStatus } from '$lib/utility';;
 
 export const load = async (event) => {

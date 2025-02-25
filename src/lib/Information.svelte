@@ -46,5 +46,6 @@
         <Li>Select employee to add data to and input year</Li>
         <Li>Input left and right ear data</Li>
         <Li>Submit information to add it to the data table</Li>
+        <Li>If a value could not be tested, submit 'CNT' as the value</Li>
     </AccordionItem>
 </Accordion>

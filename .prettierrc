@@ -9,7 +9,6 @@
 			"files": "*.svelte",
 			"options": {
 				"parser": "svelte"
-				
 			}
 		}
 	]

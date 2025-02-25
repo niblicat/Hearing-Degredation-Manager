@@ -1,171 +1,188 @@
 <script lang="ts">
+    import { Label, Input, Radio, Button } from 'flowbite-svelte';
+    import { invalidateAll } from '$app/navigation';
+    import ErrorMessage from './ErrorMessage.svelte';
+    import SuccessMessage from './SuccessMessage.svelte';
+	import { isDate } from './utility';
+	import PageTitle from './PageTitle.svelte';
 
-  import { Label, Input, Radio, Button } from 'flowbite-svelte';
-  import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Checkbox, Modal } from 'flowbite-svelte';
-  import { invalidateAll } from '$app/navigation';
+    let firstName = $state("");
+    let lastName = $state("");
+    let email = $state("");
+    let dateOfBirth = $state("");
+    let isInactive = $state("false");
+    let sex = $state("");
+    let lastActive = $state("");
 
-  let firstName = $state('');
-  let lastName = $state('');
-  let email = $state('');
-  let dateOfBirth = $state('');
-  let isInactive = $state(false);
-  let lastActive = $state('');
+    let success = $state(true);
+    let errorMessage = $state("");
+    let successMessage = $state("");
 
-  let success = $state(true);
-  let errorMessage = $state('');
-  let successMessage = $state('');
+    let isInactiveBool = $derived(isInactive == "true")
 
-  // Employee type
-  type Employee = {
-    employee_id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    date_of_birth: string;
-    last_active: string | null;
-  };
+    let top: HTMLElement;
 
-  // Employees list
-  let employees: Employee[] = [];
-
-  function displayError(message: string) {
-    errorMessage = message;
-    success = false;
-  }
-
-  async function handleSubmit(event: Event) {
-    event.preventDefault(); // Prevent the default form submission behavior
-    successMessage = '';  
-    errorMessage = '';  
-
-    await addEmployee();
-
-    if (success) {
-      successMessage = 'Successfully added employee! Refreshing page...';
-      setTimeout(() => location.reload(), 2000);    // Refresh the page after 2 secs
-    }
-    else {
-      console.error('Error occurred:', errorMessage);
-    }
-  }
-
-  export async function addEmployee() {
-    const formData = new FormData();
-    formData.append('firstName', firstName);
-    formData.append('lastName', lastName);
-    formData.append('email', email);
-    formData.append('dateOfBirth', dateOfBirth);
-    formData.append('isInactive', isInactive.toString());
-    if (isInactive) {
-      formData.append('lastActive', lastActive);
+    interface Props {
+        showTitle?: boolean;
     }
 
-    // Debug: Log form data
-    console.log('Form data to be sent:', Object.fromEntries(formData.entries()));
+    let { showTitle = false }: Props = $props();
 
-    try {
-      const response = await fetch('/dashboard?/addEmployee', {
-        method: 'POST',
-        body: formData,
-      });
-  
-      // Debug: Log raw response
-      console.log('Raw server response:', response);
+    // Employee type
+    type Employee = {
+        employee_id: number;
+        first_name: string;
+        last_name: string;
+        email: string;
+        date_of_birth: string;
+        last_active: string | null;
+    };
 
-      if (!response.ok) {
-        throw new Error(`Server returned error: ${response.statusText}`);
-      }
+    // Employees list
+    let employees: Employee[] = [];
 
-      let serverResponse;
-      try {
-        serverResponse = await response.json();
-      } 
-      catch (e) {
-        console.error('Failed to parse JSON:', e);
-        throw new Error('Invalid JSON response from server');
-      }
-
-      console.log('Server Response:', serverResponse);
-    } 
-    catch (error: any) {
-      console.error('Error during fetch or JSON parsing:', error);
-      displayError(error.message || 'An error occurred');
+    function displayError(message: string) {
+        console.error(message);
+        errorMessage = message;
+        success = false;
     }
-  }
+
+    const validDate = /^\d{4}-\d{2}-\d{2}$/;
+    export async function addEmployee() {
+        // scroll to the top
+        top.scrollIntoView({ behavior: 'smooth' });
+
+        if (!firstName) {
+            displayError("No first name was provided!");
+            return;
+        }
+        if (!lastName) {
+            displayError("No last name was provided!");
+            return;
+        }
+        if (!email) {
+            displayError("No email was provided!");
+            return;
+        }
+        if (!sex) {
+            displayError("No sex was provided!");
+            return;
+        }
+        if (!dateOfBirth.match(validDate)) {
+            displayError("The date of birth is invalid");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('firstName', firstName);
+        formData.append('lastName', lastName);
+        formData.append('email', email);
+        formData.append('dateOfBirth', dateOfBirth);
+        formData.append('sex', sex);
+        formData.append('isInactive', isInactive.toString());
+
+        if (isInactiveBool) {
+            formData.append('lastActive', lastActive);
+
+            if (!lastActive.match(validDate)) {
+                displayError("The date of last activity is invalid!");
+                return;
+            }
+        }
+
+        // Debug: Log form data
+        console.log('Form data to be sent:', Object.fromEntries(formData.entries()));
+
+        const response = await fetch('/dashboard?/addEmployee', {
+            method: 'POST',
+            body: formData,
+        });
+
+        try {
+            const serverResponse = await response.json();
+            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
+
+            if (result["success"]) {
+                success = true;
+                successMessage = "Successfully added employee!";
+                await invalidateAll();
+            }
+            else {
+                displayError(result["message"]  ?? "Failed to add new employee");
+            }
+
+            console.log('Server Response:', serverResponse);
+        } 
+        catch (error: any) {
+            let errorMessage = error.message;
+            displayError(errorMessage ?? "An error occurred when modifying admin permissions");
+        }
+    }
+
+    const formClasses = "mx-auto w-[60%] p-2.5"
+
 
 </script>
 
-<div class="center text-2xl">Add a New Employee</div>
+<div aria-hidden="true" bind:this={top}></div>
 
-<div class="mb-6 form">
-  <Label for="firstName" class="block mb-2">Employee First Name</Label>
-  <Input id="firstName" bind:value={firstName} placeholder="First Name" required />
+{#if showTitle}
+    <PageTitle title="Add a New Employee" sub />
+{/if}
+
+<SuccessMessage {success} {successMessage} />
+<ErrorMessage {success} {errorMessage} />
+
+<div class="{formClasses}">
+    <Label for="firstName" class="block mb-2">Employee First Name</Label>
+    <Input id="firstName" bind:value={firstName} placeholder="First Name" required />
 </div>
 
-<div class="mb-6 form">
-  <Label for="lastName" class="block mb-2">Employee Last Name</Label>
-  <Input id="lastName" bind:value={lastName} placeholder="Last Name" required />
+<div class="mb-6 {formClasses}">
+    <Label for="lastName" class="block mb-2">Employee Last Name</Label>
+    <Input id="lastName" bind:value={lastName} placeholder="Last Name" required />
 </div>
 
-<div class="mb-6 form">
-  <Label for="email" class="block mb-2">Employee Email</Label>
-  <Input id="email" type="email" bind:value={email} placeholder="email@company.com" required />
+<div class="mb-6 {formClasses}">
+    <Label for="email" class="block mb-2">Employee Email</Label>
+    <Input id="email" type="email" bind:value={email} placeholder="email@company.com" required />
 </div>
 
-<div class="mb-6 form">
-  <Label for="dateOfBirth" class="block mb-2">Employee Date of Birth</Label>
-  <Input id="dateOfBirth" type="date" bind:value={dateOfBirth} required />
+<div class="mb-6 {formClasses}">
+    <Label for="dateOfBirth" class="block mb-2">Employee Date of Birth</Label>
+    <Input id="dateOfBirth" type="date" bind:value={dateOfBirth} required />
 </div>
 
-<div class="form">
-  <Label for="employmentStatus" class="block mb-2">Employment Status</Label>
-  <Radio name="employmentStatus" bind:checked={isInactive} on:change={() => isInactive = false}>Active</Radio>
-  <Radio name="employmentStatus" bind:checked={isInactive} on:change={() => isInactive = true}>Inactive</Radio>
+<div class="{formClasses}">
+    <Label for="sex" class="block mb-2">Sex</Label>
+    <Radio name="sex" value="male" bind:group={sex}>Male</Radio>
+    <Radio name="sex" value="female" bind:group={sex}>Female</Radio>
+    <Radio name="sex" value="other" bind:group={sex}>Other</Radio>
 </div>
 
-{#if isInactive}
-  <div class="mb-6 form">
-    <Label for="lastActive" class="block mb-2">Last Active Date</Label>
-    <Input id="lastActive" type="date" bind:value={lastActive} />
-  </div>
+<div class="{formClasses}">
+    <Label for="employmentStatus" class="block mb-2">Employment Status</Label>
+    <Radio name="employmentStatus" value="false" bind:group={isInactive}>Active</Radio>
+    <Radio name="employmentStatus" value="true" bind:group={isInactive}>Inactive</Radio>
+</div>
+
+
+{#if isInactiveBool}
+    <div class="mb-6 {formClasses}">
+        <Label for="lastActive" class="block mb-2">Last Active Date</Label>
+        <Input id="lastActive" type="date" bind:value={lastActive} />
+    </div>
 {/if}
 
 
-<div class="form">
-<Button 
-  class="bg-light-bluegreen hover:bg-dark-bluegreen text-black" 
-  style="width:200px" 
-  on:click={handleSubmit}
->Submit</Button>
-</div>
-
-<div>
-  {#if successMessage}
-    <div class="text-green-600 mt-4">
-      {successMessage}
+<div class="{formClasses}">
+    <Button 
+        color="primary"
+        class="w-[60%]" 
+        on:click={addEmployee}>
+        Submit
+    </Button>
     </div>
-  {/if}
 
-  {#if !success && errorMessage}
-    <div class="text-red-600 mt-4">
-      {errorMessage}
-    </div>
-  {/if}
+    <div>
 </div>
-
-
-
-<style>
-  .center {
-    margin: auto;
-    width: 50%;
-    padding: 10px;
-    text-align: center;
-  }
-
-  .form {
-    margin: auto;
-    width: 60%;
-    padding: 10px;
-  }
-</style>

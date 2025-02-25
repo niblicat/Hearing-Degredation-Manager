@@ -1,17 +1,9 @@
-<svelte:head>
-	<link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet"/>
-    <link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.1/dist/flowbite.min.css" rel="stylesheet" />
-
-</svelte:head>
-
 <script lang="ts">
     import { page } from '$app/state';
 	import CustomNavbar from '$lib/CustomNavbar.svelte';
 	import CustomSidebar from '$lib/CustomSidebar.svelte';
 	import EmployeesPage from '$lib/EmployeesPage.svelte';
     import MailingPage from '$lib/MailingPage.svelte';
-    import InsertEmployeePage from '$lib/InsertEmployeePage.svelte';
-    import InsertDataPage from '$lib/InsertDataPage.svelte';
     import AdminPage from '$lib/AdminPage.svelte';
 	import type { UserSimple } from '$lib/MyTypes.js';
 	import Information from '$lib/Information.svelte';
@@ -38,30 +30,23 @@
 
 </script>
 
-<CustomNavbar
-{user}
-hasSidebar={true} 
-sidebarOpen={sidebarOpen}
-toggle={toggleSidebar} 
-/>
+<CustomNavbar {user} hasSidebar
+    sidebarOpen={sidebarOpen} toggle={toggleSidebar} />
 
-<CustomSidebar
-sidebarOpen={sidebarOpen}
-activeUrl={activeURLHash}
-toggle={toggleSidebar}
-/>
+<CustomSidebar sidebarOpen={sidebarOpen}
+    activeUrl={activeURLHash} toggle={toggleSidebar} />
 
 <div id="content" class="h-dvh bg-gray-100 pt-16">
     {#if activeURLHash == "#employees"}
         <EmployeesPage {employees} />
     {:else if activeURLHash == "#mailings"}
+<<<<<<< HEAD
         <MailingPage {employees} />
+=======
+        <MailingPage />
+>>>>>>> 727e42dc4863ffea82dd0d9fe6092998c1524db6
     {:else if activeURLHash == "#admin"}
         <AdminPage {admins} />
-    {:else if activeURLHash == "#insert"}
-        <InsertEmployeePage/>
-    {:else if activeURLHash == "#data"}
-        <InsertDataPage {employees}/>
     {:else}
         <!-- User who is not logged in should be redirected to home (no hash) -->
         <div class="flex justify-center p-4 text-2xl">Welcome to the dashboard</div>

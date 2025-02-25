@@ -1,6 +1,6 @@
 // agetable.ts
 
-type HertzCorrectionForAge = {
+export type HertzCorrectionForAge = {
     age: number;
     hz1000: number;
     hz2000: number;
@@ -9,7 +9,7 @@ type HertzCorrectionForAge = {
     hz6000: number;
 };
 
-const AGE_CORRECTION_TABLE_MALE: Array<HertzCorrectionForAge> = [
+export const AGE_CORRECTION_TABLE_MALE: Array<HertzCorrectionForAge> = [
     { age: 20, hz1000: 5, hz2000: 3, hz3000: 4, hz4000: 5, hz6000: 8 },
     { age: 21, hz1000: 5, hz2000: 3, hz3000: 4, hz4000: 5, hz6000: 8 },
     { age: 22, hz1000: 5, hz2000: 3, hz3000: 4, hz4000: 5, hz6000: 8 },
@@ -53,7 +53,7 @@ const AGE_CORRECTION_TABLE_MALE: Array<HertzCorrectionForAge> = [
     { age: 60, hz1000: 11, hz2000: 13, hz3000: 23, hz4000: 33, hz6000: 38 }
 ]
 
-const AGE_CORRECTION_TABLE_FEMALE: Array<HertzCorrectionForAge> = [
+export const AGE_CORRECTION_TABLE_FEMALE: Array<HertzCorrectionForAge> = [
     { age: 20, hz1000: 7, hz2000: 4, hz3000: 3, hz4000: 3, hz6000: 6 },
     { age: 21, hz1000: 7, hz2000: 4, hz3000: 4, hz4000: 3, hz6000: 6 },
     { age: 22, hz1000: 7, hz2000: 4, hz3000: 4, hz4000: 4, hz6000: 6 },

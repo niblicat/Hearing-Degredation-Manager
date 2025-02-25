@@ -1,13 +1,9 @@
-<svelte:head>
-    <link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.1/dist/flowbite.min.css" rel="stylesheet" />
-</svelte:head>
-
 <script lang="ts">
     import { page } from '$app/state';
     import CustomNavbar from '$lib/CustomNavbar.svelte';
     import type { UserSimple } from '$lib/MyTypes';
     import { LoginStatus, loginMessages } from '$lib/utility';
-    import { Alert } from 'flowbite-svelte';
+    import { Alert, Button } from 'flowbite-svelte';
 
     let { data } = $props();
 
@@ -38,16 +34,12 @@
 
 </script>
 
-<CustomNavbar
-{user}
-hasSidebar={false} 
-sidebarOpen={sidebarOpen}
-on:toggle={toggleSidebar} 
-/>
+<CustomNavbar {user} sidebarOpen={sidebarOpen} toggle={toggleSidebar} />
 
 <div id="content" class="h-dvh bg-gray-100 pt-16">
     {#if loginStatus != LoginStatus.None}
-        <Alert color={badLogin ? "red" : "yellow"}>
+        <Alert color={badLogin ? "red" : "yellow"} 
+            class="ml-10 mr-10">
             {loginMessages[loginStatus]}
         </Alert>
     {/if}

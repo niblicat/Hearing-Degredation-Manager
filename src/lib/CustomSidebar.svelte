@@ -8,9 +8,21 @@
 
     let { sidebarOpen, activeUrl, toggle } = $props();
 
+    let url: string = $state("#")
+
+    $effect(() => {
+        if (activeUrl == "") {
+            url = "#";
+        }
+        else {
+            url = activeUrl;
+        }
+    });
+
     let clickOutsideLock = false;
     const clickOutsideDelayMilliseconds = 500;
-    const waitForOutsideClickDelayMilliseconds = 250;
+
+    const showExtraPages = true;
 
     $effect(() => {
         if (sidebarOpen) {
@@ -39,11 +51,11 @@
         use:clickOutside={clickedOutside} use:tapOutside={clickedOutside}
         class="absolute pointer-events-none left-0 w-80 h-screen z-20">
         {#if sidebarOpen}
-            <Sidebar {activeUrl} {activeClass} {nonActiveClass} class="pointer-events-auto h-full">
+            <Sidebar activeUrl={url} {activeClass} {nonActiveClass} class="pointer-events-auto h-full">
                 <!-- Content wrapper inside the sidebar with padding to push content down -->
                 <SidebarWrapper class="overflow-y-auto pt-20 h-full">
                     <SidebarGroup>
-                        <SidebarItem on:click={sidebarToggleDispatch} label="Dashboard" href="">
+                        <SidebarItem on:click={sidebarToggleDispatch} label="Dashboard" href="#">
                             <HomeSolid/>
                         </SidebarItem>
                         <SidebarItem on:click={sidebarToggleDispatch} label="Admins" href="#admin">
@@ -54,12 +66,6 @@
                         </SidebarItem>
                         <SidebarItem on:click={sidebarToggleDispatch} label="Mailings" href="#mailings">
                             <MailBoxSolid/>
-                        </SidebarItem>
-                        <SidebarItem on:click={sidebarToggleDispatch} label="Insert Employees" href="#insert">
-                            <ArrowRightToBracketOutline/>
-                        </SidebarItem>
-                        <SidebarItem on:click={sidebarToggleDispatch} label="Insert Data" href="#data">
-                            <ArrowRightToBracketOutline/>
                         </SidebarItem>
                     </SidebarGroup>
                 </SidebarWrapper>
