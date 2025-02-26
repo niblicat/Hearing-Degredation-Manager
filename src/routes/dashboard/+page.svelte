@@ -1,12 +1,12 @@
 <script lang="ts">
     import { page } from '$app/state';
-	import CustomNavbar from '$lib/CustomNavbar.svelte';
-	import CustomSidebar from '$lib/CustomSidebar.svelte';
-	import EmployeesPage from '$lib/EmployeesPage.svelte';
+    import CustomNavbar from '$lib/CustomNavbar.svelte';
+    import CustomSidebar from '$lib/CustomSidebar.svelte';
+    import EmployeesPage from '$lib/EmployeesPage.svelte';
     import MailingPage from '$lib/MailingPage.svelte';
     import AdminPage from '$lib/AdminPage.svelte';
-	import type { UserSimple } from '$lib/MyTypes.js';
-	import Information from '$lib/Information.svelte';
+    import Information from '$lib/Information.svelte'
+    import type { UserSimple } from '$lib/MyTypes.js';
     let { data } = $props();
 
     let activeURL = $derived(page.url.pathname);
@@ -17,7 +17,7 @@
 
     // sidebar state and visibility 
     let sidebarOpen = $state(false);
-    const toggleSidebar = () => {
+    function toggleSidebar() {
         sidebarOpen = !sidebarOpen;
     };
 

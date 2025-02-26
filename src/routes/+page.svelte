@@ -1,6 +1,7 @@
 <script lang="ts">
     import { page } from '$app/state';
     import CustomNavbar from '$lib/CustomNavbar.svelte';
+	import ErrorMessage from '$lib/ErrorMessage.svelte';
     import type { UserSimple } from '$lib/MyTypes';
     import { LoginStatus, loginMessages } from '$lib/utility';
     import { Alert, Button } from 'flowbite-svelte';
@@ -27,9 +28,9 @@
 
     let user: UserSimple = {
         loggedIn: !!page.data.session?.user,
-        name: page.data.session?.user?.name || "Not logged in",
-        email: page.data.session?.user?.email || "",
-        avatar: page.data.session?.user?.image || ""
+        name: page.data.session?.user?.name ?? "Not logged in",
+        email: page.data.session?.user?.email ?? "",
+        avatar: page.data.session?.user?.image ?? ""
     }
 
 </script>

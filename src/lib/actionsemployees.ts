@@ -1,11 +1,10 @@
+// actionsemployees.ts
+// Contains server functions pertaining to employee actions
+
 import { sql } from '@vercel/postgres';
 import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from "./interpret";
 import { getHearingDataFromDatabaseRow } from './utility';
 import type { HearingDataSingle } from './MyTypes';
-
-interface Request {
-    formData: () => Promise<FormData>;
-}
 
 export async function fetchYears(request: Request) {
     const formData = await request.formData();

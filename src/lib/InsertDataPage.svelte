@@ -295,14 +295,14 @@
             <!-- Select Employee Dropdown -->
             <div class="w-m">
                 <Label for="employee" class="block mb-2">Select Employee</Label>
-                <Button color="primary" class="text-base flex justify-between items-center" style="width:300px">{selectedEmployee.name}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
+                <Button color="primary" class="text-base flex justify-between items-center cursor-pointer" style="width:300px">{selectedEmployee.name}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
                 <Dropdown bind:open={nameMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
                 <div  class="p-3">
                     <Search size="md" bind:value={inputValueName}/>
                 </div>
                     {#each filtered_employees as filtedEmployee}
                         <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
-                            <button type="button" class="w-full text-left" onclick={() => selectEmployee(filtedEmployee)}>
+                            <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectEmployee(filtedEmployee)}>
                                 {filtedEmployee.name}
                             </button>
                         </li>
@@ -317,7 +317,7 @@
                 <ButtonGroup class="w-full">
                     <Input id="year" placeholder="1957" 
                         bind:value={inputValueYear} on:keydown={checkYearAvailabilityKeydown} />
-                    <Button color="primary" on:click={checkYearAvailability}>
+                    <Button class="cursor-pointer" color="primary" on:click={checkYearAvailability}>
                         Check
                     </Button>
                 </ButtonGroup>
@@ -367,6 +367,7 @@
     <div class="m-auto w-3/5 p-5 text-center">
         <Button 
             color="primary"
+            class="cursor-pointer"
             on:click={addHearingData}>
             Submit
         </Button>

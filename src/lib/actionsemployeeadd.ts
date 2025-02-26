@@ -1,8 +1,7 @@
-import { sql } from '@vercel/postgres';
+// actionsemployeeadd.ts
+// Contains server functions pertaining to adding employees
 
-interface Request {
-    formData: () => Promise<FormData>;
-}
+import { insertEmployeeIntoDatabase } from './databasefunctions';
 
 export async function addEmployee(request: Request) {
     const formData = await request.formData();
@@ -16,15 +15,7 @@ export async function addEmployee(request: Request) {
 
     try {
         // Insert new employee into the database (adjust as needed for your DB schema)
-        const result = await sql`
-            INSERT INTO Employee (first_name, last_name, email, date_of_birth, sex, last_active)
-            VALUES (${firstName}, ${lastName}, ${email}, ${dateOfBirth}, ${sex}, ${lastActive});
-        `;
-    
-        if (result.rowCount === 0) {
-            return JSON.stringify({ success: false, message: 'Database failure when adding employee' });
-        }
-
+        await insertEmployeeIntoDatabase(firstName, lastName, email, dateOfBirth, sex, lastActive);
     } 
     catch (error: any) {
         const errorMessage = "Error in database when adding employee: " 

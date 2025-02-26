@@ -1,12 +1,11 @@
 <script lang="ts">
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Checkbox, Modal, Button, Tooltip } from 'flowbite-svelte';
-    import EditIcon from './EditIcon.svelte';
 
     import { Input, Label } from 'flowbite-svelte';
 	import { invalidateAll } from '$app/navigation';
 
     import type { Admin, AdminSelectable } from './MyTypes.ts';
-	import { InfoCircleOutline } from 'flowbite-svelte-icons';
+	import { EditOutline, InfoCircleOutline } from 'flowbite-svelte-icons';
 	import ErrorMessage from './ErrorMessage.svelte';
 	import PageTitle from './PageTitle.svelte';
 
@@ -208,8 +207,8 @@
     </p>
     
     <svelte:fragment slot="footer">
-        <Button color="primary" on:click={() => modifyAdminName(selectedAdmin)}>Confirm</Button>
-        <Button color="red">Cancel</Button>
+        <Button class="cursor-pointer" color="primary" on:click={() => modifyAdminName(selectedAdmin)}>Confirm</Button>
+        <Button class="cursor-pointer" color="red">Cancel</Button>
     </svelte:fragment>
 </Modal>
 
@@ -219,8 +218,8 @@
     </p>
     
     <svelte:fragment slot="footer">
-        <Button color="primary" on:click={() => modifyAdminPermissions(selectedAdmin)}>Yes</Button>
-        <Button color="red">No</Button>
+        <Button class="cursor-pointer" color="primary" on:click={() => modifyAdminPermissions(selectedAdmin)}>Yes</Button>
+        <Button class="cursor-pointer" color="red">No</Button>
     </svelte:fragment>
 </Modal>
 
@@ -233,8 +232,8 @@
     </p>
     
     <svelte:fragment slot="footer">
-        <Button color="primary" on:click={() => modifyAdminPermissions(selectedAdmin)}>Yes</Button>
-        <Button color="red">No</Button>
+        <Button class="cursor-pointer" color="primary" on:click={() => modifyAdminPermissions(selectedAdmin)}>Yes</Button>
+        <Button class="cursor-pointer" color="red">No</Button>
     </svelte:fragment>
 </Modal>
 
@@ -247,8 +246,8 @@
     <span class="text-red-600">Are you sure you want to remove these admins?</span>
     
     <svelte:fragment slot="footer">
-        <Button color="primary" on:click={() => deleteSelectedUsers()}>Yes</Button>
-        <Button color="red">No</Button>
+        <Button class="cursor-pointer" color="primary" on:click={() => deleteSelectedUsers()}>Yes</Button>
+        <Button class="cursor-pointer" color="red">No</Button>
     </svelte:fragment>
 </Modal>
 
@@ -274,7 +273,9 @@
                     </TableBodyCell>
                     <TableBodyCell>
                         {admin.name}
-                        <EditIcon on:edit={() => showNameChangeModal(admin)}/>
+                        <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showNameChangeModal(admin)}>
+                            <EditOutline class="w-4 h-4" />
+                        </Button>
                     </TableBodyCell>
                     <TableBodyCell>
                         <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
@@ -289,7 +290,9 @@
                     </TableBodyCell>
                     <TableBodyCell>
                         {admin.isOP}
-                        <EditIcon on:edit={() => showAdminPermissionsModal(admin)}/>
+                        <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showAdminPermissionsModal(admin)}>
+                            <EditOutline class="w-4 h-4" />
+                        </Button>
                     </TableBodyCell>
                 </TableBodyRow>
             {/each}
@@ -300,7 +303,7 @@
 
     {#if selectedAdmins.length > 0}
         <div>
-            <Button color="red" on:click={showAdminDeletionModal}>Delete selected users</Button>
+            <Button class="cursor-pointer" color="red" on:click={showAdminDeletionModal}>Delete selected users</Button>
         </div>
     {/if}
 </div>

@@ -178,7 +178,7 @@
 <div class="{formClasses}">
     <Button 
         color="primary"
-        class="w-[60%]" 
+        class="w-[60%] cursor-pointer" 
         on:click={addEmployee}>
         Submit
     </Button>

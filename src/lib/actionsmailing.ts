@@ -1,8 +1,7 @@
-import { sql } from '@vercel/postgres';
+// actionsmailing.ts
+// Contains server functions pertaining to mailing actions
 
-// interface Request {
-//     formData: () => Promise<FormData>;
-// }
+import { sql } from '@vercel/postgres';
 
 // TODO: Refactor to use Employee from MyTypes.ts instead
 interface EmployeeData {

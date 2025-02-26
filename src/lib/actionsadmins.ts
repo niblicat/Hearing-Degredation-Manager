@@ -1,8 +1,7 @@
-import { sql } from '@vercel/postgres';
+// actionsadmins.ts
+// Contains server functions pertaining to admin actions
 
-interface Request {
-    formData: () => Promise<FormData>;
-}
+import { sql } from '@vercel/postgres';
 
 export async function modifyAdminPermissions(request: Request) {
     const formData = await request.formData();

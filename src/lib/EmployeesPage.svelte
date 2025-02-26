@@ -1,7 +1,7 @@
 <script lang="ts">
 
     import { ButtonGroup, Button, Search, Modal, Label, Input, Radio } from 'flowbite-svelte';
-    import { ChevronDownOutline, UserRemoveSolid, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
+    import { ChevronDownOutline, UserRemoveSolid, UserAddSolid, CirclePlusSolid, EditSolid, EditOutline } from 'flowbite-svelte-icons';
     import { Dropdown } from 'flowbite-svelte';
     import ScatterPlot from './ScatterPlot.svelte';
     import { Footer } from 'flowbite-svelte';
@@ -10,10 +10,10 @@
     import { AnomalyStatus } from "./interpret";
     import type { Employee, EmployeeSearchable } from './MyTypes';
     import { invalidateAll } from '$app/navigation';
-	import { controllers } from 'chart.js';
-	import InsertEmployeePage from './InsertEmployeePage.svelte';
+    import { controllers } from 'chart.js';
+    import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { extractFrequencies } from './utility';
-	import InsertDataPage from './InsertDataPage.svelte';
+    import InsertDataPage from './InsertDataPage.svelte';
 
     let chart: any;
 
@@ -482,14 +482,14 @@
 
 <div class="relative dropdown-container flex space-x-4" style="margin-top: 20px; margin-left: 20px;"> 
     <!-- User Dropdown -->
-    <Button color="primary" style="width:300px">{selectedEmployee.name}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
+    <Button class="cursor-pointer" color="primary" style="width:300px">{selectedEmployee.name}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
     <Dropdown bind:open={nameMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
         <div  class="p-3">
             <Search size="md" bind:value={inputValueName}/>
         </div>
         {#each filteredEmployees as employee}
             <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
-                <button type="button" class="w-full text-left" onclick={() => selectEmployee(employee)}>
+                <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectEmployee(employee)}>
                     {employee.name}
                 </button>
             </li>
@@ -497,27 +497,27 @@
     </Dropdown>
 
     <!-- Year Dropdown -->
-    <Button color="primary" style="width:300px">{selectedYear}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
+    <Button class="cursor-pointer" color="primary" style="width:300px">{selectedYear}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
     <Dropdown bind:open={yearMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
         <div  class="p-3">
             <Search size="md" bind:value={inputValueYear}/>
         </div>
         {#each filteredYears as year}
             <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
-                <button type="button" class="w-full text-left" onclick={() => selectYear(year)}>
+                <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectYear(year)}>
                     {year}
                 </button>
             </li>
         {/each}
     </Dropdown>
 
-    <Button on:click={() => showAddEmployeeModal()} color="primary"><UserAddSolid /></Button>
+    <Button class="cursor-pointer" on:click={() => showAddEmployeeModal()} color="primary"><UserAddSolid /></Button>
     
     {#if selectedEmployee.name !== "No employee selected"} 
-        <Button on:click={() => showAddDataModal()} color="primary"><CirclePlusSolid /></Button>
+        <Button class="cursor-pointer" on:click={() => showAddDataModal()} color="primary"><CirclePlusSolid /></Button>
     {/if} 
     {#if selectedYear !== "No year selected"} 
-        <Button on:click={() => showEditDataModal()} color="primary"><EditSolid /></Button>
+        <Button class="cursor-pointer" on:click={() => showEditDataModal()} color="primary"><EditSolid /></Button>
     {/if} 
 </div>
 
@@ -536,8 +536,8 @@
     
     </p>
     <svelte:fragment slot="footer">
-    <Button color="primary" on:click={() => modifyEmployeeName()}>Confirm</Button>
-    <Button class="bg-red-200 hover:bg-red-300 text-black">Cancel</Button>
+    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeName()}>Confirm</Button>
+    <Button class="cursor-pointer" color="red">Cancel</Button>
     </svelte:fragment>
 </Modal>
 
@@ -550,8 +550,8 @@
         <Input type="text" id="email" placeholder={selectedEmployee.data.email} bind:value={newEmail} required />
     </p>
     <svelte:fragment slot="footer">
-    <Button color="primary" on:click={() => modifyEmployeeEmail()}>Confirm</Button>
-    <Button color="red">Cancel</Button>
+    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeEmail()}>Confirm</Button>
+    <Button class="cursor-pointer" color="red">Cancel</Button>
     </svelte:fragment>
 </Modal>
 
@@ -564,8 +564,8 @@
         <Input type="date" id="dob" placeholder={selectedEmployee.data.dob} bind:value={newDOB} required />
     </p>
     <svelte:fragment slot="footer">
-    <Button color="primary" on:click={() => modifyEmployeeDOB()}>Confirm</Button>
-    <Button color="red">Cancel</Button>
+    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeDOB()}>Confirm</Button>
+    <Button class="cursor-pointer" color="red">Cancel</Button>
     </svelte:fragment>
 </Modal>
 
@@ -584,8 +584,8 @@
         {/if}
     </p>
     <svelte:fragment slot="footer">
-    <Button color="primary" on:click={() => modifyEmploymentStatus()}>Confirm</Button>
-    <Button color="red">Cancel</Button>
+    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmploymentStatus()}>Confirm</Button>
+    <Button class="cursor-pointer" color="red">Cancel</Button>
     </svelte:fragment>
 </Modal>
 
@@ -593,7 +593,7 @@
     <InsertDataPage employee={selectedEmployee.data} year={selectedYear} allowModify />
 
     <svelte:fragment slot="footer">
-        <Button color="red"
+        <Button class="cursor-pointer" color="red"
             on:click={() => editDataModal = false}>
             Cancel
         </Button>
@@ -604,7 +604,7 @@
     <InsertDataPage employee={selectedEmployee.data} />
 
     <svelte:fragment slot="footer">
-        <Button color="red"
+        <Button class="cursor-pointer" color="red"
             on:click={() => addDataModal = false}>
             Cancel
         </Button>
@@ -614,7 +614,7 @@
 <Modal title="Add Employee" bind:open={addEmployeeModal}>
     <InsertEmployeePage />
     <svelte:fragment slot="footer">
-        <Button color="red"
+        <Button class="cursor-pointer" color="red"
             on:click={() => addEmployeeModal = false}>
             Cancel
         </Button>
@@ -628,23 +628,31 @@
         <p>Year: {selectedYear}</p> <br>
         <p>Employee: {selectedEmployee.name}
             {#if selectedEmployee.data.employeeID !== "-1"} 
-                <EditIcon on:edit={() => showNameChangeModal(selectedEmployee.data)}/>
+                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showNameChangeModal(selectedEmployee.data)}>
+                    <EditOutline class="w-4 h-4" />
+                </Button>
             {/if} 
         </p> <br>
         <p>Email: {selectedEmail}
             {#if selectedEmployee.data.email !== "Undefined"} 
-                <EditIcon on:edit={() => showEmailChangeModal(selectedEmployee.data)}/> 
+                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showEmailChangeModal(selectedEmployee.data)}>
+                    <EditOutline class="w-4 h-4" />
+                </Button> 
             {/if} 
         </p> <br>
         <p>Date of Birth: {selectedDOB}
             {#if selectedEmployee.data.dob !== "Undefined"} 
-                <EditIcon on:edit={() => showDOBChangeModal(selectedEmployee.data)}/> 
+                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showDOBChangeModal(selectedEmployee.data)}>
+                    <EditOutline class="w-4 h-4" />
+                </Button> 
             {/if} 
         </p> <br>
         <p>Sex: {selectedSex}</p> <br>
         <p>Employment Status: {selectedStatus} <!-- inactive to active is not working // double check --> 
             {#if selectedEmployee.data.employeeID !== "-1"} 
-                <EditIcon on:edit={() => showActiveStatusChangeModal(selectedEmployee.data)}/>
+                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showActiveStatusChangeModal(selectedEmployee.data)}>
+                    <EditOutline class="w-4 h-4" />
+                </Button>
             {/if} 
         </p> <br>
         <p class="text-3xl">STS Status Left: {STSstatusLeft}</p> <br>
@@ -676,13 +684,13 @@
             />
         {/if}
         <ButtonGroup class="*:!ring-primary-700">
-            <Button color="blue" style="width:175px" on:click={() => toggleChart('left')}>Left</Button>
-            <Button color="red" style="width:175px" on:click={() => toggleChart('right')}>Right</Button> 
-            <Button color="purple" style="width:175px" on:click={() => toggleChart('both')}>Both</Button> 
+            <Button class="cursor-pointer" color="blue" style="width:175px" on:click={() => toggleChart('left')}>Left</Button>
+            <Button class="cursor-pointer" color="red" style="width:175px" on:click={() => toggleChart('right')}>Right</Button> 
+            <Button class="cursor-pointer" color="purple" style="width:175px" on:click={() => toggleChart('both')}>Both</Button> 
         </ButtonGroup>
     </div>
 </div>
-
+<!-- TODO: Convert these styles into tailwind classes -->
 <style>
     .flex-container {
         display: flex;

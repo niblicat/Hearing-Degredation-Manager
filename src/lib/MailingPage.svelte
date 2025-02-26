@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ButtonGroup, Button, Footer } from 'flowbite-svelte';
+    import { ButtonGroup, Button, Footer, Spinner } from 'flowbite-svelte';
     import type { Employee } from './MyTypes';
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Checkbox, Modal, Tooltip } from 'flowbite-svelte';
     import { AnomalyStatus } from "./interpret";
@@ -13,6 +13,8 @@
     // No need for employeesMap anymore; we directly work with the employees array
     let success = $state(true);
     let errorMessage = $state("");
+    let loadingTemplate = $state(false);
+    let loadingCSV = $state(false);
 
     let STSstatusRight = $state("No data selected");
     let STSstatusLeft = $state("No data selected");
@@ -232,17 +234,20 @@
     // Handle export functionality
     async function handleExport() {
         const employeeList = createEmployeeList(); // Get the list of all employees
+        loadingCSV = true;
+        document.body.style.cursor='wait';
         const csvContent = await createCSV(employeeList); // Generate CSV content
-
         if (employeeList.length > 0) {
             downloadCSV(csvContent); // Call the function to download the CSV
         } else {
             displayError("No employees to export.");
         }
+        document.body.style.cursor='auto';
+        loadingCSV = false;
     }
 
     // Function to trigger file download
-    function downloadCSV(csvContent: string) {
+    async function downloadCSV(csvContent: string) {
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -251,6 +256,17 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+    }
+
+    async function downloadTemplate() {
+        loadingTemplate = true;
+        const a = document.createElement('a');
+        a.href = "/SLHC Email Template.docx";
+        a.download = "SLHC Email Template.docx";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        loadingTemplate = false;
     }
 </script>
 
@@ -294,12 +310,12 @@
     <hr class="my-6 border-gray-200 sm:mx-auto dark:border-gray-700 lg:my-8" />
     <div class="sm:flex sm:items-center sm:justify-between">
         <ButtonGroup class="*:!ring-primary-700" style="width:100%">
-            <Button class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-lg" style="width:50%" href="/SLHC Email Template.docx">
-                Download Template
+            <Button disabled={loadingTemplate} color="primary" class="w-[50%] {loadingTemplate ? "" : "cursor-pointer"}" on:click={downloadTemplate}>
+                {#if loadingTemplate}<Spinner class="me-3" size="4" color="white" />{/if}Download Template
             </Button>
-            <Button class="bg-light-bluegreen hover:bg-dark-bluegreen text-black text-lg" style="width:50%" on:click={handleExport}>
-                Export to CSV
-            </Button>            
+            <Button disabled={loadingCSV} color="primary" class="w-[50%] {loadingCSV ? "" : "cursor-pointer"}" on:click={handleExport}>
+                {#if loadingCSV}<Spinner class="me-3" size="4" color="white" />{/if}Export to CSV
+            </Button>
         </ButtonGroup>
     </div>
 </Footer>

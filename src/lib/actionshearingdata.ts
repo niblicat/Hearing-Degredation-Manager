@@ -1,9 +1,8 @@
+// actionshearingdata.ts
+// Contains server functions pertaining to hearing data actions
+
 import { sql } from '@vercel/postgres';
 import { validateFrequencies } from './utility';
-
-interface Request {
-    formData: () => Promise<FormData>;
-}
 
 export async function checkYearAvailability(request: Request) {
     const formData = await request.formData();
