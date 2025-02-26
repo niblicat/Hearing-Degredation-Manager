@@ -1,10 +1,8 @@
 // interpret.ts
 // Used to intepret user data and detect if there has been STS
 
-// import { base } from "$service-worker";
-// import { left } from "@popperjs/core";
 import { error } from "@sveltejs/kit";
-import {AGE_CORRECTION_TABLE_MALE, AGE_CORRECTION_TABLE_FEMALE} from './agetable'
+import { AGE_CORRECTION_TABLE_MALE, AGE_CORRECTION_TABLE_FEMALE } from './agetable'
 import type {HertzCorrectionForAge} from './agetable'
 
 
@@ -102,14 +100,13 @@ export class UserHearingScreeningHistory {
      */
     private GetStatusForEar(baselineEarData: HearingDataOneEar, beforeEarData: HearingDataOneEar, afterEarData: HearingDataOneEar, correction: HertzCorrectionForAge): AnomalyStatus {
         // Get the status for one ear
-        // let unweighedAverageChange = this.GetAverageDecibelChangeForOneEar(beforeEarData, afterEarData); // compares current year and YEAR PRIOR (only main 3 points WITHOUT AGE)
-        let weighedAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(baselineEarData, afterEarData, correction); // compares current year and BASELINE (only main 3 points WITH AGE )
+        let weightedAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(baselineEarData, afterEarData, correction); // compares current year and BASELINE (only main 3 points WITH AGE )
         let yearPriorAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(beforeEarData, afterEarData, correction, false); // compares current year and YEAR PRIOR (only main 3 points WITH AGE )
 
         // a larger value is worse
-        if (weighedAverageChange >= 10) return AnomalyStatus.STS;
+        if (weightedAverageChange >= 10) return AnomalyStatus.STS;
         if (yearPriorAverageChange >= 10) return AnomalyStatus.Warning;
-        else if (weighedAverageChange <= -7) return AnomalyStatus.Improvement; // baseline redefinition (-7 may be different number)
+        else if (weightedAverageChange <= -7) return AnomalyStatus.Improvement; // baseline redefinition (-7 may be different number)
         else if (yearPriorAverageChange >= 3) return AnomalyStatus.Worse; // i think +/-3 is the correct turning point
         else if (yearPriorAverageChange <= -3) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same;
@@ -276,11 +273,10 @@ export class UserHearingScreeningHistory {
             console.log("3000 data2-data1-correction:", diff3000, " = ", hdata2.hz3000, " - ", hdata1.hz3000, " - ", ageCorrection.hz3000);
             console.log("4000 data2-data1-correction:", diff4000, " = ", hdata2.hz4000, " - ", hdata1.hz4000, " - ", ageCorrection.hz4000);
         }
-
-        if (!doAgeCorrection) {
-        console.log("2000 data2-data1:", diff2000, " = ", hdata2.hz2000, " - ", hdata1.hz2000);
-        console.log("3000 data2-data1:", diff3000, " = ", hdata2.hz3000, " - ", hdata1.hz3000);
-        console.log("4000 data2-data1:", diff4000, " = ", hdata2.hz4000, " - ", hdata1.hz4000);
+        else {
+            console.log("2000 data2-data1:", diff2000, " = ", hdata2.hz2000, " - ", hdata1.hz2000);
+            console.log("3000 data2-data1:", diff3000, " = ", hdata2.hz3000, " - ", hdata1.hz3000);
+            console.log("4000 data2-data1:", diff4000, " = ", hdata2.hz4000, " - ", hdata1.hz4000);
         }
 
         let average = findAverage(diff2000, diff3000, diff4000);

@@ -11,6 +11,13 @@ export default defineConfig(({ mode }) => {
     }
 
     return {
-        plugins: [sveltekit(), tailwindcss()]
+        plugins: [sveltekit(), tailwindcss()],
+        server: {
+            fs: {
+                allow: [
+                    'static'
+                ]
+            }
+        }
     };
 });

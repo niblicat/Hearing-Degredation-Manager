@@ -143,18 +143,6 @@ export async function fetchHearingData(request: Request) {
             leftEar: newDataQuery.rows.filter(row => row.ear === 'left')[0] ?? null,
         };
 
-        const dataReturnTest = {
-            success: true,
-            hearingData: {
-                baselineYear,
-                newYear: year,
-                baselineData,
-                newData,
-            },
-        }
-
-        //console.log(JSON.stringify(dataReturnTest));
-
         return JSON.stringify({
             success: true,
             hearingData: {
@@ -224,7 +212,7 @@ export async function fetchHearingDataForYear(request: Request) {
 
 export async function modifyEmployeeName(request: Request) {
     const formData = await request.formData();
-    const employeeID = formData.get('employee') as string;
+    const employeeID = formData.get('employeeID') as string;
     const newFirstName = formData.get('newFirstName') as string;
     const newLastName = formData.get('newLastName') as string;
 
@@ -259,7 +247,7 @@ export async function modifyEmployeeName(request: Request) {
 
 export async function modifyEmployeeEmail(request: Request) {
     const formData = await request.formData();
-    const employeeID = formData.get('employee') as string;
+    const employeeID = formData.get('employeeID') as string;
     const newEmail = formData.get('newEmail') as string;
 
     try {
@@ -362,16 +350,16 @@ export async function calculateSTS(request: Request) {
     const year = parseInt(formData.get('year') as string, 10);
     const sex = formData.get('sex') as string;
 
-
+    //console.log("ID: ", employeeID, "YEAR: ", year, "SEX: ", sex);
 
     try { 
         // get dob from database 
         const employeeQuery = await sql`SELECT date_of_birth FROM Employee WHERE employee_id = ${employeeID};`;
         if (employeeQuery.rows.length === 0) {
             throw new Error("User not found");
+            const errorMessage = "User not found"
         }
         const employee = employeeQuery.rows[0];
-
         const dob = employee.date_of_birth;
         
         // age calculation for the selected year
@@ -393,6 +381,12 @@ export async function calculateSTS(request: Request) {
             WHERE h.employee_id = ${employeeID}
             ORDER BY h.year ASC;
         `;
+
+        if (dataQuery.rows.length === 0) {
+            throw new Error("Hearing data not found");
+            const errorMessage = "Hearing data not found"
+            
+        }
         //console.log("query: ", JSON.stringify(dataQuery));
 
         // create an empty object to store hearing data grouped by year
@@ -407,13 +401,13 @@ export async function calculateSTS(request: Request) {
             }
         
             const frequencies = [
-                Number(row.hz_500) || 0, 
-                Number(row.hz_1000) || 0, 
-                Number(row.hz_2000) || 0, 
-                Number(row.hz_3000) || 0, 
-                Number(row.hz_4000) || 0, 
-                Number(row.hz_6000) || 0, 
-                Number(row.hz_8000) || 0
+                Number(row.hz_500) ?? 0, 
+                Number(row.hz_1000) ?? 0, 
+                Number(row.hz_2000) ?? 0, 
+                Number(row.hz_3000) ?? 0, 
+                Number(row.hz_4000) ?? 0, 
+                Number(row.hz_6000) ?? 0, 
+                Number(row.hz_8000) ?? 0
             ];
             
             //console.log(`Frequencies for ${earSide} ear in ${yearKey}:`, frequencies);
@@ -423,7 +417,8 @@ export async function calculateSTS(request: Request) {
             } else if (earSide === 'left') {
                 hearingDataByYear[yearKey].leftEar = frequencies;
             } else {
-                console.warn(`Unexpected ear value: ${row.ear}`);
+                const errorMessage = `Unexpected ear value: ${row.ear}`;
+                throw new Error(errorMessage);
             }
         });
             
@@ -438,11 +433,11 @@ export async function calculateSTS(request: Request) {
                 new HearingDataOneEar(
                     ears.rightEar[0], ears.rightEar[1], ears.rightEar[2], ears.rightEar[3], 
                     ears.rightEar[4], ears.rightEar[5], ears.rightEar[6]
-                )            
+                )
             )
-        );   
-        
-        console.log("SCREENINGS: ", screenings);
+        );
+    
+        //console.log("SCREENINGS: ", screenings);
         
         // Convert sex string to enum
         const personSex = sex === "Male" ? PersonSex.Male : sex === "Female" ? PersonSex.Female : PersonSex.Other;
@@ -451,8 +446,12 @@ export async function calculateSTS(request: Request) {
         const userHearingHistory = new UserHearingScreeningHistory(age, personSex, year, screenings);
         // Generate hearing report
         const hearingReport = userHearingHistory.GenerateHearingReport();
+        if (hearingReport.length === 0) {
+            const errorMessage = "Hearing report not generated.";
+            throw new Error(errorMessage);
+        }
 
-        console.log("REPORT: ", hearingReport);
+       console.log("REPORT: ", hearingReport);
 
         return JSON.stringify({
             success: true, 
