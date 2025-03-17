@@ -1,29 +1,23 @@
-import { SvelteKitAuth } from "@auth/sveltekit"
-import Google from "@auth/sveltekit/providers/google"
-import dotenv from 'dotenv';
+import { SvelteKitAuth } from "@auth/sveltekit";
+import Google from "@auth/sveltekit/providers/google";
+import Github from "@auth/sveltekit/providers/github";
+import type { Handle } from "@sveltejs/kit";
 
-dotenv.config(); // Provides access to the environment file
- 
-export const { handle } = SvelteKitAuth({
-  providers: [
-    Google({
-        clientId: process.env.AUTH_GOOGLE_CLIENT_ID,
-        clientSecret: process.env.AUTH_GOOGLE_SECRET
-    })
-  ],
-  callbacks: {
-    async jwt({ token, account }) {
-      if (account) {
-        token.accessToken = account.access_token;
-      }
-      return token;
-    },
-    async session({ session, token, user }) {
-      //@ts-ignore
-      session.access_token = token.accessToken;
-      return session;
+export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
+    const authOptions = {
+        providers: [
+            Google({ 
+                clientId: process.env.AUTH_GOOGLE_ID,
+                clientSecret: process.env.AUTH_GOOGLE_SECRET
+            }),
+            Github({ 
+                clientId: process.env.AUTH_GITHUB_ID,
+                clientSecret: process.env.AUTH_GITHUB_SECRET
+            })
+        ],
+        secret: process.env.AUTH_SECRET,
+        trustHost: true,
     }
-  },
-  secret: process.env.AUTH_SECRET ?? 'defaultSecret',
-  trustHost: true
-});
+
+    return authOptions;
+}) satisfies { handle: Handle };;

@@ -53,9 +53,17 @@ export type HearingData = {
 }
 
 export class DatabaseError extends Error {
-    constructor(message: string) {
-      super(message);
-      this.name = 'DatabaseError';
-      Object.setPrototypeOf(this, DatabaseError.prototype);
+        constructor(message: string) {
+        super(message);
+        this.name = 'DatabaseError';
+        Object.setPrototypeOf(this, DatabaseError.prototype);
     }
-  }
+}
+
+export enum PageCategory {
+    Home,
+    Employee,
+    Admin,
+    Mailing,
+    Other
+}

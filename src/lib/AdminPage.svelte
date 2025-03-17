@@ -2,12 +2,12 @@
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Checkbox, Modal, Button, Tooltip } from 'flowbite-svelte';
 
     import { Input, Label } from 'flowbite-svelte';
-	import { invalidateAll } from '$app/navigation';
+    import { invalidateAll } from '$app/navigation';
 
     import type { Admin, AdminSelectable } from './MyTypes.ts';
-	import { EditOutline, InfoCircleOutline } from 'flowbite-svelte-icons';
-	import ErrorMessage from './ErrorMessage.svelte';
-	import PageTitle from './PageTitle.svelte';
+    import { EditOutline, InfoCircleOutline } from 'flowbite-svelte-icons';
+    import ErrorMessage from './ErrorMessage.svelte';
+    import PageTitle from './PageTitle.svelte';
 
     interface Props {
         admins: Array<Admin>;
@@ -251,8 +251,17 @@
     </svelte:fragment>
 </Modal>
 
-<PageTitle title="Admin Management" caption="Modify the priviledges of anyone who has attempted to sign in." />
-<ErrorMessage {success} {errorMessage} />
+<div class="relative w-full">
+    <div class="flex items-center justify-center">
+        <PageTitle>
+            Admin Management
+            {#snippet caption()}
+                Modify the privileges of anyone who has attempted to sign in.
+            {/snippet}
+        </PageTitle>
+        <ErrorMessage {success} {errorMessage} />
+    </div>
+</div>
 
 <div class="flex-column justify-center mx-4">
     <Table hoverable={true} class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">

@@ -2,9 +2,9 @@
 // Contains server functions pertaining to employee actions
 
 import { sql } from '@vercel/postgres';
-import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from "./interpret";
-import { getHearingDataFromDatabaseRow } from './utility';
-import type { HearingDataSingle } from './MyTypes';
+import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from "$lib/interpret";
+import { getHearingDataFromDatabaseRow } from '$lib/utility';
+import type { HearingDataSingle } from '$lib/MyTypes';
 
 export async function fetchYears(request: Request) {
     const formData = await request.formData();
@@ -343,6 +343,37 @@ export async function modifyEmployeeStatus(request: Request) {
     });
 }
 
+export async function modifyEmployeeSex(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+    const newSex = formData.get('newSex') as string;
+
+    console.log(`EmployeeID: ${employeeID}, sex: ${newSex}`);
+
+    try {
+        // Check if employee exists in database
+        const employeeIDQuery = await sql`SELECT employee_id FROM Employee WHERE employee_id = ${employeeID};`;
+        if (employeeIDQuery.rows.length === 0) {
+            throw new Error("User not found");
+        }
+            await sql`
+                UPDATE Employee 
+                SET sex = ${newSex}
+                WHERE employee_id = ${employeeID};
+            `;
+    } 
+    catch (error: any) {
+        const errorMessage = "Failed to update employee's sex: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return { success: false, message: errorMessage };
+    }
+
+    return JSON.stringify({
+        success: true,
+    });
+}
+
 export async function calculateSTS(request: Request) {
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;
@@ -389,7 +420,7 @@ export async function calculateSTS(request: Request) {
         //console.log("query: ", JSON.stringify(dataQuery));
 
         // create an empty object to store hearing data grouped by year
-        const hearingDataByYear: Record<number, { leftEar: number[], rightEar: number[] }> = {};
+        const hearingDataByYear: Record<number, { leftEar: (number | null)[], rightEar: (number | null)[] }> = {};
 
         dataQuery.rows.forEach(row => { // Loop through each row of the query result to group data by year and store frequency thresholds for each ear separately
             const yearKey = Number(row.year);
@@ -400,13 +431,13 @@ export async function calculateSTS(request: Request) {
             }
         
             const frequencies = [
-                Number(row.hz_500) ?? 0, 
-                Number(row.hz_1000) ?? 0, 
-                Number(row.hz_2000) ?? 0, 
-                Number(row.hz_3000) ?? 0, 
-                Number(row.hz_4000) ?? 0, 
-                Number(row.hz_6000) ?? 0, 
-                Number(row.hz_8000) ?? 0
+                row.hz_500 === null ? null : Number(row.hz_500),
+                row.hz_1000 === null ? null : Number(row.hz_1000),
+                row.hz_2000 === null ? null : Number(row.hz_2000),
+                row.hz_3000 === null ? null : Number(row.hz_3000),
+                row.hz_4000 === null ? null : Number(row.hz_4000),
+                row.hz_6000 === null ? null : Number(row.hz_6000),
+                row.hz_8000 === null ? null : Number(row.hz_8000)
             ];
             
             //console.log(`Frequencies for ${earSide} ear in ${yearKey}:`, frequencies);
@@ -436,7 +467,7 @@ export async function calculateSTS(request: Request) {
             )
         );
     
-        //console.log("SCREENINGS: ", screenings);
+        console.log("SCREENINGS: ", screenings);
         
         // Convert sex string to enum
         const personSex = sex === "Male" ? PersonSex.Male : sex === "Female" ? PersonSex.Female : PersonSex.Other;
@@ -450,7 +481,7 @@ export async function calculateSTS(request: Request) {
             throw new Error(errorMessage);
         }
 
-       console.log("REPORT: ", hearingReport);
+    //    console.log("REPORT: ", hearingReport);
 
         return JSON.stringify({
             success: true, 

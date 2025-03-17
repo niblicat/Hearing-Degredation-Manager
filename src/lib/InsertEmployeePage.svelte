@@ -127,7 +127,9 @@
 <div aria-hidden="true" bind:this={top}></div>
 
 {#if showTitle}
-    <PageTitle title="Add a New Employee" sub />
+    <PageTitle sub>
+        Add a New Employee
+    </PageTitle>
 {/if}
 
 <SuccessMessage {success} {successMessage} />

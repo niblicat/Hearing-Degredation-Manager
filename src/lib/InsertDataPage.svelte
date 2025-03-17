@@ -15,8 +15,8 @@
     interface Props {
         employees?: Array<Employee>,
         year?: string,
-        employee?: Employee
-        allowModify?: boolean
+        employee?: Employee,
+        allowModify?: boolean,
         showTitle?: boolean
     }
 
@@ -283,7 +283,9 @@
 
 </script>
 {#if showTitle}
-    <PageTitle title={allowModify ? "Modify Data" : "Add New Data"} sub />
+    <PageTitle sub>
+        {allowModify ? "Modify Data" : "Add New Data"}
+    </PageTitle>
 {/if}
 
 <SuccessMessage {success} {successMessage} />

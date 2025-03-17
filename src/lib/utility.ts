@@ -1,7 +1,7 @@
 import type { Session } from "@auth/sveltekit";
 import { redirect, type RequestEvent, type Server, type ServerLoadEvent } from "@sveltejs/kit"
 import { sql, type QueryResult, type QueryResultRow } from "@vercel/postgres";
-import type { Admin, Employee, HearingDataSingle } from "./MyTypes";
+import { PageCategory, type Admin, type Employee, type HearingDataSingle } from "./MyTypes";
 
 export function isNumber(value?: string | number): boolean {
     return ((value != null) &&
@@ -184,10 +184,12 @@ export function extractFrequencies(earData: Record<string, any>): number[] {
 
 export function validateFrequencies(frequencies: Record<string, string | number>): boolean {
     return Object.values(frequencies).every(value => 
+        value === null || 
         value === "CNT" || 
         (!isNaN(parseInt(value as string, 10)) && parseInt(value as string, 10) >= -10 && parseInt(value as string, 10) <= 90)
     );
 }
+
 export function validateFrequenciesLocally(frequenciesLeft: HearingDataSingle, frequenciesRight: HearingDataSingle): boolean {
     const validateFrequencies = (freqs: HearingDataSingle) =>
         Object.values(freqs).every(value => 
@@ -195,4 +197,19 @@ export function validateFrequenciesLocally(frequenciesLeft: HearingDataSingle, f
             (!isNaN(parseInt(value as string, 10)) && parseInt(value as string, 10) >= -10 && parseInt(value as string, 10) <= 90)
         );
     return validateFrequencies(frequenciesLeft) && validateFrequencies(frequenciesRight);
+}
+
+export function getPageCategory(page: string): PageCategory {
+    switch (page.toLowerCase()) {
+        case 'home':
+            return PageCategory.Home;
+        case 'employee':
+            return PageCategory.Employee;
+        case 'admin':
+            return PageCategory.Admin;
+        case 'mailing':
+            return PageCategory.Mailing;
+        default:
+            return PageCategory.Other;
+    }
 }

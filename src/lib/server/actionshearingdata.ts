@@ -2,7 +2,7 @@
 // Contains server functions pertaining to hearing data actions
 
 import { sql } from '@vercel/postgres';
-import { validateFrequencies } from './utility';
+import { validateFrequencies } from '$lib/utility';
 
 export async function checkYearAvailability(request: Request) {
     const formData = await request.formData();
@@ -153,13 +153,6 @@ export async function modifyHearingData(request: Request) {
     const year = parseInt(formData.get('year') as string, 10);
     const leftEarFrequencies = JSON.parse(formData.get('leftEarFrequencies') as string);
     const rightEarFrequencies = JSON.parse(formData.get('rightEarFrequencies') as string);
-
-    const validateFrequencies = (frequencies: Record<string, string | number>) =>
-        Object.values(frequencies).every(value => 
-            value === null || 
-            value === "CNT" || 
-            (!isNaN(parseInt(value as string, 10)) && parseInt(value as string, 10) >= -10 && parseInt(value as string, 10) <= 90)
-        );
     
     if (!validateFrequencies(leftEarFrequencies) || !validateFrequencies(rightEarFrequencies)) {
         throw new Error('Invalid frequency data');

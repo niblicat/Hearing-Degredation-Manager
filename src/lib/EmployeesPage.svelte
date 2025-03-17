@@ -1,19 +1,18 @@
 <script lang="ts">
 
-    import { ButtonGroup, Button, Search, Modal, Label, Input, Radio } from 'flowbite-svelte';
-    import { ChevronDownOutline, UserRemoveSolid, UserAddSolid, CirclePlusSolid, EditSolid, EditOutline } from 'flowbite-svelte-icons';
+    import { ButtonGroup, Button, Search, Modal, Label, Input, Radio, Tooltip } from 'flowbite-svelte';
+    import { ChevronDownOutline, UserRemoveSolid, UserAddSolid, CirclePlusSolid, EditSolid, EditOutline, InfoCircleSolid } from 'flowbite-svelte-icons';
     import { Dropdown } from 'flowbite-svelte';
     import ScatterPlot from './ScatterPlot.svelte';
-    import { Footer } from 'flowbite-svelte';
-    import EditIcon from './EditIcon.svelte';
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
     import { AnomalyStatus } from "./interpret";
     import type { Employee, EmployeeSearchable } from './MyTypes';
-    import { invalidateAll } from '$app/navigation';
-    import { controllers } from 'chart.js';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { extractFrequencies } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
+    import { Li } from "flowbite-svelte";
+    import PageTitle from './PageTitle.svelte';
+    import ErrorMessage from './ErrorMessage.svelte';
 
     let chart: any;
 
@@ -54,7 +53,7 @@
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
 
-    let success = true;
+    let success = $state(true);
     let errorMessage = $state("");
 
     // Dropdown menu state
@@ -85,10 +84,15 @@
     // employee map that is search friendly
     // name will hold first and last so it's easier to search
     // actual employee data (id and stuff) is in employee_dict.data
-    let employee_dict = $derived(employees.map((employee) => ({
-        name: `${employee.firstName} ${employee.lastName}`,
-        data: employee
-    })) as Array<EmployeeSearchable>);
+    let employee_dict = $derived(
+        employees
+            .slice() // Create a copy to avoid modifying the original array
+            .sort((a, b) => a.firstName.localeCompare(b.firstName))
+            .map((employee) => ({
+                name: `${employee.firstName} ${employee.lastName}`,
+                data: employee
+            })) as Array<EmployeeSearchable>
+    );
 
     // When the user types into the selection text box, the employees list should filter
     let filteredEmployees = $derived(employee_dict.filter(item => item.name.toLowerCase().includes(inputValueName.toLowerCase())));
@@ -249,6 +253,7 @@
     let addDataModal = $state(false);
     let editDataModal = $state(false);
     let addEmployeeModal = $state(false);
+    let sexModal = $state(false);
 
     let newFirstName = $state("");
     let newLastName = $state("");
@@ -256,6 +261,7 @@
     let newDOB = $state("");
     let newActiveStatus = $state("");
     let isInactive = $state(false);
+    let newSex = $state("");
 
     function showNameChangeModal(employee: Employee) {
         newFirstName = employee.firstName;
@@ -272,6 +278,10 @@
                     ? new Date(newDOB).toISOString().split('T')[0]
                     : "No selection made";
         DOBmodal = true;
+    }
+    function showSexChangeModal(employee: Employee) {
+        newSex = employee.sex
+        sexModal = true;
     }
     function showActiveStatusChangeModal(employee: Employee) {
         activeStatusModal = true;
@@ -388,6 +398,37 @@
             displayError(errorMessage);
         }
     }
+
+    async function modifyEmployeeSex(): Promise<void> {
+        const formData = new FormData();
+        formData.append('employeeID', selectedEmployee.data.employeeID);
+        formData.append('newSex', newSex); 
+
+        const response = await fetch('/dashboard?/modifyEmployeeSex', {
+            method: 'POST',
+            body: formData,
+        });
+
+        try {
+            const serverResponse = await response.json();
+            console.log(response);
+
+            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
+    
+            if (result["success"]) {
+                success = true;
+                selectedEmployee.data.sex = newSex;
+            }
+            else {
+                displayError(result["message"]);
+            }
+        }
+        catch (error: any) {
+            let errorMessage = error.message;
+            displayError(errorMessage);
+        }
+    }
+
     async function modifyEmploymentStatus(): Promise<void> {
         const formData = new FormData();
         formData.append('employeeID', selectedEmployee.data.employeeID);
@@ -422,7 +463,6 @@
             displayError(errorMessage);
         }
     }
-
 
     export async function fetchUpdatedHearingData(employeeID: string, year: string) {
         // ! employeeID and year from the parameters are unused
@@ -477,14 +517,28 @@
             displayError('Error fetching hearing data');
         }
     }
-
 </script>
 
-<div class="relative dropdown-container flex space-x-4" style="margin-top: 20px; margin-left: 20px;"> 
-    <!-- User Dropdown -->
-    <Button class="cursor-pointer" color="primary" style="width:300px">{selectedEmployee.name}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
+<div class="relative w-full">
+    <div class="flex items-center justify-center">
+        <PageTitle>
+            Employee Data Management
+            {#snippet caption()}
+                View employee information and data.
+            {/snippet}
+        </PageTitle>
+        <ErrorMessage {success} {errorMessage} />
+    </div>
+</div>
+
+<div class="relative dropdown-container flex flex-wrap space-x-4 space-y-2 ml-[20px] mr-[20px]"> 
+
+    <Button class="cursor-pointer w-64 h-12" color="primary">
+        {selectedEmployee.name}
+        <ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" />
+    </Button>
     <Dropdown bind:open={nameMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
-        <div  class="p-3">
+        <div class="p-3">
             <Search size="md" bind:value={inputValueName}/>
         </div>
         {#each filteredEmployees as employee}
@@ -496,34 +550,38 @@
         {/each}
     </Dropdown>
 
-    <!-- Year Dropdown -->
-    <Button class="cursor-pointer" color="primary" style="width:300px">{selectedYear}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
-    <Dropdown bind:open={yearMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
-        <div  class="p-3">
-            <Search size="md" bind:value={inputValueYear}/>
-        </div>
-        {#each filteredYears as year}
-            <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
-                <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectYear(year)}>
-                    {year}
-                </button>
-            </li>
-        {/each}
-    </Dropdown>
+    {#if selectedEmployee.name !== "No employee selected"}
+        <Button class="cursor-pointer w-64 h-12" color="primary">
+            {selectedYear}
+            <ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" />
+        </Button>
+        <Dropdown bind:open={yearMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
+            <div class="p-3">
+                <Search size="md" bind:value={inputValueYear}/>
+            </div>
+            {#each filteredYears as year}
+                <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                    <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectYear(year)}>
+                        {year}
+                    </button>
+                </li>
+            {/each}
+        </Dropdown>
+    {/if}
 
-    <Button class="cursor-pointer" on:click={() => showAddEmployeeModal()} color="primary"><UserAddSolid /></Button>
+    <Button size="sm" class="cursor-pointer w-12 h-12" on:click={() => showAddEmployeeModal()} color="primary"><UserAddSolid /></Button>
+    <Tooltip placement="bottom">Add New Employee</Tooltip>
     
-    {#if selectedEmployee.name !== "No employee selected"} 
-        <Button class="cursor-pointer" on:click={() => showAddDataModal()} color="primary"><CirclePlusSolid /></Button>
+    {#if selectedEmployee.name !== "No employee selected"}
+        <Button size="sm" class="cursor-pointer w-12 h-12" on:click={() => showAddDataModal()} color="primary"><CirclePlusSolid /></Button>
+        <Tooltip placement="bottom">Add New Data</Tooltip>
     {/if} 
     {#if selectedYear !== "No year selected"} 
-        <Button class="cursor-pointer" on:click={() => showEditDataModal()} color="primary"><EditSolid /></Button>
+        <Button size="sm" class="cursor-pointer w-12 h-12" on:click={() => showEditDataModal()} color="primary"><EditSolid /></Button>
+        <Tooltip placement="bottom">Edit Current Data</Tooltip>
     {/if} 
 </div>
 
-<!---------------------- DISPLAY INFO ---------------------->
-
-<!-- MODALS -->
 <Modal title="Change Employee Name" bind:open={nameModal} autoclose>
     <p>
         <span>Please provide an updated name for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
@@ -565,6 +623,22 @@
     </p>
     <svelte:fragment slot="footer">
     <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeDOB()}>Confirm</Button>
+    <Button class="cursor-pointer" color="red">Cancel</Button>
+    </svelte:fragment>
+</Modal>
+
+<Modal title="Change Employee Sex" bind:open={sexModal} autoclose>
+    <p>
+        <span>Please provide the updated sex for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
+        <br>
+        <br>
+        <Label for="newSex" class="mb-2">New Sex</Label>
+        <Radio name="sex" bind:group={newSex} value="male">Male</Radio>
+        <Radio name="sex" bind:group={newSex} value="female">Female</Radio>
+        <Radio name="sex" bind:group={newSex} value="other">Other</Radio>
+    </p>
+    <svelte:fragment slot="footer">
+    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeSex()}>Confirm</Button>
     <Button class="cursor-pointer" color="red">Cancel</Button>
     </svelte:fragment>
 </Modal>
@@ -624,39 +698,45 @@
 <div class="flex-container">
     <!-- Information Section -->
     <section class="selected-info text-xl">
-        <br>
-        <p>Year: {selectedYear}</p> <br>
-        <p>Employee: {selectedEmployee.name}
+        <!-- TODO: Make this into a table (maybe in a different component) -->
+        <p class="text-gray-900 dark:text-white">Year: {selectedYear}</p>
+        <p class="text-gray-900 dark:text-white">Employee: {selectedEmployee.name}
             {#if selectedEmployee.data.employeeID !== "-1"} 
                 <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showNameChangeModal(selectedEmployee.data)}>
                     <EditOutline class="w-4 h-4" />
                 </Button>
             {/if} 
-        </p> <br>
-        <p>Email: {selectedEmail}
+        </p>
+        <p class="text-gray-900 dark:text-white">Email: {selectedEmail}
             {#if selectedEmployee.data.email !== "Undefined"} 
                 <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showEmailChangeModal(selectedEmployee.data)}>
                     <EditOutline class="w-4 h-4" />
                 </Button> 
             {/if} 
-        </p> <br>
-        <p>Date of Birth: {selectedDOB}
+        </p>
+        <p class="text-gray-900 dark:text-white">Date of Birth: {selectedDOB}
             {#if selectedEmployee.data.dob !== "Undefined"} 
                 <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showDOBChangeModal(selectedEmployee.data)}>
                     <EditOutline class="w-4 h-4" />
                 </Button> 
             {/if} 
-        </p> <br>
-        <p>Sex: {selectedSex}</p> <br>
-        <p>Employment Status: {selectedStatus} <!-- inactive to active is not working // double check --> 
+        </p>
+        <p class="text-gray-900 dark:text-white">Sex: {selectedEmployee.data.sex}
+            {#if selectedEmployee.data.sex !== "Undefined"} 
+                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showSexChangeModal(selectedEmployee.data)}>
+                    <EditOutline class="w-4 h-4" />
+                </Button> 
+            {/if} 
+        </p>
+        <p class="text-gray-900 dark:text-white">Employment Status: {selectedStatus} <!-- inactive to active is not working // double check --> 
             {#if selectedEmployee.data.employeeID !== "-1"} 
                 <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showActiveStatusChangeModal(selectedEmployee.data)}>
                     <EditOutline class="w-4 h-4" />
                 </Button>
             {/if} 
-        </p> <br>
-        <p class="text-3xl">STS Status Left: {STSstatusLeft}</p> <br>
-        <p class="text-3xl">STS Status Right: {STSstatusRight}</p> <br>
+        </p>
+        <p class="text-3xl text-gray-900 dark:text-white">STS Status Left: {STSstatusLeft}</p>
+        <p class="text-3xl text-gray-900 dark:text-white">STS Status Right: {STSstatusRight}</p>
     </section>
 
     <!-- Chart Section -->
@@ -707,6 +787,7 @@
         flex: 1;  
         margin-right: 75px; 
         margin-top: 15px; 
+        margin-bottom: 40px;
         max-width: 550px; 
         text-align: center;
     }

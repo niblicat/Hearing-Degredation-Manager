@@ -22,8 +22,7 @@
     let clickOutsideLock = false;
     const clickOutsideDelayMilliseconds = 500;
 
-    const showExtraPages = true;
-
+    // handles sidebar opening timing to prevent spam open & close
     $effect(() => {
         if (sidebarOpen) {
             clickOutsideLock = true;
@@ -45,15 +44,14 @@
     let nonActiveClass = 'flex items-center p-2 text-base font-normal text-green-900 rounded-lg dark:text-white hover:bg-green-100 dark:hover:bg-green-700';
 </script>
 
-<!-- Sidebar -->
 {#key sidebarOpen}
     <div out:slide={{ axis: 'x', easing: backIn }} in:slide={{ axis: 'x' }} 
         use:clickOutside={clickedOutside} use:tapOutside={clickedOutside}
-        class="absolute pointer-events-none left-0 w-80 h-screen z-20">
+        class="fixed pointer-events-none left-0 w-80 h-screen z-20 pt-20">
         {#if sidebarOpen}
             <Sidebar activeUrl={url} {activeClass} {nonActiveClass} class="pointer-events-auto h-full">
                 <!-- Content wrapper inside the sidebar with padding to push content down -->
-                <SidebarWrapper class="overflow-y-auto pt-20 h-full">
+                <SidebarWrapper class="overflow-y-auto h-full">
                     <SidebarGroup>
                         <SidebarItem on:click={sidebarToggleDispatch} label="Dashboard" href="#">
                             <HomeSolid/>

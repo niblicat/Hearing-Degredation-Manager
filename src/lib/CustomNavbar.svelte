@@ -1,15 +1,21 @@
 <script lang="ts">
-    import { Navbar, NavBrand } from 'flowbite-svelte';
+    import { DarkMode, Modal, Navbar, NavBrand } from 'flowbite-svelte';
     import { Button } from 'flowbite-svelte';
     import CustomAvatar from './CustomAvatar.svelte';
-    import type { UserSimple } from './MyTypes';
+    import { PageCategory, type UserSimple } from './MyTypes';
     import { BarsOutline, CloseOutline } from 'flowbite-svelte-icons';
+    import { page } from '$app/state';
+	import InfoButton from './InfoButton.svelte';
+	import Information from './Information.svelte';
+	import { STRING_HEADER_TITLE } from './strings';
+
+    let activeURLHash = $derived(page.url.hash);
 
     interface Props {
         hasSidebar?: any;
         sidebarOpen: any;
         user: UserSimple;
-        toggle: any;
+        toggle?: any;
     }
 
     let { hasSidebar = false, sidebarOpen, user, toggle }: Props = $props();
@@ -17,23 +23,56 @@
     function sidebarToggleDispatch() {
         toggle();
     }
+
+    let currentPageCategory = $derived.by(() => {
+        switch (activeURLHash) {
+            case "#":
+            case "":
+                return PageCategory.Home;
+            case "#admin":
+                return PageCategory.Admin;
+            case "#employees":
+                return PageCategory.Employee;
+            case "#mailings":
+                return PageCategory.Mailing;
+            default:
+                return PageCategory.Other;
+        }
+    })
+
+    let infoModal = $state(false);
+    const darkClass = "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-hidden rounded-lg text-sm p-2.5";
 </script>
 
-{#if hasSidebar}
-    <Button color="primary" class="fixed top-2.5 left-5 z-50 w-8 h-10 cursor-pointer" on:click={sidebarToggleDispatch}>
-        {#if sidebarOpen}
-            <CloseOutline size="xl" />
-        {:else}
-            <BarsOutline size="xl" />
-        {/if}
-    </Button>
-{/if}
+<Navbar color="primary" class="fixed z-30" navContainerClass="flex flex-nowrap space-x-4 h-16">
+    {#if hasSidebar}
+        <Button color="primary" class="w-8 h-10 cursor-pointer !z-50" on:click={sidebarToggleDispatch}>
+            {#if sidebarOpen}
+                <CloseOutline size="xl" />
+            {:else}
+                <BarsOutline size="xl" />
+            {/if}
+        </Button>
+    {/if}
 
-<Navbar color="primary" class="fixed flex justify-between items-center h-16 z-30">
-    <NavBrand href="/dashboard" class="w-full text-center cursor-pointer">
-        <span class="m-auto relative inline-block overflow-hidden whitespace-nowrap text-3xl font-bold text-[clamp(0.75rem,_3vw,_2rem)]">
-            SIUE SLHC Employee Hearing Panel
+    <NavBrand href="/dashboard" class="cursor-pointer mr-0">
+        <img src="favicon.png" class="me-3 h-6 sm:h-9" alt="Hearing Panel Logo" />
+        <span class="text-3xl font-bold text-[clamp(0.5rem,_3vw,_2.5rem)] overflow-ellipsis">
+            {STRING_HEADER_TITLE}
         </span>
     </NavBrand>
-    <CustomAvatar {user} />
+    
+    <div class="ml-auto flex">
+        <DarkMode class={darkClass + " mr-4 cursor-pointer"} />
+        <InfoButton class="p-1! mr-4 cursor-pointer" page={currentPageCategory} bind:infoModal={infoModal} />
+        <CustomAvatar {user} />
+    </div>
 </Navbar>
+
+<Modal title="Information" bind:open={infoModal} placement="top-right" outsideclose>
+    <Information page={currentPageCategory} />
+    
+    <svelte:fragment slot="footer">
+        <Button class="cursor-pointer" color="primary" on:click={() => infoModal = false}>OK</Button>
+    </svelte:fragment>
+</Modal>

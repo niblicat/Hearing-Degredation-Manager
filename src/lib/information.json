@@ -1,0 +1,85 @@
+[
+    {
+        "category": "admin",
+        "header": "Learn about the Admins Page",
+        "points": [
+            "Grant admin privileges to registered users by clicking the edit icon in the \"Is Admin\" column.",
+            "Setting \"True\" allows admin access, while \"False\" restricts it.",
+            "Edit an admin's name by clicking the edit icon and updating their full name.",
+            "Delete admins by selecting the checkbox in the far-left column and clicking the delete button at the bottom.",
+            "To delete all admins at once, click the top checkbox next to the \"Name\" column, then select the delete button."
+        ]
+    },
+    {
+        "category": "employee",
+        "header": "Learn about the Employees Page",
+        "points": [
+            "Use the dropdown menus at the top of the page to select an employee and a year.",
+            "Employee information is displayed on the left, while the data graph appears on the right.",
+            "To edit employee information, click the edit button next to the item you want to update."
+        ],
+        "sub": [
+            {
+                "category": "insert",
+                "header": "Adding New Employees",
+                "points": [
+
+                    "Click the button to the right of the year dropdown menu (a person icon with a plus symbol).",
+                    "Enter the employee's first name, last name, SIUE email, date of birth, sex, and employment status.",
+                    "If the employee is no longer employed, an additional field will appear to input their last employment date.",
+                    "Click \"Submit\" to add the employee to the table."
+                ]
+            },
+            {
+                "category": "add",
+                "header": "Adding New Employee Data",
+                "points": [
+                    "Select an employee from the dropdown to add a new year of data.",
+                    "Once selected, a new button (a circle with a plus symbol) will appear to the right of the \"Add Employee\" button.",
+                    "Enter the year you want to add and click the check button to validate it.",
+                    "If the year is valid, a data entry table will appear; otherwise, an error message will be displayed.",
+                    "Input left and right ear data (accepted values: -10 to 90 or 'CNT').",
+                    "Click \"Submit\" to save the data to the table."
+                ]
+            },
+            {
+                "category": "edit",
+                "header": "Editing Employee Data",
+                "points": [
+                    "Select an employee and enter the year you want to edit.",
+                    "Once both are selected, a new button (a notepad and pencil icon) will appear.",
+                    "Click this button to edit the data for the selected employee and year.",
+                    "A table will display the existing data—update the necessary information.",
+                    "Click \"Submit\" to save changes to the data table."
+                ]
+            },
+            {
+                "category": "graph",
+                "header": "Understanding the Data Graph",
+                "points": [
+                    "The graph offers \"Left,\" \"Right,\" and \"Both\" options to view specific data sets.",
+                    "Hovering over or clicking on points displays their exact coordinates.",
+                    "Clicking on colors in the top legend will toggle the visibility of the corresponding data set."
+                ]
+            }
+        ]
+    },
+    {
+        "category": "mailing",
+        "header": "Learn about the Mailings Page",
+        "points": [
+            "All employees are listed by their database-assigned Employee ID.",
+            "Before starting your mail merge, ensure that your default email reader is set to <em>Outlook<em>.",
+            "Below the employee information, you will find two buttons: \"Create CSV\" and \"Download Template.\"",
+            "First, click \"Export to CSV\" to download a file named <em>employees.csv</em>. You do not need to open this file, but ensure you remember its download location.",
+            "Next, click \"Download Template\" to download a document titled <em>SLHC Email Template</em>. Open this file in Microsoft Word. <b>DO NOT MODIFY THE TEMPLATE!</b>",
+            "In the Word document, navigate to the \"Mailings\" tab and select the \"Start Mail Merge\" button.",
+            "From the \"Start Mail Merge\" dropdown menu, ensure \"Letter\" is selected, then close the dropdown.",
+            "Click \"Select Recipients\" and choose \"Use an Existing List.\"",
+            "When prompted, locate and select the previously downloaded <em>employees.csv</em> file and click open.",
+            "You may be prompted to edit or filter the recipient list, but this step is optional. For our purposes, we do not have to use these features, so you can skip this step.",
+            "Also optionally, you can click \"Preview Results\" to review how the employee data appears in the template. Using this feature will auto fill the employees data into the fields specified on the template. After using this feature, all data fields should be filled with the data stored in <em>employees.csv</em> and everything should look formatted properly.",
+            "Finally, click \"Finish & Merge,\" then select \"Merge to E-Mail\". Select the <em>To</em> dropdown window and select <em>Email</em>. The <em>Subject</em> field will give your email a subject and it will be the same for all employees (ex. Subject: Hearing Test Results). In the <em>Send As</em> field, select <em>HTML Message</em> in the dropdown window." 
+        ]
+    }
+]

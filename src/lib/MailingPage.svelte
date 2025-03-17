@@ -3,6 +3,11 @@
     import type { Employee } from './MyTypes';
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Checkbox, Modal, Tooltip } from 'flowbite-svelte';
     import { AnomalyStatus } from "./interpret";
+    import PageTitle from './PageTitle.svelte';
+    import ErrorMessage from './ErrorMessage.svelte';
+    import { Li } from "flowbite-svelte";
+    import { InfoCircleSolid } from 'flowbite-svelte-icons';
+    
 
     interface Props {
         employees: Array<Employee>;
@@ -26,7 +31,9 @@
 
     // Function to create an array of employees (no filtering needed)
     function createEmployeeList() {
-        return employees.map((employee) => ({
+    return employees
+        .filter(employee => employee.activeStatus === null) // Only include active employees
+        .map((employee) => ({
             employeeID: employee.employeeID,
             firstName: employee.firstName,
             lastName: employee.lastName,
@@ -34,7 +41,7 @@
             dob: employee.dob,
             sex: employee.sex
         }));
-    }
+}
 
     const createCSV = async (employeeList: Array<any>) => {
         const headers = [
@@ -270,23 +277,28 @@
     }
 </script>
 
+<div class="relative w-full">
+    <div class="flex items-center justify-center">
+        <PageTitle >
+            Mail Merge Management
+            {#snippet caption()}
+                Begin the process of mailing out status notifications.
+            {/snippet}
+        </PageTitle>
+        <ErrorMessage {success} {errorMessage} />
+    </div>
+</div>
+
 <div class="flex-column justify-center mx-4">
-    <Table hoverable={true} class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-        <caption class="p-5 text-lg font-semibold text-left text-gray-900 bg-white dark:text-white dark:bg-gray-800">
-            Mail Merge Page
-            <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">Select "Export to CSV" to begin the mail merge.</p>
-            {#if !success}
-            <p class="mt-1 text-sm font-normal text-red-600 dark:text-red-300">{errorMessage}</p>
-            {/if}
-        </caption>
+    <Table hoverable={true} class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 z-20">
         <TableHead>
             <TableHeadCell>Name</TableHeadCell>
             <TableHeadCell>Email</TableHeadCell>
-            <TableHeadCell>ID</TableHeadCell>
             <TableHeadCell>Date of Birth</TableHeadCell>
+            <TableHeadCell>ID</TableHeadCell>
         </TableHead>
         <TableBody tableBodyClass="divide-y">
-            {#each employees as employee (employee.employeeID)}
+            {#each [...employees].sort((a, b) => a.firstName.localeCompare(b.firstName)) as employee (employee.employeeID)}
                 <TableBodyRow>
                     <TableBodyCell>
                         {employee.firstName} {employee.lastName}
@@ -310,11 +322,11 @@
     <hr class="my-6 border-gray-200 sm:mx-auto dark:border-gray-700 lg:my-8" />
     <div class="sm:flex sm:items-center sm:justify-between">
         <ButtonGroup class="*:!ring-primary-700" style="width:100%">
-            <Button disabled={loadingTemplate} color="primary" class="w-[50%] {loadingTemplate ? "" : "cursor-pointer"}" on:click={downloadTemplate}>
-                {#if loadingTemplate}<Spinner class="me-3" size="4" color="white" />{/if}Download Template
-            </Button>
             <Button disabled={loadingCSV} color="primary" class="w-[50%] {loadingCSV ? "" : "cursor-pointer"}" on:click={handleExport}>
                 {#if loadingCSV}<Spinner class="me-3" size="4" color="white" />{/if}Export to CSV
+            </Button>
+            <Button disabled={loadingTemplate} color="primary" class="w-[50%] {loadingTemplate ? "" : "cursor-pointer"}" on:click={downloadTemplate}>
+                {#if loadingTemplate}<Spinner class="me-3" size="4" color="white" />{/if}Download Template
             </Button>
         </ButtonGroup>
     </div>

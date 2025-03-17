@@ -30,7 +30,8 @@ export enum AnomalyStatus {
     Improvement = 4,
     Worse = 5,
     STS = 6,
-    Warning = 7
+    Warning = 7,
+    CNT = 8
 }
 
 class EarAnomalyStatus {
@@ -50,15 +51,22 @@ class EarAnomalyStatus {
 }
 
 export class HearingDataOneEar {
-    hz500: number;
-    hz1000: number;
-    hz2000: number;
-    hz3000: number;
-    hz4000: number;
-    hz6000: number;
-    hz8000: number;
+    hz500: number | null;
+    hz1000: number | null;
+    hz2000: number | null;
+    hz3000: number | null;
+    hz4000: number | null;
+    hz6000: number | null;
+    hz8000: number | null
 
-    constructor(hz500: number, hz1000: number, hz2000: number, hz3000: number, hz4000: number, hz6000: number, hz8000: number) {
+    constructor(hz500: number | null, 
+        hz1000: number | null, 
+        hz2000: number | null, 
+        hz3000: number | null, 
+        hz4000: number | null, 
+        hz6000: number | null, 
+        hz8000: number | null
+    ) {
         this.hz500 = hz500;
         this.hz1000 = hz1000;
         this.hz2000 = hz2000;
@@ -104,6 +112,7 @@ export class UserHearingScreeningHistory {
         let yearPriorAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(beforeEarData, afterEarData, correction, false); // compares current year and YEAR PRIOR (only main 3 points WITH AGE )
 
         // a larger value is worse
+        if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData) || this.confirmCNT(beforeEarData)) return AnomalyStatus.CNT; 
         if (weightedAverageChange >= 10) return AnomalyStatus.STS;
         if (yearPriorAverageChange >= 10) return AnomalyStatus.Warning;
         else if (weightedAverageChange <= -7) return AnomalyStatus.Improvement; // baseline redefinition (-7 may be different number)
@@ -111,6 +120,19 @@ export class UserHearingScreeningHistory {
         else if (yearPriorAverageChange <= -3) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same;
     }
+
+    private confirmCNT(hdata: HearingDataOneEar): boolean {
+        console.log("Checking CNT for:", hdata);
+        if (hdata.hz2000 === null || hdata.hz3000 === null || hdata.hz4000 === null) { 
+            console.log("CNT detected!");
+            return true; // Values were not tested
+        }
+        else {
+            console.log("No CNT detected.");
+            return false; // All values were tested 
+        }
+    }
+    
 
     /**
      * GetAgeCorrectiveDecibelAdjustment
@@ -157,6 +179,7 @@ export class UserHearingScreeningHistory {
     /**
      * GenerateHearingReport
      * Returns an array of EarAnomalyStatus for each year
+     * Calculated STS for every year through one report because of how the baselines are redefined and not stored 
      */
     public GenerateHearingReport(): EarAnomalyStatus[] {
         let arrayLength = this.screenings.length;
@@ -199,7 +222,7 @@ export class UserHearingScreeningHistory {
             let ageCorrectionLeft = this.GetAgeCorrectiveDecibelAdjustment(baselineLeftAge);
             let ageCorrectionRight = this.GetAgeCorrectiveDecibelAdjustment(baselineRightAge);
 
-            console.log("left age correction: ", ageCorrectionLeft, " right age correction: ", ageCorrectionRight);
+            // console.log("left age correction: ", ageCorrectionLeft, " right age correction: ", ageCorrectionRight);
 
             let leftAnomalyStatus = this.GetStatusForEar(baselineLeftScreening.leftEar, previousScreening.leftEar, afterScreening.leftEar, ageCorrectionLeft);
             let rightAnomalyStatus = this.GetStatusForEar(baselineRightScreening.rightEar, previousScreening.rightEar, afterScreening.rightEar, ageCorrectionRight);
@@ -240,9 +263,10 @@ export class UserHearingScreeningHistory {
      * Useful for changing baseline if average improves
      */
     private GetAverageHertzForSTSRangeForOneEar(hdata: HearingDataOneEar): number {
-        let hz2000 = hdata.hz2000;
-        let hz3000 = hdata.hz3000;
-        let hz4000 = hdata.hz4000;
+        // IF NULL, USE THE WORST VALUE POSSIBLE (90)
+        let hz2000 = hdata.hz2000 ?? 90;
+        let hz3000 = hdata.hz3000 ?? 90;
+        let hz4000 = hdata.hz4000 ?? 90;
         
         let average = findAverage(hz2000, hz3000, hz4000);
         
@@ -260,27 +284,36 @@ export class UserHearingScreeningHistory {
         // console.log("DATA BASELINE/PRIOR: ", hdata1);
         // console.log("DATA NEW: ", hdata2);
 
-        let diff2000 = hdata2.hz2000 - hdata1.hz2000;
-        let diff3000 = hdata2.hz3000 - hdata1.hz3000;
-        let diff4000 = hdata2.hz4000 - hdata1.hz4000;
+        // IF NULL, USE THE WORST VALUE POSSIBLE (90)
+        const h1_2000 = hdata1.hz2000 ?? 90;
+        const h1_3000 = hdata1.hz3000 ?? 90;
+        const h1_4000 = hdata1.hz4000 ?? 90;
+        
+        const h2_2000 = hdata2.hz2000 ?? 90;
+        const h2_3000 = hdata2.hz3000 ?? 90;
+        const h2_4000 = hdata2.hz4000 ?? 90;
+
+        let diff2000 = h2_2000 - h1_2000;
+        let diff3000 = h2_3000 - h1_3000;
+        let diff4000 = h2_4000 - h1_4000;
 
         if (doAgeCorrection) {
             diff2000 -= ageCorrection.hz2000;
             diff3000 -= ageCorrection.hz3000;
             diff4000 -= ageCorrection.hz4000;
 
-            console.log("2000 data2-data1-correction:", diff2000, " = ", hdata2.hz2000, " - ", hdata1.hz2000, " - ", ageCorrection.hz2000);
-            console.log("3000 data2-data1-correction:", diff3000, " = ", hdata2.hz3000, " - ", hdata1.hz3000, " - ", ageCorrection.hz3000);
-            console.log("4000 data2-data1-correction:", diff4000, " = ", hdata2.hz4000, " - ", hdata1.hz4000, " - ", ageCorrection.hz4000);
+            // console.log("2000 data2-data1-correction:", diff2000, " = ", hdata2.hz2000, " - ", hdata1.hz2000, " - ", ageCorrection.hz2000);
+            // console.log("3000 data2-data1-correction:", diff3000, " = ", hdata2.hz3000, " - ", hdata1.hz3000, " - ", ageCorrection.hz3000);
+            // console.log("4000 data2-data1-correction:", diff4000, " = ", hdata2.hz4000, " - ", hdata1.hz4000, " - ", ageCorrection.hz4000);
         }
         else {
-            console.log("2000 data2-data1:", diff2000, " = ", hdata2.hz2000, " - ", hdata1.hz2000);
-            console.log("3000 data2-data1:", diff3000, " = ", hdata2.hz3000, " - ", hdata1.hz3000);
-            console.log("4000 data2-data1:", diff4000, " = ", hdata2.hz4000, " - ", hdata1.hz4000);
+            // console.log("2000 data2-data1:", diff2000, " = ", hdata2.hz2000, " - ", hdata1.hz2000);
+            // console.log("3000 data2-data1:", diff3000, " = ", hdata2.hz3000, " - ", hdata1.hz3000);
+            // console.log("4000 data2-data1:", diff4000, " = ", hdata2.hz4000, " - ", hdata1.hz4000);
         }
 
         let average = findAverage(diff2000, diff3000, diff4000);
-        console.log("weighted average:", average);
+        // console.log("weighted average:", average);
 
         return average;
     }
@@ -291,13 +324,31 @@ export class UserHearingScreeningHistory {
      */
     private GetAverageDecibelChangeForOneEar(hdata1: HearingDataOneEar, hdata2: HearingDataOneEar): number {
         // TODO: use age table?
-        let diff500 = hdata2.hz500 - hdata1.hz500;
-        let diff1000 = hdata2.hz1000 - hdata1.hz1000;
-        let diff2000 = hdata2.hz2000 - hdata1.hz2000;
-        let diff3000 = hdata2.hz3000 - hdata1.hz3000;
-        let diff4000 = hdata2.hz4000 - hdata1.hz4000;
-        let diff6000 = hdata2.hz6000 - hdata1.hz6000;
-        let diff8000 = hdata2.hz8000 - hdata1.hz8000;
+
+        // IF NULL, USE THE WORST VALUE POSSIBLE (90)
+        const h1_500 = hdata1.hz500 ?? 90;
+        const h1_1000 = hdata1.hz1000 ?? 90;
+        const h1_2000 = hdata1.hz2000 ?? 90;
+        const h1_3000 = hdata1.hz3000 ?? 90;
+        const h1_4000 = hdata1.hz4000 ?? 90;
+        const h1_6000 = hdata1.hz6000 ?? 90;
+        const h1_8000 = hdata1.hz8000 ?? 90;
+        
+        const h2_500 = hdata2.hz500 ?? 90;
+        const h2_1000 = hdata2.hz1000 ?? 90;
+        const h2_2000 = hdata2.hz2000 ?? 90;
+        const h2_3000 = hdata2.hz3000 ?? 90;
+        const h2_4000 = hdata2.hz4000 ?? 90;
+        const h2_6000 = hdata2.hz6000 ?? 90;
+        const h2_8000 = hdata2.hz8000 ?? 90;
+
+        let diff500 = h2_500 - h1_500;
+        let diff1000 = h2_1000 - h1_1000;
+        let diff2000 = h2_2000 - h1_2000;
+        let diff3000 = h2_3000 - h1_3000;
+        let diff4000 = h2_4000 - h1_4000;
+        let diff6000 = h2_6000 - h1_6000;
+        let diff8000 = h2_8000 - h1_8000;
 
         let average = findAverage(diff500, diff1000, diff2000, diff3000, diff4000, diff6000, diff8000);
         //let average = findAverage(diff2000, diff3000, diff4000);
