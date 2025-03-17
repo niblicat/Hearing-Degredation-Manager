@@ -96,9 +96,8 @@
         data: undefinedEmployee
     });
 
-    // TODO: Change this to no longer be a lambda function. Just make it a regular function for consistency
     // Functions to update selected employee and year
-    const selectEmployee = async (employee: EmployeeSearchable) => {
+    async function selectEmployee(employee: EmployeeSearchable): Promise<void> {
         const formData = new FormData();
 
         selectedEmployee = employee;
@@ -163,14 +162,13 @@
                 yearItems = [];
                 displayError('No years found for the selected employee');
             }
-
         } 
         catch (error) {
             console.error('Error fetching data:', error);
             yearItems = [];
             displayError('Error fetching data');
         }
-    };
+    }
 
     let filteredYears = $derived.by(() => {
         let filterable = yearItems;
@@ -179,23 +177,19 @@
         return filterable.filter(item => item.includes(filter));
     });
 
-    // TODO: Change this to no longer be a lambda function. Just make it a regular function for consistency
-    const selectYear = async (year: string) => {
+    async function selectYear(year: string): Promise<void> {
         selectedYear = year;
         yearMenuOpen = false;
 
+        await fetchUpdatedHearingData();
+
+        // Creating form data
+        const formData = new FormData();
+        formData.append('employeeID', selectedEmployee.data.employeeID);
+        formData.append('year', selectedYear);
+        formData.append('sex', selectedEmployee.data.sex);
+
         try {
-            // ! Awaiting the fetch in a try block is not necessary since it already has error handling
-            // either handle errors here and remove error handling from fetchUpdatedHearingData() or
-            // move this outside of the try
-            await fetchUpdatedHearingData();
-
-            // ! Creating form data does not need to be in the try block
-            const formData = new FormData();
-            formData.append('employeeID', selectedEmployee.data.employeeID);
-            formData.append('year', selectedYear);
-            formData.append('sex', selectedEmployee.data.sex);
-
             const response = await fetch('/dashboard?/calculateSTS', { 
                 method: 'POST',
                 body: formData,
@@ -236,13 +230,12 @@
             console.error(errorMessage);
             displayError(errorMessage);
         }
-    };
+    }
 
-     // TODO: Change this to no longer be a lambda function. Just make it a regular function for consistency
     // Helper function to get the readable status
-    const GetAnomalyStatusText = (status: AnomalyStatus): string => {
+    function GetAnomalyStatusText(status: AnomalyStatus): string {
         return AnomalyStatus[status] ?? "Unknown";
-    };
+    }
 
     //DATA MODIFICATION STUFF
     let nameModal = $state(false); // controls the appearance of the employee name change window
