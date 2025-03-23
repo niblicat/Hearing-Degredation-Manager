@@ -4,6 +4,7 @@
     import ErrorMessage from '$lib/ErrorMessage.svelte';
     import HomePage from '$lib/HomePage.svelte';
     import type { UserSimple } from '$lib/MyTypes';
+	import { STRING_HEADER_TITLE } from '$lib/strings.js';
     import { LoginStatus, loginMessages } from '$lib/utility';
 
     let { data } = $props();
@@ -34,6 +35,10 @@
     }
 
 </script>
+
+<svelte:head>
+    <title>{STRING_HEADER_TITLE}</title>
+</svelte:head>
 
 <CustomNavbar {user} sidebarOpen={sidebarOpen} toggle={toggleSidebar} />
 

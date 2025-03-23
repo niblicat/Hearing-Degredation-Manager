@@ -20,4 +20,4 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
     }
 
     return authOptions;
-}) satisfies { handle: Handle };;
+}) satisfies { handle: Handle };
