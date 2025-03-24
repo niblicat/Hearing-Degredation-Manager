@@ -226,7 +226,9 @@ vercel link
 ```
 
 #### Environment Variables
-The environment variables needed to locally run the project can be found in the [example environment file](.envexample) (`.envexample`). Use the following command to pull the POSTGRES environment variables into `.env.local`.
+Your environment variables should ultimately be saved in `.env.local`.
+
+The environment variables needed to locally run the project can be found in the [example environment file](.env.example) (`.env.example`). Use the following command to pull the POSTGRES environment variables into `.env.local`.
 ```
 vercel env pull
 ```
