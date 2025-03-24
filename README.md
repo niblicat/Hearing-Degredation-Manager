@@ -1,7 +1,7 @@
 # Hearing Degredation Manager
 Manage employee hearing data and communicate changes to employees!
 
-Table of contents
+**Table of contents**
 1. [Limitations](#limitations)
 2. [Requirements to Deploy](#requirements-to-deploy)
 3. [Setting up Your Project](#setting-up-your-project)
@@ -12,11 +12,15 @@ Table of contents
 4. [Simple Website Modification](#simple-website-modification)
     1. [Public Homepage](#public-homepage)
     2. [Dashboard Homepage](#dashboard-homepage)
-    3. [Authentication Providers](#authentication-providers)
+    3. [Favicon](#favicon)
+    4. [Authentication Providers](#authentication-providers)
 5. [Running Locally](#running-locally)
+    1. [Setup](#setup)
+    2. [Environment Variables](#environment-variables)
+    3. [Locally Run](#locally-run)
 
 ## Limitations
-- Only allows for yearly hearing screenings (multiple in the same year is not possible).
+- Only allows for yearly hearing screenings (multiple screenings in the same year is not possible).
 
 ## Requirements to Deploy
 - Git CLI or GitHub Desktop
@@ -25,6 +29,7 @@ Table of contents
 
 ## Setting Up Your Project
 This will describe how to set up a new hearing degredation manager from scratch.
+
 ### Repository Setup
 First, we will create a new repository from this one for your own version of the portal. With GitHub, we can [import a repository](https://docs.github.com/en/migrations/importing-source-code/using-github-importer/about-github-importer).
 
@@ -57,16 +62,20 @@ You need an authorization secret. View the [Auth.js guide](https://authjs.dev/gu
 #### Authorization Platforms
 On the project tab of Vercel, you can find your project's deployment domain. If you have your own domain that you want to use, you can set it up in Vercel's settings. This will be important for setting up authentication. Let's assume your website is `https://example.vercel.app` for the following steps.
 
+##### GitHub Authentication
 For GitHub authentication, [follow GitHub's "Creating an OAuth app" guide](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app).
 - **Homepage URL**: `https://example.vercel.app`
 - **Authorization Callback URL**: `https://example.vercel.app/auth/callback/github`
+
 Make sure to record the following:
 - Client ID
 - Client Secret (it should allow you to generate a secret)
 
+##### Google Authentication
 For Google authentication, [follow Google's "Using OAuth 2.0 to Access Google APIs" guide](https://developers.google.com/identity/protocols/oauth2).
 - **Authorized Javascript Origin**: `https://example.vercel.app`
 - **Authorized redirect URI**: `https://example.vercel.app/auth/callback/google`
+
 Make sure to record the following:
 - Client ID
 - Client Secret (it should allow you to generate a secret)
@@ -182,18 +191,49 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 To learn more about adding authentication providers and which ones are available, [check out the Auth.js docs on OAuth providers](https://authjs.dev/getting-started/authentication/oauth).
 
 ## Running Locally
+This section is intended for developers to extend and modify the Hearing Degredation Manager. It is assumed that you have already deployed your website to Vercel using the steps above. This project uses Sveltekit. To learn more, [check out the documentation on the Svelte website](https://svelte.dev/docs).
+
+### Requirements
+To run the project locally, you'll need the following:
+- [NPM](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (or some other package manager)
+- Terminal or [IDE](https://en.wikipedia.org/wiki/Integrated_development_environment)
+- [Git CLI](https://git-scm.com/downloads)
+
+### Setup
+Clone the repository
+```git
+git clone {YOUR REPOSITORY LINK}
+```
+
 Install the required packages.
 ```
 npm i
 ```
 
-Use Vercel CLI (later versions may not work)
+Install Vercel CLI to your global environment (later versions may not work).
 ```
-pnpm i -g vercel@37.4.2
+npm i -g vercel@37.4.2
 ```
 
-Setup the environment variables
+Log into Vercel.
+```
+vercel login
+```
 
+Link your deployment to your local project.
+```
+vercel link
+```
+
+#### Environment Variables
+The environment variables needed to locally run the project can be found in the [example environment file](.envexample) (`.envexample`). Use the following command to pull the POSTGRES environment variables into `.env.local`.
+```
+vercel env pull
+```
+
+If pulling the environment variables doesn't provide the AUTH variables, this means you have not set them in your online Vercel project. See [OAuth Setup](#oauth-setup) for details on how to obtain AUTH IDs and keys, and then add these to your environment file.
+
+#### Locally Run
 Now run the project!
 ```
 vercel dev
