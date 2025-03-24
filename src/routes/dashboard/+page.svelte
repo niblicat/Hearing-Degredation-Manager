@@ -8,6 +8,8 @@
     import Information from '$lib/Information.svelte'
     import type { UserSimple } from '$lib/MyTypes.js';
     import PageTitle from '$lib/PageTitle.svelte';
+	import { STRING_HEADER_TITLE } from '$lib/strings.js';
+	import HomePageDashboard from '$lib/HomePageDashboard.svelte';
     let { data } = $props();
 
     let activeURL = $derived(page.url.pathname);
@@ -31,6 +33,10 @@
 
 </script>
 
+<svelte:head>
+    <title>{STRING_HEADER_TITLE}</title>
+</svelte:head>
+
 <CustomNavbar {user} hasSidebar
     sidebarOpen={sidebarOpen} toggle={toggleSidebar} />
 
@@ -45,15 +51,6 @@
     {:else if activeURLHash == "#admin"}
         <AdminPage {admins} />
     {:else}
-        <PageTitle>
-            Welcome to the Dashboard!
-            {#snippet caption()}
-                Check out the dropdowns below to get started. Use the sidebar to navigate through the various pages.
-            {/snippet}
-        </PageTitle>
-
-        <div class="max-w-3xl mx-auto">
-            <Information />
-        </div>
+        <HomePageDashboard />
     {/if}
 </main>
