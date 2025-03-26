@@ -3,15 +3,25 @@
     import ScatterPlot from './ScatterPlot.svelte';
 
     // Props
-    export let rightBaselineHearingData: Array<number> = [];
-    export let rightNewHearingData: Array<number> = [];
-    export let leftBaselineHearingData: Array<number> = [];
-    export let leftNewHearingData: Array<number> = [];
-    export let selectedYear: string = "No year selected";
+    interface Props {
+        rightBaselineHearingData: Array<number>,
+        rightNewHearingData: Array<number>,
+        leftBaselineHearingData: Array<number>,
+        leftNewHearingData: Array<number>,
+        selectedYear: string
+    }
+
+    let {
+        rightBaselineHearingData = [],
+        rightNewHearingData = [],
+        leftBaselineHearingData = [],
+        leftNewHearingData = [],
+        selectedYear = "No year selected",
+    }: Props = $props();
 
     // Chart Selection
-    let isRightEar = false;
-    let showBoth = true;
+    let isRightEar = $state(false);
+    let showBoth = $state(true);
     
     const toggleChart = (ear: string) => {
         if (ear === 'both') {
@@ -21,31 +31,26 @@
             showBoth = false;
         }
     };
-
-    // Title for the chart that changes based on selected year
-    $: plotTitle = selectedYear !== "No year selected" 
-        ? `Audiogram for ${selectedYear}` 
-        : "No Data Selected";
 </script>
 
 <div class="chart-container w-full max-w-xl">
     {#if showBoth}
         <ScatterPlot 
-            plotTitle={plotTitle}
+            plotTitle={`Audiogram for ${selectedYear}`}
             baselineHearingData={rightBaselineHearingData.concat(leftBaselineHearingData)}
             newHearingData={rightNewHearingData.concat(leftNewHearingData)}
             labels={['Right Baseline', 'Right New', 'Left Baseline', 'Left New']}
         />
     {:else if isRightEar}
         <ScatterPlot 
-            plotTitle={plotTitle}
+            plotTitle={`Audiogram for ${selectedYear}`}
             baselineHearingData={rightBaselineHearingData} 
             newHearingData={rightNewHearingData} 
             labels={['Right Baseline', 'Right New']}
         />
     {:else}
         <ScatterPlot 
-            plotTitle={plotTitle}
+            plotTitle={`Audiogram for ${selectedYear}`}
             baselineHearingData={leftBaselineHearingData} 
             newHearingData={leftNewHearingData} 
             labels={['Left Baseline', 'Left New']}
