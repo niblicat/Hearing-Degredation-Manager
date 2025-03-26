@@ -173,6 +173,9 @@
     // Reactive block to update chart data dynamically
     $effect(() => {
         if (chart) {
+            //update chart title
+            chart.options.plugins.title.text = plotTitle;
+
             // Dynamically update datasets
             chart.data.datasets = [
                 {
