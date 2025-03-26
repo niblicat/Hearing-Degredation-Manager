@@ -11,6 +11,7 @@
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import EmployeeData from './EmployeeData.svelte';
+    import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from './interpret';
 
     interface Props {
         employees: Array<Employee>;
@@ -44,9 +45,6 @@
         hz6000: "",
         hz8000: ""
     };
-
-    let modifiedLeftFrequencies = $state(blankFrequencies);
-    let modifiedRightFrequencies = $state(blankFrequencies);
 
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
@@ -96,6 +94,23 @@
         data: undefinedEmployee
     });
 
+    function resetEmployeeInfo() {
+        // Reset year selection and clear years dropdown
+        selectedYear = "No year selected";
+        yearItems = [];
+        inputValueYear = "";
+        STSstatusRight = "No data selected";
+        STSstatusLeft = "No data selected";
+    }
+    function resetData() {
+        // Clear previous data
+        rightBaselineHearingData.length = 0;
+        rightNewHearingData.length = 0;
+        leftBaselineHearingData.length = 0;
+        leftNewHearingData.length = 0;
+        hearingHistory.length = 0;
+    }
+
     // Functions to update selected employee and year
     async function selectEmployee(employee: EmployeeSearchable): Promise<void> {
         const formData = new FormData();
@@ -103,17 +118,9 @@
         selectedEmployee = employee;
         nameMenuOpen = false; 
 
-        // Reset year selection and clear years dropdown
-        selectedYear = "No year selected";
-        yearItems = [];
-        inputValueYear = "";
-        STSstatusRight = "No data selected";
-        STSstatusLeft = "No data selected";
-        // Clear previous data
-        rightBaselineHearingData.length = 0;
-        rightNewHearingData.length = 0;
-        leftBaselineHearingData.length = 0;
-        leftNewHearingData.length = 0;
+        // Reset all data
+        resetEmployeeInfo();
+        resetData();
 
         formData.append('employeeID', selectedEmployee.data.employeeID);
 
@@ -187,22 +194,28 @@
         const formData = new FormData();
         formData.append('employeeID', selectedEmployee.data.employeeID);
         formData.append('year', selectedYear);
-        formData.append('sex', selectedEmployee.data.sex);
 
         try {
-            const response = await fetch('/dashboard?/calculateSTS', { 
+            const response = await fetch('/dashboard?/fetchCalculateSTSData', { 
                 method: 'POST',
                 body: formData,
             });
 
-            // ! Everything before this point should be outside of the try block
             const serverResponse = await response.json();
             const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
 
             if (result["success"]) {
                 success = true;
+                // Perform STS calculation on the client side
+                const hearingReport = calculateSTSClientSide(
+                    result.hearingData, 
+                    parseInt(selectedYear)
+                );
+
                 // Find the test result that matches the selected year
-                const selectedYearReport = result.hearingReport.find((report: any) => report.reportYear === parseInt(year, 10));
+                const selectedYearReport = hearingReport.find(
+                    (report: any) => report.reportYear === parseInt(year, 10)
+                );
 
                 if (selectedYearReport) {
                     STSstatusRight = GetAnomalyStatusText(selectedYearReport.rightStatus);
@@ -213,7 +226,7 @@
                 }
 
                 // Build the full hearing history from all years
-                hearingHistory = result.hearingReport.map((report: any) => ({
+                hearingHistory = hearingReport.map((report: any) => ({
                     year: report.reportYear.toString(),
                     leftStatus: GetAnomalyStatusText(report.leftStatus),
                     rightStatus: GetAnomalyStatusText(report.rightStatus)
@@ -223,13 +236,62 @@
                 hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
             }
             else {
-                displayError(result["message"]);
+                displayError(result.message);
             }
         } catch (error) {
             const errorMessage = 'Error fetching hearing data: ' + error;
             console.error(errorMessage);
             displayError(errorMessage);
         }
+    }
+
+    function calculateSTSClientSide(hearingData: any, currentYear: number) {
+        // Convert raw hearing data to the format required by UserHearingScreeningHistory
+        const screenings = Object.entries(hearingData.screenings)
+            .map(([year, data]) => new HearingScreening(
+                parseInt(year),
+                new HearingDataOneEar(
+                    data.left.hz500 ?? null,
+                    data.left.hz1000 ?? null,
+                    data.left.hz2000 ?? null,
+                    data.left.hz3000 ?? null,
+                    data.left.hz4000 ?? null,
+                    data.left.hz6000 ?? null,
+                    data.left.hz8000 ?? null
+                ),
+                new HearingDataOneEar(
+                    data.right.hz500 ?? null,
+                    data.right.hz1000 ?? null,
+                    data.right.hz2000 ?? null,
+                    data.right.hz3000 ?? null,
+                    data.right.hz4000 ?? null,
+                    data.right.hz6000 ?? null,
+                    data.right.hz8000 ?? null
+                )
+            ));
+
+        // Calculate age based on date of birth and current year
+        const dob = new Date(hearingData.dateOfBirth);
+        const dobYear = dob.getFullYear();
+        const age = currentYear - dobYear;
+
+        // Determine sex
+        const personSex = hearingData.sex === "Male" ? PersonSex.Male : 
+                        hearingData.sex === "Female" ? PersonSex.Female : 
+                        PersonSex.Other;
+
+        // Create UserHearingScreeningHistory instance
+        const userHearingHistory = new UserHearingScreeningHistory(
+            age, 
+            personSex, 
+            currentYear, 
+            screenings
+        );
+
+        // Generate hearing report
+        const hearingReport = userHearingHistory.GenerateHearingReport();
+
+        return hearingReport;
     }
 
     // Helper function to get the readable status
@@ -450,10 +512,7 @@
                 const { baselineData, newData } = result.hearingData;
 
                 // Clear previous data
-                rightBaselineHearingData.length = 0;
-                rightNewHearingData.length = 0;
-                leftBaselineHearingData.length = 0;
-                leftNewHearingData.length = 0;
+                resetData();
 
                 // Extract frequencies and populate arrays
                 // For right ear baseline data
