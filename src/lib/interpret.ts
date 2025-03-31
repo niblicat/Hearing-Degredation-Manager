@@ -373,6 +373,7 @@ export class UserHearingScreeningHistory {
     }
 }
 
+// ! this is a duplicate of hearing screening, remove one of them
 interface HearingDataEntry {
     year: number;
     left: { hz500: number; hz1000: number; hz2000: number; hz3000: number; hz4000: number; hz6000: number; hz8000: number };

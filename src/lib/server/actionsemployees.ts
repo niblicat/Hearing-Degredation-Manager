@@ -4,7 +4,8 @@
 import { sql } from '@vercel/postgres';
 import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from "$lib/interpret";
 import { getHearingDataFromDatabaseRow } from '$lib/utility';
-import type { HearingDataSingle } from '$lib/MyTypes';
+import type { EmployeeInfo, HearingDataSingle, HearingHistory } from '$lib/MyTypes';
+import { checkEmployeeExists, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase } from './databasefunctions';
 
 export async function fetchYears(request: Request) {
     const formData = await request.formData();
@@ -41,7 +42,12 @@ export async function fetchYears(request: Request) {
     }
 }
 
+/**
+ * 
+ * @deprecated use extractEmployeeInfo instead
+ */
 export async function fetchEmployeeInfo(request: Request) {
+    // ! deprecated
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;
 
@@ -75,13 +81,6 @@ export async function fetchEmployeeInfo(request: Request) {
             sex: employee.sex
         }
 
-        const dataReturnTest = {
-            success: true,
-            employee: employeeData
-        }
-
-        //JSON.stringify(dataReturnTest));
-
         // Return only the necessary data in a plain object format
         return JSON.stringify({
             success: true,
@@ -90,6 +89,28 @@ export async function fetchEmployeeInfo(request: Request) {
     } 
     catch (error: any) {
         const errorMessage = "Failed to fetch employee data: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return { success: false, message: errorMessage };
+    }
+}
+
+export async function extractEmployeeInfo(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+
+    try {
+        await checkEmployeeExists(employeeID); // will throw error if employee is not found
+        const employeeInfo: EmployeeInfo = await extractEmployeeInfoFromDatabase(employeeID);
+
+        // Return only the necessary data in a plain object format
+        return JSON.stringify({
+            success: true,
+            employeeInfo
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Failed to fetch employee info: " 
             + (error.message ?? "no error message provided by server");
         console.error(errorMessage);
         return { success: false, message: errorMessage };
@@ -372,4 +393,174 @@ export async function modifyEmployeeSex(request: Request) {
     return JSON.stringify({
         success: true,
     });
+}
+
+/**
+ * 
+ * @param request The POST request.
+ * @deprecated no longer calculating STS on server.
+ * @returns STS Calculated Hearing Report.
+ */
+export async function calculateSTS(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+    const year = parseInt(formData.get('year') as string, 10);
+    const sex = formData.get('sex') as string;
+
+    //console.log("ID: ", employeeID, "YEAR: ", year, "SEX: ", sex);
+
+    try { 
+        // get dob from database 
+        const employeeQuery = await sql`SELECT date_of_birth FROM Employee WHERE employee_id = ${employeeID};`;
+        if (employeeQuery.rows.length === 0) {
+            throw new Error("User not found");
+            const errorMessage = "User not found"
+        }
+        const employee = employeeQuery.rows[0];
+        const dob = employee.date_of_birth;
+        
+        // age calculation for the selected year
+        const yearDate = new Date(year, 0 , 1); // January 1st of the given year // may need to track entire date in database?
+        const dobDate = new Date(dob);
+        let age = yearDate.getFullYear() - dobDate.getFullYear();
+        
+        if ( // Check if the birthday has occurred this year
+            yearDate.getMonth() < dobDate.getMonth() || 
+            (yearDate.getMonth() === dobDate.getMonth() && yearDate.getDate() < dobDate.getDate())
+        ) {
+            age--;
+        }
+        // get all frequencies, ear, and year
+        const dataQuery = await sql`
+            SELECT d.Hz_500, d.Hz_1000, d.Hz_2000, d.Hz_3000, d.Hz_4000, d.Hz_6000, d.Hz_8000, h.ear, h.year
+            FROM Has h
+            JOIN Data d ON h.data_id = d.data_id
+            WHERE h.employee_id = ${employeeID}
+            ORDER BY h.year ASC;
+        `;
+
+        if (dataQuery.rows.length === 0) {
+            throw new Error("Hearing data not found");
+        }
+        //console.log("query: ", JSON.stringify(dataQuery));
+
+        // create an empty object to store hearing data grouped by year
+        const hearingDataByYear: Record<number, { leftEar: (number | null)[], rightEar: (number | null)[] }> = {};
+
+        dataQuery.rows.forEach(row => { // Loop through each row of the query result to group data by year and store frequency thresholds for each ear separately
+            const yearKey = Number(row.year);
+            const earSide = row.ear.trim().toLowerCase();  // Normalize ear value
+        
+            if (!hearingDataByYear[yearKey]) {
+                hearingDataByYear[yearKey] = { leftEar: new Array(7).fill(0), rightEar: new Array(7).fill(0) };
+            }
+        
+            const frequencies = [
+                row.hz_500 === null ? null : Number(row.hz_500),
+                row.hz_1000 === null ? null : Number(row.hz_1000),
+                row.hz_2000 === null ? null : Number(row.hz_2000),
+                row.hz_3000 === null ? null : Number(row.hz_3000),
+                row.hz_4000 === null ? null : Number(row.hz_4000),
+                row.hz_6000 === null ? null : Number(row.hz_6000),
+                row.hz_8000 === null ? null : Number(row.hz_8000)
+            ];
+            
+            //console.log(`Frequencies for ${earSide} ear in ${yearKey}:`, frequencies);
+        
+            if (earSide === 'right') {
+                hearingDataByYear[yearKey].rightEar = frequencies;
+            } else if (earSide === 'left') {
+                hearingDataByYear[yearKey].leftEar = frequencies;
+            } else {
+                const errorMessage = `Unexpected ear value: ${row.ear}`;
+                throw new Error(errorMessage);
+            }
+        });
+            
+        // Convert fetched data into HearingScreening objects
+        const screenings: HearingScreening[] = Object.entries(hearingDataByYear).map(([year, ears]) => 
+            new HearingScreening(
+                Number(year),
+                new HearingDataOneEar(
+                    ears.leftEar[0], ears.leftEar[1], ears.leftEar[2], ears.leftEar[3], 
+                    ears.leftEar[4], ears.leftEar[5], ears.leftEar[6]
+                ),
+                new HearingDataOneEar(
+                    ears.rightEar[0], ears.rightEar[1], ears.rightEar[2], ears.rightEar[3], 
+                    ears.rightEar[4], ears.rightEar[5], ears.rightEar[6]
+                )
+            )
+        );
+    
+        console.log("SCREENINGS: ", screenings);
+        
+        // Convert sex string to enum
+        const personSex = sex === "Male" ? PersonSex.Male : sex === "Female" ? PersonSex.Female : PersonSex.Other;
+
+        // Create UserHearingScreeningHistory instance
+        const userHearingHistory = new UserHearingScreeningHistory(age, personSex, year, screenings);
+        // Generate hearing report
+        const hearingReport = userHearingHistory.GenerateHearingReport();
+        if (hearingReport.length === 0) {
+            const errorMessage = "Hearing report not generated.";
+            throw new Error(errorMessage);
+        }
+
+    //    console.log("REPORT: ", hearingReport);
+
+        return JSON.stringify({
+            success: true, 
+            hearingReport
+        });
+    }
+    catch (error: any) {
+        const errorMessage = "Failed to calculate STS status: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return JSON.stringify({ success: false, message: errorMessage });
+    }
+}
+
+export async function extractEmployeeHearingScreenings(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+    
+    try {
+        checkEmployeeExists(employeeID); // will throw error if employee is not found
+        // Get employee hearing screenings from database
+        const screenings: HearingScreening[] = await extractEmployeeHearingScreeningsFromDatabase(employeeID);
+
+        return JSON.stringify({
+            success: true,
+            screenings
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Error in database when adding employee: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return JSON.stringify({ success: false, message: errorMessage });
+    }
+}
+
+export async function extractEmployeeHearingHistory(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+    
+    try {
+        checkEmployeeExists(employeeID); // will throw error if employee is not found
+        // Get employee hearing screenings from database
+        const history: HearingHistory = await extractEmployeeHearingHistoryFromDatabase(employeeID);
+
+        return JSON.stringify({
+            success: true,
+            history
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Error in database when adding employee: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return JSON.stringify({ success: false, message: errorMessage });
+    }
 }

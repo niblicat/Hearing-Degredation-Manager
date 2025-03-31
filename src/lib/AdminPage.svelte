@@ -252,7 +252,7 @@
 </Modal>
 
 <div class="relative w-full">
-    <div class="flex items-center justify-center">
+    <div class="flex flex-col items-center justify-center">
         <PageTitle>
             Admin Management
             {#snippet caption()}

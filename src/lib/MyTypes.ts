@@ -1,3 +1,5 @@
+import type { HearingScreening, PersonSex } from "./interpret";
+
 export type Employee = {
     employeeID: string;
     firstName: string;
@@ -7,6 +9,16 @@ export type Employee = {
     dob: string;
     sex: string;
 };
+
+// employee data accessed from database
+export type EmployeeInfo = {
+    id: number,
+    firstName: string,
+    lastName: string,
+    email: string,
+    dob: Date,
+    sex: PersonSex
+}
 
 export type EmployeeSearchable = {
     name: string, // full name
@@ -50,6 +62,12 @@ export type HearingData = {
     ear: string;
     leftData: HearingDataSingle,
     rightData: HearingDataSingle
+}
+
+export type HearingHistory = {
+    dob: Date,
+    sex: PersonSex,
+    screenings: HearingScreening[]
 }
 
 export class DatabaseError extends Error {
