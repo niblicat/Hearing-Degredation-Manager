@@ -252,6 +252,10 @@ export async function modifyHearingData(request: Request) {
     });
 }
 
+/**
+ * 
+ * @deprecated use extractEmployeeHearingHistory instead
+ */
 export async function fetchCalculateSTSData(request: Request) {
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;

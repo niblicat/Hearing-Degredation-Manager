@@ -3,8 +3,8 @@
 // This will make it easy to switch out our database provider if needed
 
 import { sql } from '@vercel/postgres';
-import { DatabaseError } from '../MyTypes';
-import { HearingDataOneEar, HearingScreening } from '$lib/interpret';
+import { DatabaseError, type EmployeeInfo, type HearingHistory } from '../MyTypes';
+import { HearingDataOneEar, HearingScreening, PersonSex, UserHearingScreeningHistory } from '$lib/interpret';
 
 // EMPLOYEES
 
@@ -29,9 +29,37 @@ export async function checkEmployeeExists(employeeID: string) {
     }
 }
 
-export async function extractEmployeeHearingDataFromDatabase(employeeID: string): Promise<HearingScreening[]> {
-    checkEmployeeExists(employeeID); // will throw error if employee is not found
+export async function extractEmployeeInfoFromDatabase(employeeID: string): Promise<EmployeeInfo> {
+    const query = await sql`
+        SELECT first_name, last_name, email, date_of_birth, last_active, sex
+        FROM Employee
+        WHERE employee_id = ${employeeID};
+    `;
 
+    if (query.rows.length === 0) {
+        throw new DatabaseError("There was an issue accessing the employee data.");
+    }
+
+    const employeeRaw = query.rows[0];
+
+    // interpret sex from lowercase version of database field
+    const sexRaw = employeeRaw.sex.toLowerCase();
+    const personSex: PersonSex = sexRaw === "male" ? PersonSex.Male : sexRaw === "female" ? PersonSex.Female : PersonSex.Other;
+
+    // build and return employee info
+    const employeeInfo: EmployeeInfo = {
+        id: parseInt(employeeID),
+        firstName: employeeRaw.first_name,
+        lastName: employeeRaw.last_name,
+        email: employeeRaw.email,
+        dob: new Date(employeeRaw.dob),
+        sex: personSex
+    }
+
+    return employeeInfo;
+}
+
+export async function extractEmployeeHearingScreeningsFromDatabase(employeeID: string): Promise<HearingScreening[]> {
     const dataQuery = await sql`
         SELECT d.Hz_500, d.Hz_1000, d.Hz_2000, d.Hz_3000, d.Hz_4000, d.Hz_6000, d.Hz_8000, h.ear, h.year
         FROM Has h
@@ -41,7 +69,7 @@ export async function extractEmployeeHearingDataFromDatabase(employeeID: string)
     `;
 
     if (dataQuery.rows.length === 0) {
-        throw new DatabaseError("Hearing data not found");
+        throw new DatabaseError("Hearing data not found.");
     }
 
     const hearingDataByYear: Record<number, { leftEar: (number | null)[], rightEar: (number | null)[] }> = {};
@@ -57,6 +85,7 @@ export async function extractEmployeeHearingDataFromDatabase(employeeID: string)
         }
     
         const frequencies = [
+            Number(row.hz_500) ?? null,
             row.hz_500 === null ? null : Number(row.hz_500),
             row.hz_1000 === null ? null : Number(row.hz_1000),
             row.hz_2000 === null ? null : Number(row.hz_2000),
@@ -92,6 +121,20 @@ export async function extractEmployeeHearingDataFromDatabase(employeeID: string)
     );
 
     return screenings;
+}
+
+export async function extractEmployeeHearingHistoryFromDatabase(employeeID: string): Promise<HearingHistory> {
+    // get the hearing screenings
+    const screenings: HearingScreening[] = await extractEmployeeHearingScreeningsFromDatabase(employeeID);
+    const employeeInfo: EmployeeInfo = await extractEmployeeInfoFromDatabase(employeeID);
+
+    const history: HearingHistory = {
+        dob: employeeInfo.dob,
+        sex: employeeInfo.sex,
+        screenings
+    };
+
+    return history;
 }
 
 // ADMINS
