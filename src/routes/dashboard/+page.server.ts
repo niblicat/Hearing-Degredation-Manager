@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getAdminsFromDatabase, getEmployeesFromDatabase, turnAwayNonAdmins } from '$lib/utility';
-import { addHearingData, checkYearAvailability, modifyHearingData } from '$lib/server/actionshearingdata';
-import { fetchEmployeeInfo, fetchHearingData, fetchHearingDataForYear, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS } from '$lib/server/actionsemployees';
+import { addHearingData, checkYearAvailability, modifyHearingData, fetchCalculateSTSData } from '$lib/server/actionshearingdata';
+import { fetchEmployeeInfo, fetchHearingData, fetchHearingDataForYear, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex } from '$lib/server/actionsemployees';
 import { addEmployee } from '$lib/server/actionsemployeeadd';
 import { deleteAdmins, modifyAdminName, modifyAdminPermissions } from '$lib/server/actionsadmins';
 import { extractAllEmployeeData, extractHearingData, extractBaselineHearingData, extractRecentHearingData } from '$lib/server/actionsmailing';
@@ -51,6 +51,9 @@ export const actions: Actions = {
     },
     modifyHearingData: async ({ request }) => {
         return modifyHearingData(request);
+    },
+    fetchCalculateSTSData: async ({ request }) => { 
+        return fetchCalculateSTSData(request);
     },
     // ================================================
 

@@ -1,25 +1,29 @@
 <script lang="ts">
     import { Alert } from "flowbite-svelte";
 
+    const defaultMessage: string = "Error message is currently not being passed into ErrorMessage component";
+    const defaultClass: string = "mx-10";
+
     interface Props {
         success: boolean,
         errorMessage: string,
         type?: "notice" | "error"
+        class?: string
     }
 
-    const defaultMessage: string = "Error message is currently not being passed into ErrorMessage component";
 
     let { 
         success = false,
         errorMessage = defaultMessage,
-        type = "error"
-
+        type = "error",
+        class: classValue = defaultClass,
+        ...others
     }: Props = $props();
 
 </script>
 
 {#if !success}
-    <Alert color={type === "error" ? "red" : "yellow"} border class="mx-10">
+    <Alert color={type === "error" ? "red" : "yellow"} border class={classValue} {...others}>
         <span class="font-bold">{type === "error" ? "Error!" : "Notice!"}</span>
         {errorMessage}
     </Alert>

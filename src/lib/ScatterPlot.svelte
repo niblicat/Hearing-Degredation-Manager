@@ -103,7 +103,7 @@
                         showLine: true,
                         fill: false,
                         lineTension: 0
-                    }].filter(Boolean)
+                    }].filter(dataset => dataset !== false)
             },
             options: {
                 responsive: true,
@@ -125,7 +125,7 @@
                         min: Math.min(...customTicksX),  // Ensure the x-axis starts from the minimum value of custom ticks
                         max: Math.max(...customTicksX),  // Ensure the x-axis ends at the maximum value of custom ticks
                         ticks: {
-                            values: customTicksX,  // Set exact tick values
+                            callback: (value) => (customTicksX.includes(value as number) ? value : null),
                             autoSkip: false,  // Ensure no ticks are skipped
                         }
                     },
@@ -140,7 +140,7 @@
                         min: Math.min(...customTicksY),
                         max: Math.max(...customTicksY),
                         ticks: {
-                            values: customTicksY,
+                            callback: (value) => (customTicksY.includes(value as number) ? value : null),
                             autoSkip: false,
                         },
                         reverse: true
@@ -173,6 +173,9 @@
     // Reactive block to update chart data dynamically
     $effect(() => {
         if (chart) {
+            //update chart title
+            chart.options.plugins.title.text = plotTitle;
+
             // Dynamically update datasets
             chart.data.datasets = [
                 {
