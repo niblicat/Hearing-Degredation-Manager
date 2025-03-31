@@ -53,6 +53,7 @@ export async function extractEmployeeInfoFromDatabase(employeeID: string): Promi
         lastName: employeeRaw.last_name,
         email: employeeRaw.email,
         dob: new Date(employeeRaw.dob),
+        lastActive: new Date(employeeRaw.last_active),
         sex: personSex
     }
 

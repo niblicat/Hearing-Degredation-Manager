@@ -17,6 +17,7 @@ export type EmployeeInfo = {
     lastName: string,
     email: string,
     dob: Date,
+    lastActive: Date,
     sex: PersonSex
 }
 
