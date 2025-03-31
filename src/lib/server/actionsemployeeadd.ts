@@ -1,7 +1,7 @@
 // actionsemployeeadd.ts
 // Contains server functions pertaining to adding employees
 
-import { insertEmployeeIntoDatabase } from '$lib/databasefunctions';
+import { insertEmployeeIntoDatabase } from '$lib/server/databasefunctions';
 
 export async function addEmployee(request: Request) {
     const formData = await request.formData();

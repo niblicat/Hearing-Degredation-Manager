@@ -75,13 +75,6 @@ export async function fetchEmployeeInfo(request: Request) {
             sex: employee.sex
         }
 
-        const dataReturnTest = {
-            success: true,
-            employee: employeeData
-        }
-
-        //JSON.stringify(dataReturnTest));
-
         // Return only the necessary data in a plain object format
         return JSON.stringify({
             success: true,
@@ -374,6 +367,12 @@ export async function modifyEmployeeSex(request: Request) {
     });
 }
 
+/**
+ * 
+ * @param request The POST request.
+ * @deprecated no longer calculating STS on server.
+ * @returns STS Calculated Hearing Report.
+ */
 export async function calculateSTS(request: Request) {
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;

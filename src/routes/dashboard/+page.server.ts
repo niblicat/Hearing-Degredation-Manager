@@ -85,6 +85,9 @@ export const actions: Actions = {
     calculateSTS: async ({ request }) => { 
         return calculateSTS(request);
     },
+    extractEmployeeHearingData: async ({ request }) => {
+        return
+    },
     // ================================================
 
     // actionsmailing.ts
