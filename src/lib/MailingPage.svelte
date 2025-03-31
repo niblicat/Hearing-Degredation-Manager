@@ -285,7 +285,7 @@
                 Begin the process of mailing out status notifications.
             {/snippet}
         </PageTitle>
-        <ErrorMessage {success} {errorMessage} />
+        <ErrorMessage class="mx-10 mb-4 w-full" {success} {errorMessage} />
     </div>
 </div>
 

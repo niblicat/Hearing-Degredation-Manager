@@ -1,20 +1,17 @@
 <script lang="ts">
 
-    import { ButtonGroup, Button, Search, Modal, Label, Input, Radio, Tooltip } from 'flowbite-svelte';
-    import { ChevronDownOutline, UserRemoveSolid, UserAddSolid, CirclePlusSolid, EditSolid, EditOutline, InfoCircleSolid } from 'flowbite-svelte-icons';
+    import { Button, Search, Modal, Label, Input, Radio, Tooltip } from 'flowbite-svelte';
+    import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
     import { Dropdown } from 'flowbite-svelte';
-    import ScatterPlot from './ScatterPlot.svelte';
-    import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
     import { AnomalyStatus } from "./interpret";
     import type { Employee, EmployeeSearchable } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { extractFrequencies } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
-    import { Li } from "flowbite-svelte";
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
-
-    let chart: any;
+    import EmployeeData from './EmployeeData.svelte';
+    import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from './interpret';
 
     interface Props {
         employees: Array<Employee>;
@@ -23,10 +20,12 @@
     let { employees }: Props = $props();
 
     // Data for scatter plot
-    let RightBaselineHearingData = $state<Array<number>>([]);
-    let RightNewHearingData =  $state<Array<number>>([]);
-    let LeftBaselineHearingData =  $state<Array<number>>([]);
-    let LeftNewHearingData =  $state<Array<number>>([]);
+    let rightBaselineHearingData = $state<Array<number>>([]);
+    let rightNewHearingData =  $state<Array<number>>([]);
+    let leftBaselineHearingData =  $state<Array<number>>([]);
+    let leftNewHearingData =  $state<Array<number>>([]);
+    
+    let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string}>>([]);
 
     // Selected employee and year
     let selectedYear = $state("No year selected");
@@ -47,9 +46,6 @@
         hz8000: ""
     };
 
-    let modifiedLeftFrequencies = $state(blankFrequencies);
-    let modifiedRightFrequencies = $state(blankFrequencies);
-
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
 
@@ -59,10 +55,6 @@
     // Dropdown menu state
     let nameMenuOpen = $state(false);
     let yearMenuOpen = $state(false);
-
-    // Chart Selection
-    let isRightEar = $state(false);
-    let showBoth = $state(true);
 
     let yearItems = $state<Array<string>>([]);
 
@@ -101,32 +93,34 @@
         name: "No employee selected", 
         data: undefinedEmployee
     });
-    
-    const toggleChart = (ear: string) => {
-        if (ear === 'both') {
-            showBoth = true;
-        } else {
-            isRightEar = ear === 'right';
-            showBoth = false;
-        }
-    };
-  
+
+    function resetEmployeeInfo() {
+        // Reset year selection and clear years dropdown
+        selectedYear = "No year selected";
+        yearItems = [];
+        inputValueYear = "";
+        STSstatusRight = "No data selected";
+        STSstatusLeft = "No data selected";
+    }
+    function resetData() {
+        // Clear previous data
+        rightBaselineHearingData.length = 0;
+        rightNewHearingData.length = 0;
+        leftBaselineHearingData.length = 0;
+        leftNewHearingData.length = 0;
+        hearingHistory.length = 0;
+    }
+
     // Functions to update selected employee and year
-    const selectEmployee = async (employee: EmployeeSearchable) => {
+    async function selectEmployee(employee: EmployeeSearchable): Promise<void> {
         const formData = new FormData();
 
         selectedEmployee = employee;
         nameMenuOpen = false; 
 
-        // Reset year selection and clear years dropdown
-        selectedYear = "No year selected";
-        yearItems = [];
-        inputValueYear = "";
-        // Clear previous data
-        RightBaselineHearingData.length = 0;
-        RightNewHearingData.length = 0;
-        LeftBaselineHearingData.length = 0;
-        LeftNewHearingData.length = 0;
+        // Reset all data
+        resetEmployeeInfo();
+        resetData();
 
         formData.append('employeeID', selectedEmployee.data.employeeID);
 
@@ -175,14 +169,13 @@
                 yearItems = [];
                 displayError('No years found for the selected employee');
             }
-
         } 
         catch (error) {
             console.error('Error fetching data:', error);
             yearItems = [];
             displayError('Error fetching data');
         }
-    };
+    }
 
     let filteredYears = $derived.by(() => {
         let filterable = yearItems;
@@ -190,60 +183,121 @@
 
         return filterable.filter(item => item.includes(filter));
     });
-   
-    const selectYear = async (year: string) => {
+
+    async function selectYear(year: string): Promise<void> {
         selectedYear = year;
         yearMenuOpen = false;
 
+        await fetchUpdatedHearingData();
+
+        // Creating form data
+        const formData = new FormData();
+        formData.append('employeeID', selectedEmployee.data.employeeID);
+        formData.append('year', selectedYear);
+
         try {
-            await fetchUpdatedHearingData(selectedEmployee.name, year);
-
-            const formData = new FormData();
-            formData.append('employeeID', selectedEmployee.data.employeeID);
-            formData.append('year', selectedYear);
-            formData.append('sex', selectedEmployee.data.sex);
-
-            const response = await fetch('/dashboard?/calculateSTS', { 
+            const response = await fetch('/dashboard?/fetchCalculateSTSData', { 
                 method: 'POST',
                 body: formData,
             });
 
             const serverResponse = await response.json();
-            console.log(response);
-
             const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
+
             if (result["success"]) {
                 success = true;
+                // Perform STS calculation on the client side
+                const hearingReport = calculateSTSClientSide(
+                    result.hearingData, 
+                    parseInt(selectedYear)
+                );
 
                 // Find the test result that matches the selected year
-                const selectedYearReport = result.hearingReport.find((report: any) => report.reportYear === parseInt(year, 10));
+                const selectedYearReport = hearingReport.find(
+                    (report: any) => report.reportYear === parseInt(year, 10)
+                );
 
                 if (selectedYearReport) {
                     STSstatusRight = GetAnomalyStatusText(selectedYearReport.rightStatus);
                     STSstatusLeft = GetAnomalyStatusText(selectedYearReport.leftStatus);
-
-                    console.log(`STS Report for ${year} - RIGHT:`, STSstatusRight);
-                    console.log(`STS Report for ${year} - LEFT:`, STSstatusLeft);
                 } else {
-                    console.warn(`No hearing report found for year: ${year}`);
                     STSstatusRight = "No Data";
                     STSstatusLeft = "No Data";
                 }
-            } else {
-                throw new Error(serverResponse.error ?? "Failed to calculate STS");
-            }
 
+                // Build the full hearing history from all years
+                hearingHistory = hearingReport.map((report: any) => ({
+                    year: report.reportYear.toString(),
+                    leftStatus: GetAnomalyStatusText(report.leftStatus),
+                    rightStatus: GetAnomalyStatusText(report.rightStatus)
+                }));
+                
+                // Sort by year (newest first)
+                hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+            }
+            else {
+                displayError(result.message);
+            }
         } catch (error) {
-            console.error('Error fetching hearing JOE data:', error);
-            displayError('Error fetching hearing data');
+            const errorMessage = 'Error fetching hearing data: ' + error;
+            console.error(errorMessage);
+            displayError(errorMessage);
         }
-    };
+    }
+
+    function calculateSTSClientSide(hearingData: any, currentYear: number) {
+        // Convert raw hearing data to the format required by UserHearingScreeningHistory
+        const screenings = Object.entries(hearingData.screenings)
+            .map(([year, data]) => new HearingScreening(
+                parseInt(year),
+                new HearingDataOneEar(
+                    data.left.hz500 ?? null,
+                    data.left.hz1000 ?? null,
+                    data.left.hz2000 ?? null,
+                    data.left.hz3000 ?? null,
+                    data.left.hz4000 ?? null,
+                    data.left.hz6000 ?? null,
+                    data.left.hz8000 ?? null
+                ),
+                new HearingDataOneEar(
+                    data.right.hz500 ?? null,
+                    data.right.hz1000 ?? null,
+                    data.right.hz2000 ?? null,
+                    data.right.hz3000 ?? null,
+                    data.right.hz4000 ?? null,
+                    data.right.hz6000 ?? null,
+                    data.right.hz8000 ?? null
+                )
+            ));
+
+        // Calculate age based on date of birth and current year
+        const dob = new Date(hearingData.dateOfBirth);
+        const dobYear = dob.getFullYear();
+        const age = currentYear - dobYear;
+
+        // Determine sex
+        const personSex = hearingData.sex === "Male" ? PersonSex.Male : 
+                        hearingData.sex === "Female" ? PersonSex.Female : 
+                        PersonSex.Other;
+
+        // Create UserHearingScreeningHistory instance
+        const userHearingHistory = new UserHearingScreeningHistory(
+            age, 
+            personSex, 
+            currentYear, 
+            screenings
+        );
+
+        // Generate hearing report
+        const hearingReport = userHearingHistory.GenerateHearingReport();
+
+        return hearingReport;
+    }
 
     // Helper function to get the readable status
-    const GetAnomalyStatusText = (status: AnomalyStatus): string => {
+    function GetAnomalyStatusText(status: AnomalyStatus): string {
         return AnomalyStatus[status] ?? "Unknown";
-    };
+    }
 
     //DATA MODIFICATION STUFF
     let nameModal = $state(false); // controls the appearance of the employee name change window
@@ -262,30 +316,6 @@
     let newActiveStatus = $state("");
     let isInactive = $state(false);
     let newSex = $state("");
-
-    function showNameChangeModal(employee: Employee) {
-        newFirstName = employee.firstName;
-        newLastName = employee.lastName;
-        nameModal = true;
-    }
-    function showEmailChangeModal(employee: Employee) {
-        newEmail = employee.email;
-        emailModal = true;
-    }
-    function showDOBChangeModal(employee: Employee) {
-        newDOB = employee.dob
-        selectedDOB = newDOB
-                    ? new Date(newDOB).toISOString().split('T')[0]
-                    : "No selection made";
-        DOBmodal = true;
-    }
-    function showSexChangeModal(employee: Employee) {
-        newSex = employee.sex
-        sexModal = true;
-    }
-    function showActiveStatusChangeModal(employee: Employee) {
-        activeStatusModal = true;
-    }
 
     function showAddEmployeeModal() {
         addEmployeeModal = true;
@@ -336,6 +366,7 @@
             displayError(errorMessage);
         }
     }
+
     async function modifyEmployeeEmail(): Promise<void> {
         const formData = new FormData();
         formData.append('employeeID', selectedEmployee.data.employeeID);
@@ -464,8 +495,7 @@
         }
     }
 
-    export async function fetchUpdatedHearingData(employeeID: string, year: string) {
-        // ! employeeID and year from the parameters are unused
+    export async function fetchUpdatedHearingData() {
         try {
             const formData = new FormData();
             formData.append('employeeID', selectedEmployee.data.employeeID);
@@ -482,30 +512,27 @@
                 const { baselineData, newData } = result.hearingData;
 
                 // Clear previous data
-                RightBaselineHearingData.length = 0;
-                RightNewHearingData.length = 0;
-                LeftBaselineHearingData.length = 0;
-                LeftNewHearingData.length = 0;
+                resetData();
 
                 // Extract frequencies and populate arrays
                 // For right ear baseline data
                 if (baselineData.rightEar) {
-                    RightBaselineHearingData.push(...extractFrequencies(baselineData.rightEar));
+                    rightBaselineHearingData.push(...extractFrequencies(baselineData.rightEar));
                 }
 
                 // For right ear new data
                 if (newData.rightEar) {
-                    RightNewHearingData.push(...extractFrequencies(newData.rightEar));
+                    rightNewHearingData.push(...extractFrequencies(newData.rightEar));
                 }
 
                 // For left ear baseline data
                 if (baselineData.leftEar) {
-                    LeftBaselineHearingData.push(...extractFrequencies(baselineData.leftEar));
+                    leftBaselineHearingData.push(...extractFrequencies(baselineData.leftEar));
                 }
 
                 // For left ear new data
                 if (newData.leftEar) {
-                    LeftNewHearingData.push(...extractFrequencies(newData.leftEar));
+                    leftNewHearingData.push(...extractFrequencies(newData.leftEar));
                 }
             } 
             else {
@@ -519,69 +546,98 @@
     }
 </script>
 
+<!-- TITLE PAGE SECTION -->
 <div class="relative w-full">
-    <div class="flex items-center justify-center">
+    <div class="flex flex-col items-center justify-center">
         <PageTitle>
             Employee Data Management
             {#snippet caption()}
                 View employee information and data.
             {/snippet}
         </PageTitle>
-        <ErrorMessage {success} {errorMessage} />
+        <ErrorMessage class="mx-10 mb-4 w-full" {success} {errorMessage} />
     </div>
 </div>
 
-<div class="relative dropdown-container flex flex-wrap space-x-4 space-y-2 ml-[20px] mr-[20px]"> 
-
-    <Button class="cursor-pointer w-64 h-12" color="primary">
-        {selectedEmployee.name}
-        <ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" />
-    </Button>
-    <Dropdown bind:open={nameMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
-        <div class="p-3">
-            <Search size="md" bind:value={inputValueName}/>
-        </div>
-        {#each filteredEmployees as employee}
-            <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
-                <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectEmployee(employee)}>
-                    {employee.name}
-                </button>
-            </li>
-        {/each}
-    </Dropdown>
-
-    {#if selectedEmployee.name !== "No employee selected"}
+<div class="w-full px-4">
+    <!-- DROPDOWN MENU SECTION BEGINS -->
+    <div class="mb-4 flex gap-4 md:ms-13">
         <Button class="cursor-pointer w-64 h-12" color="primary">
-            {selectedYear}
+            {selectedEmployee.name}
             <ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" />
         </Button>
-        <Dropdown bind:open={yearMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
+        <Dropdown bind:open={nameMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
             <div class="p-3">
-                <Search size="md" bind:value={inputValueYear}/>
+                <Search size="md" bind:value={inputValueName}/>
             </div>
-            {#each filteredYears as year}
+            {#each filteredEmployees as employee}
                 <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
-                    <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectYear(year)}>
-                        {year}
+                    <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectEmployee(employee)}>
+                        {employee.name}
                     </button>
                 </li>
             {/each}
         </Dropdown>
-    {/if}
 
-    <Button size="sm" class="cursor-pointer w-12 h-12" on:click={() => showAddEmployeeModal()} color="primary"><UserAddSolid /></Button>
-    <Tooltip placement="bottom">Add New Employee</Tooltip>
-    
-    {#if selectedEmployee.name !== "No employee selected"}
-        <Button size="sm" class="cursor-pointer w-12 h-12" on:click={() => showAddDataModal()} color="primary"><CirclePlusSolid /></Button>
-        <Tooltip placement="bottom">Add New Data</Tooltip>
-    {/if} 
-    {#if selectedYear !== "No year selected"} 
-        <Button size="sm" class="cursor-pointer w-12 h-12" on:click={() => showEditDataModal()} color="primary"><EditSolid /></Button>
-        <Tooltip placement="bottom">Edit Current Data</Tooltip>
-    {/if} 
+        {#if selectedEmployee.name !== "No employee selected"}
+            <Button class="cursor-pointer w-64 h-12" color="primary">
+                {selectedYear}
+                <ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" />
+            </Button>
+            <Dropdown bind:open={yearMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
+                <div class="p-3">
+                    <Search size="md" bind:value={inputValueYear}/>
+                </div>
+                {#each filteredYears as year}
+                    <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                        <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectYear(year)}>
+                            {year}
+                        </button>
+                    </li>
+                {/each}
+            </Dropdown>
+        {/if}
+
+        <Button size="sm" class="cursor-pointer w-12 h-12" on:click={() => showAddEmployeeModal()} color="primary"><UserAddSolid /></Button>
+        <Tooltip placement="bottom">Add New Employee</Tooltip>
+        
+        {#if selectedEmployee.name !== "No employee selected"}
+            <Button size="sm" class="cursor-pointer w-12 h-12" on:click={() => showAddDataModal()} color="primary"><CirclePlusSolid /></Button>
+            <Tooltip placement="bottom">Add New Data</Tooltip>
+        {/if} 
+        {#if selectedYear !== "No year selected"} 
+            <Button size="sm" class="cursor-pointer w-12 h-12" on:click={() => showEditDataModal()} color="primary"><EditSolid /></Button>
+            <Tooltip placement="bottom">Edit Current Data</Tooltip>
+        {/if} 
+    </div>
+    <!-- DROPDOWN MENU SECTION ENDS -->
+
+    <!-- INFORMATION DISPLAY SECTION BEGINS -->
+    <div class="mb-4">
+        <EmployeeData 
+            {selectedYear}
+            {selectedEmployee}
+            {selectedEmail}
+            {selectedDOB}
+            {selectedStatus}
+            {STSstatusLeft}
+            {STSstatusRight}
+            {rightBaselineHearingData}
+            {rightNewHearingData}
+            {leftBaselineHearingData}
+            {leftNewHearingData}
+            {hearingHistory}
+            editname={() => nameModal = true}
+            editemail={() => emailModal = true}
+            editdob={() => DOBmodal = true}
+            editsex={() => sexModal = true}
+            editstatus={() => activeStatusModal = true}
+        />
+    </div>
 </div>
+<!-- INFORMATION DISPLAY SECTION ENDS -->
 
+<!-- MODAL SECTION BEGINS -->
 <Modal title="Change Employee Name" bind:open={nameModal} autoclose>
     <p>
         <span>Please provide an updated name for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
@@ -694,101 +750,4 @@
         </Button>
     </svelte:fragment>
 </Modal>
-
-<div class="flex-container">
-    <!-- Information Section -->
-    <section class="selected-info text-xl">
-        <!-- TODO: Make this into a table (maybe in a different component) -->
-        <p class="text-gray-900 dark:text-white">Year: {selectedYear}</p>
-        <p class="text-gray-900 dark:text-white">Employee: {selectedEmployee.name}
-            {#if selectedEmployee.data.employeeID !== "-1"} 
-                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showNameChangeModal(selectedEmployee.data)}>
-                    <EditOutline class="w-4 h-4" />
-                </Button>
-            {/if} 
-        </p>
-        <p class="text-gray-900 dark:text-white">Email: {selectedEmail}
-            {#if selectedEmployee.data.email !== "Undefined"} 
-                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showEmailChangeModal(selectedEmployee.data)}>
-                    <EditOutline class="w-4 h-4" />
-                </Button> 
-            {/if} 
-        </p>
-        <p class="text-gray-900 dark:text-white">Date of Birth: {selectedDOB}
-            {#if selectedEmployee.data.dob !== "Undefined"} 
-                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showDOBChangeModal(selectedEmployee.data)}>
-                    <EditOutline class="w-4 h-4" />
-                </Button> 
-            {/if} 
-        </p>
-        <p class="text-gray-900 dark:text-white">Sex: {selectedEmployee.data.sex}
-            {#if selectedEmployee.data.sex !== "Undefined"} 
-                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showSexChangeModal(selectedEmployee.data)}>
-                    <EditOutline class="w-4 h-4" />
-                </Button> 
-            {/if} 
-        </p>
-        <p class="text-gray-900 dark:text-white">Employment Status: {selectedStatus} <!-- inactive to active is not working // double check --> 
-            {#if selectedEmployee.data.employeeID !== "-1"} 
-                <Button outline size="sm" class="p-1! cursor-pointer" on:click={() => showActiveStatusChangeModal(selectedEmployee.data)}>
-                    <EditOutline class="w-4 h-4" />
-                </Button>
-            {/if} 
-        </p>
-        <p class="text-3xl text-gray-900 dark:text-white">STS Status Left: {STSstatusLeft}</p>
-        <p class="text-3xl text-gray-900 dark:text-white">STS Status Right: {STSstatusRight}</p>
-    </section>
-
-    <!-- Chart Section -->
-    <div class="chart-container">
-        {#if showBoth}
-            <ScatterPlot 
-                plotTitle="Both Ears"
-                baselineHearingData={RightBaselineHearingData.concat(LeftBaselineHearingData)}
-                newHearingData={RightNewHearingData.concat(LeftNewHearingData)}
-                labels={['Right Baseline', 'Right New', 'Left Baseline', 'Left New']}
-            />
-        {:else if isRightEar}
-            <ScatterPlot 
-                plotTitle="Right Ear"
-                baselineHearingData={RightBaselineHearingData} 
-                newHearingData={RightNewHearingData} 
-                labels={['Right Baseline', 'Right New']}
-            />
-        {:else}
-            <ScatterPlot 
-                plotTitle="Left Ear"
-                baselineHearingData={LeftBaselineHearingData} 
-                newHearingData={LeftNewHearingData} 
-                labels={['Left Baseline', 'Left New']}
-            />
-        {/if}
-        <ButtonGroup class="*:!ring-primary-700">
-            <Button class="cursor-pointer" color="blue" style="width:175px" on:click={() => toggleChart('left')}>Left</Button>
-            <Button class="cursor-pointer" color="red" style="width:175px" on:click={() => toggleChart('right')}>Right</Button> 
-            <Button class="cursor-pointer" color="purple" style="width:175px" on:click={() => toggleChart('both')}>Both</Button> 
-        </ButtonGroup>
-    </div>
-</div>
-<!-- TODO: Convert these styles into tailwind classes -->
-<style>
-    .flex-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-    }
-    .selected-info {
-        flex: 1; 
-        margin-left: 75px; 
-        margin-top: 55px; 
-        max-width: 500px; 
-    }
-    .chart-container {
-        flex: 1;  
-        margin-right: 75px; 
-        margin-top: 15px; 
-        margin-bottom: 40px;
-        max-width: 550px; 
-        text-align: center;
-    }
-</style>
+<!-- MODAL SECTION ENDS -->

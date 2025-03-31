@@ -259,7 +259,7 @@
                 Modify the privileges of anyone who has attempted to sign in.
             {/snippet}
         </PageTitle>
-        <ErrorMessage {success} {errorMessage} />
+        <ErrorMessage class="mx-10 mb-4 w-full" {success} {errorMessage} />
     </div>
 </div>
 

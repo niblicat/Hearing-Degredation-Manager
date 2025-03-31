@@ -1,5 +1,5 @@
 // interpret.ts
-// Used to intepret user data and detect if there has been STS
+// Used to interpret user data and detect if there has been STS
 
 import { error } from "@sveltejs/kit";
 import { AGE_CORRECTION_TABLE_MALE, AGE_CORRECTION_TABLE_FEMALE } from './agetable'
@@ -108,14 +108,22 @@ export class UserHearingScreeningHistory {
      */
     private GetStatusForEar(baselineEarData: HearingDataOneEar, beforeEarData: HearingDataOneEar, afterEarData: HearingDataOneEar, correction: HertzCorrectionForAge): AnomalyStatus {
         // Get the status for one ear
-        let weightedAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(baselineEarData, afterEarData, correction); // compares current year and BASELINE (only main 3 points WITH AGE )
+        let baselineAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(baselineEarData, afterEarData, correction); // compares current year and BASELINE (only main 3 points WITH AGE )
         let yearPriorAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(beforeEarData, afterEarData, correction, false); // compares current year and YEAR PRIOR (only main 3 points WITH AGE )
 
         // a larger value is worse
-        if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData) || this.confirmCNT(beforeEarData)) return AnomalyStatus.CNT; 
-        if (weightedAverageChange >= 10) return AnomalyStatus.STS;
+        
+        if (baselineAverageChange >= 10) {
+            // Check for CNT specifically in current year or baseline, which are used for STS determination
+            if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) {
+                return AnomalyStatus.CNT;
+            }
+            return AnomalyStatus.STS;
+        }
         if (yearPriorAverageChange >= 10) return AnomalyStatus.Warning;
-        else if (weightedAverageChange <= -7) return AnomalyStatus.Improvement; // baseline redefinition (-7 may be different number)
+        // Only check for CNT after handling the STS case
+        if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
+        else if (baselineAverageChange <= -5) return AnomalyStatus.Improvement; // baseline redefinition (-7 may be different number)
         else if (yearPriorAverageChange >= 3) return AnomalyStatus.Worse; // i think +/-3 is the correct turning point
         else if (yearPriorAverageChange <= -3) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same;
