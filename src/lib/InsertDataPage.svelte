@@ -48,7 +48,7 @@
         data: employee
     })) as Array<EmployeeSearchable>);
 
-    x
+    let selectedEmployee: EmployeeSearchable = $state(undefinedEmployeeSearchable);
 
     let inputValueName: string = $state("");
 
@@ -96,7 +96,7 @@
         lastPulledRightFrequencies = rightEar;
     }
 
-    function compareFrequenciesEquality(freq1: HearingDataSingle, freq2: HearingDataSingle): boolean {
+    function compareFrequencieEquality(freq1: HearingDataSingle, freq2: HearingDataSingle): boolean {
         // Iterate through each frequency key and check if they are the same in both sets
         return Object.keys(freq1).every((key) => {
             // Type assertion to tell TypeScript the key is a valid key of HearingDataSingle
@@ -219,7 +219,7 @@
     }
 
     async function addHearingData() {
-        if (compareFrequenciesEquality(lastPulledLeftFrequencies, leftFrequencies) && compareFrequenciesEquality(lastPulledRightFrequencies, rightFrequencies)) {
+        if (compareFrequencieEquality(lastPulledLeftFrequencies, leftFrequencies) && compareFrequencieEquality(lastPulledRightFrequencies, rightFrequencies)) {
             displayError("There were no changes to push!");
             return;
         }
@@ -255,19 +255,7 @@
 
             if (result["success"]) {
                 displaySuccess("Successfully pushed changes to database.");
-                
-                // Update the last pulled frequencies to match the new values
-                lastPulledLeftFrequencies = {...leftFrequencies};
-                lastPulledRightFrequencies = {...rightFrequencies};
-                
-                // If we don't have a year set yet, set it now (for new data)
-                if (!year) {
-                    year = inputValueYear;
-                    showDataFields = true;
-                }
-                
-                // No need to invalidateAll() which causes a refresh
-                // await invalidateAll();
+                await invalidateAll();
             } else {
                 displayError(result["message"] ?? "Failed to add employee data.");
             }
