@@ -6,7 +6,7 @@
     import { AnomalyStatus } from "./interpret";
     import type { Employee, EmployeeSearchable } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
-    import { extractFrequencies } from './utility';
+    import { extractFrequencies, calculateSTSClientSide } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
@@ -341,132 +341,11 @@
         }
     }
 
-    // respects proper baselines
-    function calculateSTSClientSide(hearingData: any) {
-        // Convert raw hearing data to the format required by UserHearingScreeningHistory
-        const screenings = Object.entries(hearingData.screenings)
-            .map(([year, data]) => new HearingScreening(
-                parseInt(year),
-                new HearingDataOneEar(
-                    data.left.hz500 ?? null,
-                    data.left.hz1000 ?? null,
-                    data.left.hz2000 ?? null,
-                    data.left.hz3000 ?? null,
-                    data.left.hz4000 ?? null,
-                    data.left.hz6000 ?? null,
-                    data.left.hz8000 ?? null
-                ),
-                new HearingDataOneEar(
-                    data.right.hz500 ?? null,
-                    data.right.hz1000 ?? null,
-                    data.right.hz2000 ?? null,
-                    data.right.hz3000 ?? null,
-                    data.right.hz4000 ?? null,
-                    data.right.hz6000 ?? null,
-                    data.right.hz8000 ?? null
-                )
-            ));
-
-        // Sort screenings by year
-        screenings.sort((a, b) => a.year - b.year);
-        
-        // Calculate age based on date of birth and current year
-        const dob = new Date(hearingData.dateOfBirth);
-        const dobYear = dob.getFullYear();
-        
-        // Determine sex
-        const personSex = hearingData.sex === "Male" ? PersonSex.Male : 
-                        hearingData.sex === "Female" ? PersonSex.Female : 
-                        PersonSex.Other;
-        
-        // Process each screening with its proper baseline
-        const reports = [];
-        
-        // Find the oldest year's data (first baseline)
-        let leftBaselineIndex = 0;
-        let rightBaselineIndex = 0;
-        let leftBaselineYear = screenings[0].year;
-        let rightBaselineYear = screenings[0].year;
-        
-        // Process each year relative to its proper baseline
-        for (let i = 0; i < screenings.length; i++) {
-            const currentYear = screenings[i].year;
-            const age = currentYear - dobYear;
-            
-            // If this is a baseline year or the first year, set it as its own baseline
-            if (i === 0) {
-                // This is a baseline year - no previous data to compare against
-                reports.push({
-                    reportYear: currentYear,
-                    leftStatus: AnomalyStatus.Baseline,
-                    rightStatus: AnomalyStatus.Baseline,
-                    leftBaselineYear: currentYear,
-                    rightBaselineYear: currentYear
-                });
-            } else {
-                // Compare against left baseline
-                const leftBaselineScreening = screenings[leftBaselineIndex];
-                const rightBaselineScreening = screenings[rightBaselineIndex];
-                
-                // Create separate history objects for left and right ears
-                const leftHistoryForComparison = new UserHearingScreeningHistory(
-                    age,
-                    personSex,
-                    currentYear,
-                    [leftBaselineScreening, screenings[i]]
-                );
-                
-                const rightHistoryForComparison = new UserHearingScreeningHistory(
-                    age,
-                    personSex,
-                    currentYear,
-                    [rightBaselineScreening, screenings[i]]
-                );
-                
-                // Generate reports for this specific comparison
-                const leftYearReport = leftHistoryForComparison.GenerateHearingReport()
-                    .find(report => report.reportYear === currentYear);
-                    
-                const rightYearReport = rightHistoryForComparison.GenerateHearingReport()
-                    .find(report => report.reportYear === currentYear);
-                
-                if (leftYearReport && rightYearReport) {
-                    reports.push({
-                        reportYear: currentYear,
-                        leftStatus: leftYearReport.leftStatus,
-                        rightStatus: rightYearReport.rightStatus,
-                        leftBaselineYear: leftBaselineYear,
-                        rightBaselineYear: rightBaselineYear
-                    });
-                }
-                
-                // Check if we need to update the baselines
-                const leftHasSignificantImprovement = 
-                    leftYearReport && leftYearReport.leftStatus === AnomalyStatus.New_Baseline;
-                    
-                const rightHasSignificantImprovement = 
-                    rightYearReport && rightYearReport.rightStatus === AnomalyStatus.New_Baseline;
-                    
-                if (leftHasSignificantImprovement) {
-                    // Set this year as the new baseline for future calculations for left ear
-                    leftBaselineIndex = i;
-                    leftBaselineYear = currentYear;
-                }
-                
-                if (rightHasSignificantImprovement) {
-                    // Set this year as the new baseline for future calculations for right ear
-                    rightBaselineIndex = i;
-                    rightBaselineYear = currentYear;
-                }
-            }
-        }
-        
-        return reports;
-    }
-
-    // Helper function to get the readable status
+   // Helper function to get the readable status
     function GetAnomalyStatusText(status: AnomalyStatus): string {
-        return AnomalyStatus[status].replace("_", " ") ?? "Unknown";
+        return AnomalyStatus[status].replace(/([a-z])([A-Z])/g, (match: string, lower: string, upper: string) => {
+            return lower + " " + upper;
+        }) ?? "Unknown";
     }
 
     //DATA MODIFICATION STUFF

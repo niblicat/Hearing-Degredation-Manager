@@ -27,7 +27,7 @@ export enum AnomalyStatus {
     Baseline = 1,
     Same = 2,
     Better = 3,
-    New_Baseline = 4,
+    NewBaseline = 4,
     Worse = 5,
     STS = 6,
     Warning = 7,
@@ -123,7 +123,7 @@ export class UserHearingScreeningHistory {
         if (yearPriorAverageChange >= 10) return AnomalyStatus.Warning;
         // Only check for CNT after handling the STS case
         if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
-        else if (baselineAverageChange <= -7) return AnomalyStatus.New_Baseline; // baseline redefinition (-7 may be different number)
+        else if (baselineAverageChange <= -7) return AnomalyStatus.NewBaseline; // baseline redefinition (-7 may be different number)
         else if (yearPriorAverageChange >= 3) return AnomalyStatus.Worse; // i think +/-3 is the correct turning point
         else if (yearPriorAverageChange <= -3) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same;
