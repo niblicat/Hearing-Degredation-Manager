@@ -27,6 +27,10 @@
     
     let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string}>>([]);
 
+    let allHearingData = $state<any>(null);
+    let allHearingReports = $state<Array<any>>([]);
+    let allYearScreenings = $state<Record<string, any>>({});
+
     // Selected employee and year
     let selectedYear = $state("No year selected");
     let selectedEmail = $state("No data selected");
@@ -108,7 +112,6 @@
         rightNewHearingData.length = 0;
         leftBaselineHearingData.length = 0;
         leftNewHearingData.length = 0;
-        hearingHistory.length = 0;
     }
 
     // Functions to update selected employee and year
@@ -126,11 +129,12 @@
 
         // Fetch employee details from the server and years for other dropdown
         try {
-            // data stuff first
+            // Fetch employee information
             const dataResponse = await fetch('/dashboard?/fetchEmployeeInfo', {
                 method: 'POST',
                 body: formData,
             });
+            
             const serverDataResponse = await dataResponse.json();
             const dataResult = JSON.parse(JSON.parse(serverDataResponse.data)[0]);
 
@@ -147,9 +151,11 @@
                 selectedEmail = "Error fetching data: not a data success";
                 selectedDOB = "Error fetching data: not a data success";
                 selectedStatus = "Error fetching data: not a data success";
+                displayError('Failed to fetch employee information');
+                return;
             }
 
-            // years stuff next
+            // Fetch available years
             const yearsResponse = await fetch('/dashboard?/fetchYears', {
                 method: 'POST',
                 body: formData,
@@ -158,16 +164,50 @@
             const serverYearsResponse = await yearsResponse.json();
             const yearsResult = JSON.parse(JSON.parse(serverYearsResponse.data)[0]);
 
-            console.log(yearsResult);
-
             if (yearsResult["success"]) {
                 success = true;
                 yearItems = yearsResult.years.map(String);
-                console.log(yearItems);
             }
             else {
                 yearItems = [];
                 displayError('No years found for the selected employee');
+                return;
+            }
+
+            // Fetch all hearing data at once
+            const hearingResponse = await fetch('/dashboard?/fetchCalculateSTSData', { 
+                method: 'POST',
+                body: formData,
+            });
+
+            const hearingServerResponse = await hearingResponse.json();
+            const hearingResult = JSON.parse(JSON.parse(hearingServerResponse.data)[0]);
+
+            if (hearingResult["success"]) {
+                // Store all hearing data
+                allHearingData = hearingResult.hearingData;
+
+                // Pre-calculate STS reports for all years
+                allHearingReports = calculateSTSClientSide(allHearingData);
+                
+                // Store screenings by year for quick access
+                Object.entries(allHearingData.screenings).forEach(([year, data]) => {
+                    allYearScreenings[year] = data;
+                });
+
+                // Create the hearing history display info
+                hearingHistory = allHearingReports.map((report: any) => ({
+                    year: report.reportYear.toString(),
+                    leftStatus: GetAnomalyStatusText(report.leftStatus),
+                    rightStatus: GetAnomalyStatusText(report.rightStatus)
+                }));
+                
+                // Sort by year (newest first)
+                hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+            }
+            else {
+                displayError('Failed to fetch hearing data');
+                return;
             }
         } 
         catch (error) {
@@ -184,68 +224,125 @@
         return filterable.filter(item => item.includes(filter));
     });
 
+    // Updated selectYear function that doesn't make API calls but uses cached data
     async function selectYear(year: string): Promise<void> {
         selectedYear = year;
         yearMenuOpen = false;
 
-        await fetchUpdatedHearingData();
-
-        // Creating form data
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('year', selectedYear);
+        if (!allHearingData || !allHearingReports) {
+            displayError('No hearing data available');
+            return;
+        }
 
         try {
-            const response = await fetch('/dashboard?/fetchCalculateSTSData', { 
-                method: 'POST',
-                body: formData,
-            });
+            // Find the test result that matches the selected year from the pre-calculated reports
+            const selectedYearReport = allHearingReports.find(
+                (report: any) => report.reportYear === parseInt(year, 10)
+            );
 
-            const serverResponse = await response.json();
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-
-            if (result["success"]) {
-                success = true;
-                // Perform STS calculation on the client side
-                const hearingReport = calculateSTSClientSide(
-                    result.hearingData, 
-                    parseInt(selectedYear)
-                );
-
-                // Find the test result that matches the selected year
-                const selectedYearReport = hearingReport.find(
-                    (report: any) => report.reportYear === parseInt(year, 10)
-                );
-
-                if (selectedYearReport) {
-                    STSstatusRight = GetAnomalyStatusText(selectedYearReport.rightStatus);
-                    STSstatusLeft = GetAnomalyStatusText(selectedYearReport.leftStatus);
-                } else {
-                    STSstatusRight = "No Data";
-                    STSstatusLeft = "No Data";
-                }
-
-                // Build the full hearing history from all years
-                hearingHistory = hearingReport.map((report: any) => ({
-                    year: report.reportYear.toString(),
-                    leftStatus: GetAnomalyStatusText(report.leftStatus),
-                    rightStatus: GetAnomalyStatusText(report.rightStatus)
-                }));
-                
-                // Sort by year (newest first)
-                hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+            if (selectedYearReport) {
+                STSstatusRight = GetAnomalyStatusText(selectedYearReport.rightStatus);
+                STSstatusLeft = GetAnomalyStatusText(selectedYearReport.leftStatus);
+            } else {
+                STSstatusRight = "No Data";
+                STSstatusLeft = "No Data";
             }
-            else {
-                displayError(result.message);
-            }
+
+            // Update the graph data without making an API call
+            updateHearingDataDisplay(year);
         } catch (error) {
-            const errorMessage = 'Error fetching hearing data: ' + error;
+            const errorMessage = 'Error processing hearing data: ' + error;
             console.error(errorMessage);
             displayError(errorMessage);
         }
     }
 
-    function calculateSTSClientSide(hearingData: any, currentYear: number) {
+    // Function that updates the graph data from cached data
+    function updateHearingDataDisplay(year: string): void {
+        try {
+            // Clear previous data
+            resetData();
+
+            // Find the baseline years from the selected year report
+            const selectedYearReport = allHearingReports.find(
+                (report: any) => report.reportYear === parseInt(year, 10)
+            );
+
+            if (!selectedYearReport) {
+                displayError('No report found for the selected year');
+                return;
+            }
+
+            // Get baseline year data for left and right ears
+            const leftBaselineYear = selectedYearReport.leftBaselineYear?.toString();
+            const rightBaselineYear = selectedYearReport.rightBaselineYear?.toString();
+            
+            // Get current year data
+            const currentYearData = allYearScreenings[year];
+            
+            if (!currentYearData) {
+                displayError('No hearing data found for the selected year');
+                return;
+            }
+
+            // Extract data for the graphs
+            if (leftBaselineYear && allYearScreenings[leftBaselineYear]?.left) {
+                leftBaselineHearingData = [
+                    allYearScreenings[leftBaselineYear].left.hz500,
+                    allYearScreenings[leftBaselineYear].left.hz1000,
+                    allYearScreenings[leftBaselineYear].left.hz2000,
+                    allYearScreenings[leftBaselineYear].left.hz3000,
+                    allYearScreenings[leftBaselineYear].left.hz4000,
+                    allYearScreenings[leftBaselineYear].left.hz6000,
+                    allYearScreenings[leftBaselineYear].left.hz8000,
+                ].filter(value => value !== null);
+            }
+
+            if (rightBaselineYear && allYearScreenings[rightBaselineYear]?.right) {
+                rightBaselineHearingData = [
+                    allYearScreenings[rightBaselineYear].right.hz500,
+                    allYearScreenings[rightBaselineYear].right.hz1000,
+                    allYearScreenings[rightBaselineYear].right.hz2000,
+                    allYearScreenings[rightBaselineYear].right.hz3000,
+                    allYearScreenings[rightBaselineYear].right.hz4000,
+                    allYearScreenings[rightBaselineYear].right.hz6000,
+                    allYearScreenings[rightBaselineYear].right.hz8000,
+                ].filter(value => value !== null);
+            }
+
+            // Current year data
+            if (currentYearData.left) {
+                leftNewHearingData = [
+                    currentYearData.left.hz500,
+                    currentYearData.left.hz1000,
+                    currentYearData.left.hz2000,
+                    currentYearData.left.hz3000,
+                    currentYearData.left.hz4000,
+                    currentYearData.left.hz6000,
+                    currentYearData.left.hz8000,
+                ].filter(value => value !== null);
+            }
+
+            if (currentYearData.right) {
+                rightNewHearingData = [
+                    currentYearData.right.hz500,
+                    currentYearData.right.hz1000,
+                    currentYearData.right.hz2000,
+                    currentYearData.right.hz3000,
+                    currentYearData.right.hz4000,
+                    currentYearData.right.hz6000,
+                    currentYearData.right.hz8000,
+                ].filter(value => value !== null);
+            }
+        }
+        catch (error) {
+            console.error('Error updating hearing data display:', error);
+            displayError('Error updating hearing data display');
+        }
+    }
+
+    // respects proper baselines
+    function calculateSTSClientSide(hearingData: any) {
         // Convert raw hearing data to the format required by UserHearingScreeningHistory
         const screenings = Object.entries(hearingData.screenings)
             .map(([year, data]) => new HearingScreening(
@@ -270,28 +367,101 @@
                 )
             ));
 
+        // Sort screenings by year
+        screenings.sort((a, b) => a.year - b.year);
+        
         // Calculate age based on date of birth and current year
         const dob = new Date(hearingData.dateOfBirth);
         const dobYear = dob.getFullYear();
-        const age = currentYear - dobYear;
-
+        
         // Determine sex
         const personSex = hearingData.sex === "Male" ? PersonSex.Male : 
                         hearingData.sex === "Female" ? PersonSex.Female : 
                         PersonSex.Other;
-
-        // Create UserHearingScreeningHistory instance
-        const userHearingHistory = new UserHearingScreeningHistory(
-            age, 
-            personSex, 
-            currentYear, 
-            screenings
-        );
-
-        // Generate hearing report
-        const hearingReport = userHearingHistory.GenerateHearingReport();
-
-        return hearingReport;
+        
+        // Process each screening with its proper baseline
+        const reports = [];
+        
+        // Find the oldest year's data (first baseline)
+        let leftBaselineIndex = 0;
+        let rightBaselineIndex = 0;
+        let leftBaselineYear = screenings[0].year;
+        let rightBaselineYear = screenings[0].year;
+        
+        // Process each year relative to its proper baseline
+        for (let i = 0; i < screenings.length; i++) {
+            const currentYear = screenings[i].year;
+            const age = currentYear - dobYear;
+            
+            // If this is a baseline year or the first year, set it as its own baseline
+            if (i === 0) {
+                // This is a baseline year - no previous data to compare against
+                reports.push({
+                    reportYear: currentYear,
+                    leftStatus: AnomalyStatus.Base,
+                    rightStatus: AnomalyStatus.Base,
+                    leftBaselineYear: currentYear,
+                    rightBaselineYear: currentYear
+                });
+            } else {
+                // Compare against left baseline
+                const leftBaselineScreening = screenings[leftBaselineIndex];
+                const rightBaselineScreening = screenings[rightBaselineIndex];
+                
+                // Create separate history objects for left and right ears
+                const leftHistoryForComparison = new UserHearingScreeningHistory(
+                    age,
+                    personSex,
+                    currentYear,
+                    [leftBaselineScreening, screenings[i]]
+                );
+                
+                const rightHistoryForComparison = new UserHearingScreeningHistory(
+                    age,
+                    personSex,
+                    currentYear,
+                    [rightBaselineScreening, screenings[i]]
+                );
+                
+                // Generate reports for this specific comparison
+                const leftYearReport = leftHistoryForComparison.GenerateHearingReport()
+                    .find(report => report.reportYear === currentYear);
+                    
+                const rightYearReport = rightHistoryForComparison.GenerateHearingReport()
+                    .find(report => report.reportYear === currentYear);
+                
+                if (leftYearReport && rightYearReport) {
+                    reports.push({
+                        reportYear: currentYear,
+                        leftStatus: leftYearReport.leftStatus,
+                        rightStatus: rightYearReport.rightStatus,
+                        leftBaselineYear: leftBaselineYear,
+                        rightBaselineYear: rightBaselineYear
+                    });
+                }
+                
+                // Check if we need to update the baselines
+                const leftHasSignificantImprovement = 
+                    leftYearReport && leftYearReport.leftStatus === AnomalyStatus.Improvement;
+                    
+                const rightHasSignificantImprovement = 
+                    rightYearReport && rightYearReport.rightStatus === AnomalyStatus.Improvement;
+                    
+                if (leftHasSignificantImprovement) {
+                    // Set this year as the new baseline for future calculations for left ear
+                    leftBaselineIndex = i;
+                    leftBaselineYear = currentYear;
+                }
+                
+                if (rightHasSignificantImprovement) {
+                    // Set this year as the new baseline for future calculations for right ear
+                    rightBaselineIndex = i;
+                    rightBaselineYear = currentYear;
+                }
+            }
+        }
+        
+        return reports;
     }
 
     // Helper function to get the readable status
@@ -495,55 +665,55 @@
         }
     }
 
-    export async function fetchUpdatedHearingData() {
-        try {
-            const formData = new FormData();
-            formData.append('employeeID', selectedEmployee.data.employeeID);
-            formData.append('year', selectedYear);
-            const response = await fetch('/dashboard?/fetchHearingData', {
-                method: 'POST',
-                body: formData,
-            });
+    // export async function fetchUpdatedHearingData() {
+    //     try {
+    //         const formData = new FormData();
+    //         formData.append('employeeID', selectedEmployee.data.employeeID);
+    //         formData.append('year', selectedYear);
+    //         const response = await fetch('/dashboard?/fetchHearingData', {
+    //             method: 'POST',
+    //             body: formData,
+    //         });
             
-            const serverResponse = await response.json();
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
+    //         const serverResponse = await response.json();
+    //         const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
             
-            if (result["success"]) {
-                const { baselineData, newData } = result.hearingData;
+    //         if (result["success"]) {
+    //             const { baselineData, newData } = result.hearingData;
 
-                // Clear previous data
-                resetData();
+    //             // Clear previous data
+    //             resetData();
 
-                // Extract frequencies and populate arrays
-                // For right ear baseline data
-                if (baselineData.rightEar) {
-                    rightBaselineHearingData.push(...extractFrequencies(baselineData.rightEar));
-                }
+    //             // Extract frequencies and populate arrays
+    //             // For right ear baseline data
+    //             if (baselineData.rightEar) {
+    //                 rightBaselineHearingData.push(...extractFrequencies(baselineData.rightEar));
+    //             }
 
-                // For right ear new data
-                if (newData.rightEar) {
-                    rightNewHearingData.push(...extractFrequencies(newData.rightEar));
-                }
+    //             // For right ear new data
+    //             if (newData.rightEar) {
+    //                 rightNewHearingData.push(...extractFrequencies(newData.rightEar));
+    //             }
 
-                // For left ear baseline data
-                if (baselineData.leftEar) {
-                    leftBaselineHearingData.push(...extractFrequencies(baselineData.leftEar));
-                }
+    //             // For left ear baseline data
+    //             if (baselineData.leftEar) {
+    //                 leftBaselineHearingData.push(...extractFrequencies(baselineData.leftEar));
+    //             }
 
-                // For left ear new data
-                if (newData.leftEar) {
-                    leftNewHearingData.push(...extractFrequencies(newData.leftEar));
-                }
-            } 
-            else {
-                displayError('Failed to fetch hearing data for the selected year');
-            }
-        }
-        catch (error) {
-            console.error('Error fetching hearing data:', error);
-            displayError('Error fetching hearing data');
-        }
-    }
+    //             // For left ear new data
+    //             if (newData.leftEar) {
+    //                 leftNewHearingData.push(...extractFrequencies(newData.leftEar));
+    //             }
+    //         } 
+    //         else {
+    //             displayError('Failed to fetch hearing data for the selected year');
+    //         }
+    //     }
+    //     catch (error) {
+    //         console.error('Error fetching hearing data:', error);
+    //         displayError('Error fetching hearing data');
+    //     }
+    // }
 </script>
 
 <!-- TITLE PAGE SECTION -->
