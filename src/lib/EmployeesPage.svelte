@@ -6,12 +6,11 @@
     import { AnomalyStatus } from "./interpret";
     import type { Employee, EmployeeSearchable } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
-    import { extractFrequencies, calculateSTSClientSide } from './utility';
+    import { calculateSTSClientSide } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import EmployeeData from './EmployeeData.svelte';
-    import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from './interpret';
 
     interface Props {
         employees: Array<Employee>;
@@ -39,16 +38,6 @@
     let STSstatusRight = $state("No data selected");
     let STSstatusLeft = $state("No data selected");
     let selectedSex = $state("No data selected");
-
-    const blankFrequencies = {
-        hz500: "",
-        hz1000: "",
-        hz2000: "",
-        hz3000: "",
-        hz4000: "",
-        hz6000: "",
-        hz8000: ""
-    };
 
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
