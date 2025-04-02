@@ -398,8 +398,8 @@
                 // This is a baseline year - no previous data to compare against
                 reports.push({
                     reportYear: currentYear,
-                    leftStatus: AnomalyStatus.Base,
-                    rightStatus: AnomalyStatus.Base,
+                    leftStatus: AnomalyStatus.Baseline,
+                    rightStatus: AnomalyStatus.Baseline,
                     leftBaselineYear: currentYear,
                     rightBaselineYear: currentYear
                 });
@@ -442,10 +442,10 @@
                 
                 // Check if we need to update the baselines
                 const leftHasSignificantImprovement = 
-                    leftYearReport && leftYearReport.leftStatus === AnomalyStatus.Improvement;
+                    leftYearReport && leftYearReport.leftStatus === AnomalyStatus.New_Baseline;
                     
                 const rightHasSignificantImprovement = 
-                    rightYearReport && rightYearReport.rightStatus === AnomalyStatus.Improvement;
+                    rightYearReport && rightYearReport.rightStatus === AnomalyStatus.New_Baseline;
                     
                 if (leftHasSignificantImprovement) {
                     // Set this year as the new baseline for future calculations for left ear
@@ -466,7 +466,7 @@
 
     // Helper function to get the readable status
     function GetAnomalyStatusText(status: AnomalyStatus): string {
-        return AnomalyStatus[status] ?? "Unknown";
+        return AnomalyStatus[status].replace("_", " ") ?? "Unknown";
     }
 
     //DATA MODIFICATION STUFF
@@ -664,56 +664,6 @@
             displayError(errorMessage);
         }
     }
-
-    // export async function fetchUpdatedHearingData() {
-    //     try {
-    //         const formData = new FormData();
-    //         formData.append('employeeID', selectedEmployee.data.employeeID);
-    //         formData.append('year', selectedYear);
-    //         const response = await fetch('/dashboard?/fetchHearingData', {
-    //             method: 'POST',
-    //             body: formData,
-    //         });
-            
-    //         const serverResponse = await response.json();
-    //         const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-            
-    //         if (result["success"]) {
-    //             const { baselineData, newData } = result.hearingData;
-
-    //             // Clear previous data
-    //             resetData();
-
-    //             // Extract frequencies and populate arrays
-    //             // For right ear baseline data
-    //             if (baselineData.rightEar) {
-    //                 rightBaselineHearingData.push(...extractFrequencies(baselineData.rightEar));
-    //             }
-
-    //             // For right ear new data
-    //             if (newData.rightEar) {
-    //                 rightNewHearingData.push(...extractFrequencies(newData.rightEar));
-    //             }
-
-    //             // For left ear baseline data
-    //             if (baselineData.leftEar) {
-    //                 leftBaselineHearingData.push(...extractFrequencies(baselineData.leftEar));
-    //             }
-
-    //             // For left ear new data
-    //             if (newData.leftEar) {
-    //                 leftNewHearingData.push(...extractFrequencies(newData.leftEar));
-    //             }
-    //         } 
-    //         else {
-    //             displayError('Failed to fetch hearing data for the selected year');
-    //         }
-    //     }
-    //     catch (error) {
-    //         console.error('Error fetching hearing data:', error);
-    //         displayError('Error fetching hearing data');
-    //     }
-    // }
 </script>
 
 <!-- TITLE PAGE SECTION -->

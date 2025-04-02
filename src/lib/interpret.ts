@@ -21,13 +21,13 @@ function findAverage(...args: number[]) {
     return average;
 }
 
-// used to identify hearing anomolies for each ear
+// used to identify hearing anomalies for each ear
 export enum AnomalyStatus {
     None = 0,
-    Base = 1,
+    Baseline = 1,
     Same = 2,
     Better = 3,
-    Improvement = 4,
+    New_Baseline = 4,
     Worse = 5,
     STS = 6,
     Warning = 7,
@@ -123,7 +123,7 @@ export class UserHearingScreeningHistory {
         if (yearPriorAverageChange >= 10) return AnomalyStatus.Warning;
         // Only check for CNT after handling the STS case
         if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
-        else if (baselineAverageChange <= -5) return AnomalyStatus.Improvement; // baseline redefinition (-7 may be different number)
+        else if (baselineAverageChange <= -7) return AnomalyStatus.New_Baseline; // baseline redefinition (-7 may be different number)
         else if (yearPriorAverageChange >= 3) return AnomalyStatus.Worse; // i think +/-3 is the correct turning point
         else if (yearPriorAverageChange <= -3) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same;
@@ -206,7 +206,7 @@ export class UserHearingScreeningHistory {
         bestRightEarAverage = this.GetAverageHertzForSTSRangeForOneEar(this.screenings[0].rightEar);
 
         // push base status for the first hearing screening
-        reportArray.push(new EarAnomalyStatus(AnomalyStatus.Base, AnomalyStatus.Base, this.screenings[0].year, this.screenings[0].year, this.screenings[0].year));
+        reportArray.push(new EarAnomalyStatus(AnomalyStatus.Baseline, AnomalyStatus.Baseline, this.screenings[0].year, this.screenings[0].year, this.screenings[0].year));
 
         for (var i = 1; i < arrayLength; i++) {
             let previousScreening: HearingScreening = this.screenings[i - 1];
