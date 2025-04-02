@@ -251,3 +251,72 @@ export async function modifyHearingData(request: Request) {
         success: true,
     });
 }
+
+/**
+ * 
+ * @deprecated use extractEmployeeHearingHistory instead
+ */
+export async function fetchCalculateSTSData(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+    const year = parseInt(formData.get('year') as string, 10);
+
+    try {
+        // Fetch raw hearing data for the employee
+        const dataQuery = await sql`
+            SELECT d.Hz_500, d.Hz_1000, d.Hz_2000, d.Hz_3000, d.Hz_4000, d.Hz_6000, d.Hz_8000, 
+                   h.ear, h.year, e.date_of_birth, e.sex
+            FROM Has h
+            JOIN Data d ON h.data_id = d.data_id
+            JOIN Employee e ON h.employee_id = e.employee_id
+            WHERE h.employee_id = ${employeeID}
+            ORDER BY h.year ASC;
+        `;
+
+        if (dataQuery.rows.length === 0) {
+            throw new Error("Hearing data not found");
+        }
+
+        // Prepare data for client-side processing
+        const hearingData = {
+            employeeID,
+            dateOfBirth: dataQuery.rows[0].date_of_birth,
+            sex: dataQuery.rows[0].sex,
+            screenings: dataQuery.rows.reduce((acc, row) => {
+                const yearKey = row.year;
+                if (!acc[yearKey]) {
+                    acc[yearKey] = { left: {}, right: {} };
+                }
+
+                const frequencies = {
+                    hz500: row.hz_500,
+                    hz1000: row.hz_1000,
+                    hz2000: row.hz_2000,
+                    hz3000: row.hz_3000,
+                    hz4000: row.hz_4000,
+                    hz6000: row.hz_6000,
+                    hz8000: row.hz_8000
+                };
+
+                if (row.ear.trim().toLowerCase() === 'left') {
+                    acc[yearKey].left = frequencies;
+                } else if (row.ear.trim().toLowerCase() === 'right') {
+                    acc[yearKey].right = frequencies;
+                }
+
+                return acc;
+            }, {})
+        };
+
+        return JSON.stringify({
+            success: true, 
+            hearingData
+        });
+    }
+    catch (error: any) {
+        const errorMessage = "Failed to fetch hearing data: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return JSON.stringify({ success: false, message: errorMessage });
+    }
+}

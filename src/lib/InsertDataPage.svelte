@@ -282,6 +282,7 @@
     }
 
 </script>
+
 {#if showTitle}
     <PageTitle sub>
         {allowModify ? "Modify Data" : "Add New Data"}
@@ -297,7 +298,7 @@
             <!-- Select Employee Dropdown -->
             <div class="w-m">
                 <Label for="employee" class="block mb-2">Select Employee</Label>
-                <Button color="primary" class="text-base flex justify-between items-center cursor-pointer" style="width:300px">{selectedEmployee.name}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
+                <Button color="primary" class="text-base flex justify-between items-center cursor-pointer">{selectedEmployee.name}<ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" /></Button>
                 <Dropdown bind:open={nameMenuOpen} class="overflow-y-auto px-3 pb-3 text-sm h-44">
                 <div  class="p-3">
                     <Search size="md" bind:value={inputValueName}/>

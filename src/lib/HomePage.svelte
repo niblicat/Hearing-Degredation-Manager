@@ -1,6 +1,6 @@
 <script>
     import PageTitle from '$lib/PageTitle.svelte';
-    import { STRING_INDEX_CAPTION, STRING_INDEX_WELCOME } from '$lib/strings.js';
+    import { STRING_ALT_TEXT_LOGO, STRING_INDEX_CAPTION, STRING_INDEX_WELCOME } from '$lib/strings.js';
 </script>
 
 <PageTitle>
@@ -11,5 +11,5 @@
 </PageTitle>
 
 <div class="max-w-3xl mx-auto">
-    <img src="landingpage/SIUE_logo_2024.png" alt="SIUE Logo">
+    <img src="landingpage/logo.png" alt={STRING_ALT_TEXT_LOGO}>
 </div>

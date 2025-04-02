@@ -380,14 +380,14 @@
 </script>
 
 <div class="relative w-full">
-    <div class="flex items-center justify-center">
+    <div class="flex flex-col items-center justify-center">
         <PageTitle >
             Mail Merge Management
             {#snippet caption()}
                 Begin the process of mailing out status notifications.
             {/snippet}
         </PageTitle>
-        <ErrorMessage {success} {errorMessage} />
+        <ErrorMessage class="mx-10 mb-4 w-full" {success} {errorMessage} />
     </div>
 </div>
 

@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getAdminsFromDatabase, getEmployeesFromDatabase, turnAwayNonAdmins } from '$lib/utility';
-import { addHearingData, checkYearAvailability, modifyHearingData } from '$lib/server/actionshearingdata';
-import { fetchEmployeeInfo, fetchHearingData, fetchHearingDataForYear, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS } from '$lib/server/actionsemployees';
+import { addHearingData, checkYearAvailability, modifyHearingData, fetchCalculateSTSData } from '$lib/server/actionshearingdata';
+import { fetchEmployeeInfo, fetchHearingData, fetchHearingDataForYear, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory } from '$lib/server/actionsemployees';
 import { addEmployee } from '$lib/server/actionsemployeeadd';
 import { deleteAdmins, modifyAdminName, modifyAdminPermissions } from '$lib/server/actionsadmins';
 import { extractAllEmployeeData, extractHearingData, extractBaselineHearingData, extractRecentHearingData } from '$lib/server/actionsmailing';
@@ -52,15 +52,23 @@ export const actions: Actions = {
     modifyHearingData: async ({ request }) => {
         return modifyHearingData(request);
     },
+    // ! to be removed later
+    fetchCalculateSTSData: async ({ request }) => { 
+        return fetchCalculateSTSData(request);
+    },
     // ================================================
 
     // actionsemployees.ts
     fetchYears: async ({ request }) => {
         return fetchYears(request);
     },
+    // ! to be removed later
     fetchEmployeeInfo: async ({ request }) => {
         return fetchEmployeeInfo(request);
-    }, 
+    },
+    extractEmployeeInfo: async ({ request }) => {
+        return extractEmployeeInfo(request);
+    },
     fetchHearingData: async ({ request }) => {
        return fetchHearingData(request);
     },
@@ -82,8 +90,15 @@ export const actions: Actions = {
     modifyEmployeeSex: async ({ request }) => {
         return modifyEmployeeSex(request);
     },
+    // ! to be removed later
     calculateSTS: async ({ request }) => { 
         return calculateSTS(request);
+    },
+    extractEmployeeHearingScreenings: async ({ request }) => {
+        return extractEmployeeHearingScreenings(request);
+    },
+    extractEmployeeHearingHistory: async ({ request }) => {
+        return extractEmployeeHearingHistory(request);
     },
     // ================================================
 

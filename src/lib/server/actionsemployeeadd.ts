@@ -1,7 +1,7 @@
 // actionsemployeeadd.ts
 // Contains server functions pertaining to adding employees
 
-import { insertEmployeeIntoDatabase } from '$lib/databasefunctions';
+import { insertEmployeeIntoDatabase } from '$lib/server/databasefunctions';
 
 export async function addEmployee(request: Request) {
     const formData = await request.formData();
@@ -14,7 +14,7 @@ export async function addEmployee(request: Request) {
     const lastActive = isInactive ? formData.get('lastActive') as string : null;
 
     try {
-        // Insert new employee into the database (adjust as needed for your DB schema)
+        // Insert new employee into the database
         await insertEmployeeIntoDatabase(firstName, lastName, email, dateOfBirth, sex, lastActive);
     } 
     catch (error: any) {

@@ -134,6 +134,7 @@ export async function turnAwayNonAdmins(event: ServerLoadEvent) {
 }
 
 export async function getEmployeesFromDatabase(): Promise<Employee[]> {
+    // TODO: move to databasefunctions
     const employeeTable = await sql`SELECT * FROM Employee;`;
 
     const employees: Employee[] = employeeTable.rows.map(row => ({
@@ -146,7 +147,7 @@ export async function getEmployeesFromDatabase(): Promise<Employee[]> {
         sex: row.sex
     }));
 
-    return  employees;
+    return employees;
 }
 
 export async function getHearingDataFromDatabaseRow(row: QueryResultRow): Promise<HearingDataSingle> {
@@ -164,6 +165,7 @@ export async function getHearingDataFromDatabaseRow(row: QueryResultRow): Promis
 }
 
 export async function getAdminsFromDatabase(): Promise<Admin[]> {
+    // TODO: move to databasefunctions
     const adminTable = await sql`SELECT * FROM Administrator;`;
 
     const admins: Admin[] = adminTable.rows.map(row => ({

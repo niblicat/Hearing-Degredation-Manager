@@ -252,14 +252,14 @@
 </Modal>
 
 <div class="relative w-full">
-    <div class="flex items-center justify-center">
+    <div class="flex flex-col items-center justify-center">
         <PageTitle>
             Admin Management
             {#snippet caption()}
                 Modify the privileges of anyone who has attempted to sign in.
             {/snippet}
         </PageTitle>
-        <ErrorMessage {success} {errorMessage} />
+        <ErrorMessage class="mx-10 mb-4 w-full" {success} {errorMessage} />
     </div>
 </div>
 

@@ -4,7 +4,8 @@
 import { sql } from '@vercel/postgres';
 import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from "$lib/interpret";
 import { getHearingDataFromDatabaseRow } from '$lib/utility';
-import type { HearingDataSingle } from '$lib/MyTypes';
+import type { EmployeeInfo, HearingDataSingle, HearingHistory } from '$lib/MyTypes';
+import { checkEmployeeExists, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase } from './databasefunctions';
 
 export async function fetchYears(request: Request) {
     const formData = await request.formData();
@@ -41,7 +42,12 @@ export async function fetchYears(request: Request) {
     }
 }
 
+/**
+ * 
+ * @deprecated use extractEmployeeInfo instead
+ */
 export async function fetchEmployeeInfo(request: Request) {
+    // ! deprecated
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;
 
@@ -75,13 +81,6 @@ export async function fetchEmployeeInfo(request: Request) {
             sex: employee.sex
         }
 
-        const dataReturnTest = {
-            success: true,
-            employee: employeeData
-        }
-
-        //JSON.stringify(dataReturnTest));
-
         // Return only the necessary data in a plain object format
         return JSON.stringify({
             success: true,
@@ -90,6 +89,28 @@ export async function fetchEmployeeInfo(request: Request) {
     } 
     catch (error: any) {
         const errorMessage = "Failed to fetch employee data: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return { success: false, message: errorMessage };
+    }
+}
+
+export async function extractEmployeeInfo(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+
+    try {
+        await checkEmployeeExists(employeeID); // will throw error if employee is not found
+        const employeeInfo: EmployeeInfo = await extractEmployeeInfoFromDatabase(employeeID);
+
+        // Return only the necessary data in a plain object format
+        return JSON.stringify({
+            success: true,
+            employeeInfo
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Failed to fetch employee info: " 
             + (error.message ?? "no error message provided by server");
         console.error(errorMessage);
         return { success: false, message: errorMessage };
@@ -374,6 +395,12 @@ export async function modifyEmployeeSex(request: Request) {
     });
 }
 
+/**
+ * 
+ * @param request The POST request.
+ * @deprecated no longer calculating STS on server.
+ * @returns STS Calculated Hearing Report.
+ */
 export async function calculateSTS(request: Request) {
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;
@@ -414,8 +441,6 @@ export async function calculateSTS(request: Request) {
 
         if (dataQuery.rows.length === 0) {
             throw new Error("Hearing data not found");
-            const errorMessage = "Hearing data not found"
-            
         }
         //console.log("query: ", JSON.stringify(dataQuery));
 
@@ -490,6 +515,50 @@ export async function calculateSTS(request: Request) {
     }
     catch (error: any) {
         const errorMessage = "Failed to calculate STS status: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return JSON.stringify({ success: false, message: errorMessage });
+    }
+}
+
+export async function extractEmployeeHearingScreenings(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+    
+    try {
+        checkEmployeeExists(employeeID); // will throw error if employee is not found
+        // Get employee hearing screenings from database
+        const screenings: HearingScreening[] = await extractEmployeeHearingScreeningsFromDatabase(employeeID);
+
+        return JSON.stringify({
+            success: true,
+            screenings
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Error in database when adding employee: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return JSON.stringify({ success: false, message: errorMessage });
+    }
+}
+
+export async function extractEmployeeHearingHistory(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+    
+    try {
+        checkEmployeeExists(employeeID); // will throw error if employee is not found
+        // Get employee hearing screenings from database
+        const history: HearingHistory = await extractEmployeeHearingHistoryFromDatabase(employeeID);
+
+        return JSON.stringify({
+            success: true,
+            history
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Error in database when adding employee: " 
             + (error.message ?? "no error message provided by server");
         console.error(errorMessage);
         return JSON.stringify({ success: false, message: errorMessage });
