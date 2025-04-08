@@ -58,6 +58,10 @@
         }
         success = false;
     }
+    function displayInfo(message: string) {
+        errorMessage = message;
+        success = true; // This will style it as an info message, not an error
+    }
 
     const undefinedEmployee: Employee = {
         employeeID: "-1",
@@ -159,11 +163,32 @@
             if (yearsResult["success"]) {
                 success = true;
                 yearItems = yearsResult.years.map(String);
+
+                // shows a helpful message when there's no data
+                if (yearItems.length === 0) {
+                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
+                    // Initialize empty data structures for a new employee with no data
+                    hearingHistory = [];
+                    allHearingData = null;
+                    allHearingReports = [];
+                    allYearScreenings = {};
+                    return; // Exit early since there's no data to fetch
+                }
             }
             else {
-                yearItems = [];
-                displayError('No years found for the selected employee');
-                return;
+                // Check if this is a "no data" error
+                if (yearsResult.message && yearsResult.message.includes("No years found")) {
+                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
+                    hearingHistory = [];
+                    allHearingData = null;
+                    allHearingReports = [];
+                    allYearScreenings = {};
+                    return; // Exit early
+                } else {
+                    // Only show an error for actual errors, not for expected "no data" cases
+                    displayError('Error fetching years data: ' + (yearsResult.message || 'Unknown error'));
+                    return;
+                }
             }
 
             // Fetch all hearing data at once
@@ -180,38 +205,56 @@
                 allHearingData = hearingResult.hearingData;
 
                 try {
-                // Pre-calculate STS reports for all years
-                allHearingReports = calculateSTSClientSide(allHearingData);
-                
-                // Store screenings by year for quick access
-                Object.entries(allHearingData.screenings).forEach(([year, data]) => {
-                    allYearScreenings[year] = data;
-                });
+                    // Pre-calculate STS reports for all years
+                    allHearingReports = calculateSTSClientSide(allHearingData);
+                    
+                    // Store screenings by year for quick access
+                    Object.entries(allHearingData.screenings).forEach(([year, data]) => {
+                        allYearScreenings[year] = data;
+                    });
 
-                // Create the hearing history display info
-                hearingHistory = allHearingReports.map((report: any) => ({
-                    year: report.reportYear.toString(),
-                    leftStatus: GetAnomalyStatusText(report.leftStatus),
-                    rightStatus: GetAnomalyStatusText(report.rightStatus)
-                }));
-                
-                // Sort by year (newest first)
-                hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
-            } catch (calcError) {
-                console.error('Error calculating STS:', calcError);
-                displayError('Error calculating hearing thresholds. Please check the hearing data format.');
-                return;
-            }
+                    // Create the hearing history display info
+                    hearingHistory = allHearingReports.map((report: any) => ({
+                        year: report.reportYear.toString(),
+                        leftStatus: GetAnomalyStatusText(report.leftStatus),
+                        rightStatus: GetAnomalyStatusText(report.rightStatus)
+                    }));
+                    
+                    // Sort by year (newest first)
+                    hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+                } catch (calcError) {
+                    console.error('Error calculating STS:', calcError);
+                    displayError('Error calculating hearing thresholds. Please check the hearing data format.');
+                    return;
+                }
             }
             else {
-                displayError('Failed to fetch hearing data');
+                // Check if this is a "no data" error or another type of error
+                if (hearingResult.message && (
+                    hearingResult.message.includes("not found") || 
+                    hearingResult.message.includes("No hearing data") ||
+                    hearingResult.message.includes("no data") ||
+                    hearingResult.message.includes("no screening")
+                )) {
+                    // This is expected for new employees - don't show an error
+                    console.log("No hearing data available for this employee");
+                    // We already showed the info message earlier based on empty years
+                    // Just make sure the data structures are properly initialized
+                    hearingHistory = [];
+                    allHearingData = null;
+                    allHearingReports = [];
+                    allYearScreenings = {};
+                } else {
+                    // This is an actual error
+                    displayError((hearingResult.message || 'Unknown error'));
+                }
                 return;
             }
         } 
         catch (error) {
             console.error('Error fetching data:', error);
             yearItems = [];
-            displayError('Error fetching data');
+            displayError('Error fetching data from server. Please try again later.');
         }
     }
 
@@ -585,13 +628,17 @@
                 <div class="p-3">
                     <Search size="md" bind:value={inputValueYear}/>
                 </div>
-                {#each filteredYears as year}
-                    <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
-                        <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectYear(year)}>
-                            {year}
-                        </button>
-                    </li>
-                {/each}
+                {#if yearItems.length === 0}
+                    <li class="rounded p-2 text-gray-500 italic">No hearing data available for this employee</li>
+                {:else}
+                    {#each filteredYears as year}
+                        <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectYear(year)}>
+                                {year}
+                            </button>
+                        </li>
+                    {/each}
+                {/if}
             </Dropdown>
         {/if}
 
