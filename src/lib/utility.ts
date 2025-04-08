@@ -219,29 +219,51 @@ export function getPageCategory(page: string): PageCategory {
 
 // respects proper baselines
 export function calculateSTSClientSide(hearingData: any) {
+    if (!hearingData || !hearingData.screenings) {
+        console.error("Invalid hearing data format");
+        return [];
+    }
+
     // Convert raw hearing data to the format required by UserHearingScreeningHistory
     const screenings = Object.entries(hearingData.screenings)
-        .map(([year, data]) => new HearingScreening(
-            parseInt(year),
-            new HearingDataOneEar(
-                data.left.hz500 ?? null,
-                data.left.hz1000 ?? null,
-                data.left.hz2000 ?? null,
-                data.left.hz3000 ?? null,
-                data.left.hz4000 ?? null,
-                data.left.hz6000 ?? null,
-                data.left.hz8000 ?? null
-            ),
-            new HearingDataOneEar(
-                data.right.hz500 ?? null,
-                data.right.hz1000 ?? null,
-                data.right.hz2000 ?? null,
-                data.right.hz3000 ?? null,
-                data.right.hz4000 ?? null,
-                data.right.hz6000 ?? null,
-                data.right.hz8000 ?? null
-            )
-        ));
+        .map(([year, data]) => {
+            try {
+                return new HearingScreening(
+                    parseInt(year),
+                    new HearingDataOneEar(
+                        parseValueOrNull(data.left.hz500),
+                        parseValueOrNull(data.left.hz1000),
+                        parseValueOrNull(data.left.hz2000),
+                        parseValueOrNull(data.left.hz3000),
+                        parseValueOrNull(data.left.hz4000),
+                        parseValueOrNull(data.left.hz6000),
+                        parseValueOrNull(data.left.hz8000)
+                    ),
+                    new HearingDataOneEar(
+                        parseValueOrNull(data.right.hz500),
+                        parseValueOrNull(data.right.hz1000),
+                        parseValueOrNull(data.right.hz2000),
+                        parseValueOrNull(data.right.hz3000),
+                        parseValueOrNull(data.right.hz4000),
+                        parseValueOrNull(data.right.hz6000),
+                        parseValueOrNull(data.right.hz8000)
+                    )
+                );
+            } catch (err) {
+                console.error(`Error parsing screening data for year ${year}:`, err);
+                return null;
+            }
+        })
+        .filter(screening => screening !== null);
+
+    // Helper function to safely parse values
+    function parseValueOrNull(value: any): number | null {
+        if (value === null || value === undefined || value === "CNT") {
+            return null;
+        }
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? null : parsed;
+    }
 
     // Sort screenings by year
     screenings.sort((a, b) => a.year - b.year);

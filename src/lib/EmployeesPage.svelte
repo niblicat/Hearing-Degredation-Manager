@@ -51,8 +51,11 @@
 
     let yearItems = $state<Array<string>>([]);
 
-    function displayError(message: string) {
+    function displayError(message: string, error?: any) {
         errorMessage = message;
+        if (error) {
+            console.error(message, error);
+        }
         success = false;
     }
 
@@ -176,6 +179,7 @@
                 // Store all hearing data
                 allHearingData = hearingResult.hearingData;
 
+                try {
                 // Pre-calculate STS reports for all years
                 allHearingReports = calculateSTSClientSide(allHearingData);
                 
@@ -193,6 +197,11 @@
                 
                 // Sort by year (newest first)
                 hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+            } catch (calcError) {
+                console.error('Error calculating STS:', calcError);
+                displayError('Error calculating hearing thresholds. Please check the hearing data format.');
+                return;
+            }
             }
             else {
                 displayError('Failed to fetch hearing data');

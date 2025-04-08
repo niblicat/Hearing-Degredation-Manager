@@ -148,7 +148,7 @@ export class UserHearingScreeningHistory {
      */
     private GetAgeCorrectiveDecibelAdjustment(baselineAge: number): HertzCorrectionForAge {
         function GetRowValue(val: number): number {
-            return Math.min(Math.max(val, 20), 60);
+            return Math.min(Math.max(val, 19), 60); 
         }
         let correctionTable: Array<HertzCorrectionForAge>;
         switch (this.sex) {
@@ -162,15 +162,17 @@ export class UserHearingScreeningHistory {
                 correctionTable = AGE_CORRECTION_TABLE_MALE;
                 break;
         }
-        // need to clamp values between 20 and 60 because the age table does not
-        // have data for outside that range
+        
+        // Clamp ages to the range supported by the table (19-60)
         let baselineAgeRowValue = GetRowValue(baselineAge);
         let currentAgeRowValue = GetRowValue(this.age);
 
-        let baselineCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == baselineAge);
-        let currentCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == this.age);
-        if (!baselineCorrection) throw error; // TODO: specific error
-        if (!currentCorrection) throw error; // TODO: specific error
+        // Look up the corrections using the clamped age values
+        let baselineCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == baselineAgeRowValue);
+        let currentCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == currentAgeRowValue);
+        
+        if (!baselineCorrection) throw new Error(`Age correction table does not have an adjustment for age ${baselineAgeRowValue}.`);
+        if (!currentCorrection) throw new Error(`Age correction table does not have an adjustment for age ${currentAgeRowValue}.`);
 
         let difference: HertzCorrectionForAge = { 
             age: 0,
@@ -191,7 +193,20 @@ export class UserHearingScreeningHistory {
      */
     public GenerateHearingReport(): EarAnomalyStatus[] {
         let arrayLength = this.screenings.length;
-        if (arrayLength == 0) throw error; // TODO: throw specific error
+        if (arrayLength == 0) {
+            console.error("No screenings available");
+            return [];
+        }
+        if (arrayLength == 1) {
+            // Only one screening, so it's the baseline with no comparison
+            return [new EarAnomalyStatus(
+                AnomalyStatus.Baseline, 
+                AnomalyStatus.Baseline, 
+                this.screenings[0].year, 
+                this.screenings[0].year, 
+                this.screenings[0].year
+            )];
+        }
 
         let reportArray: EarAnomalyStatus[] = [];
         // Record the average for each each and move the index when the average is Better
