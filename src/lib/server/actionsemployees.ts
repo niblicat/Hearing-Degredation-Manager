@@ -5,8 +5,11 @@ import { sql } from '@vercel/postgres';
 import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from "$lib/interpret";
 import { getHearingDataFromDatabaseRow } from '$lib/utility';
 import type { EmployeeInfo, HearingDataSingle, HearingHistory } from '$lib/MyTypes';
-import { checkEmployeeExists, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase } from './databasefunctions';
+import { checkEmployeeExists, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase, extractEmployeeInfosFromDatabase } from './databasefunctions';
 
+/**
+ * @deprecated use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
+ */
 export async function fetchYears(request: Request) {
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;
@@ -43,7 +46,6 @@ export async function fetchYears(request: Request) {
 }
 
 /**
- * 
  * @deprecated use extractEmployeeInfo instead
  */
 export async function fetchEmployeeInfo(request: Request) {
@@ -117,6 +119,29 @@ export async function extractEmployeeInfo(request: Request) {
     }
 }
 
+export async function extractEmployeeInfos(request: Request) {
+    const formData = await request.formData();
+
+    try {
+        const employeeInfos: EmployeeInfo[] = await extractEmployeeInfosFromDatabase();
+
+        // Return only the necessary data in a plain object format
+        return JSON.stringify({
+            success: true,
+            employeeInfos
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Failed to fetch employee info: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return { success: false, message: errorMessage };
+    }
+}
+
+/**
+ * @deprecated use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
+ */
 export async function fetchHearingData(request: Request) {
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;
@@ -181,6 +206,9 @@ export async function fetchHearingData(request: Request) {
     }
 }
 
+/**
+ * @deprecated use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
+ */
 export async function fetchHearingDataForYear(request: Request) {
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;
@@ -399,6 +427,7 @@ export async function modifyEmployeeSex(request: Request) {
  * 
  * @param request The POST request.
  * @deprecated no longer calculating STS on server.
+ * use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
  * @returns STS Calculated Hearing Report.
  */
 export async function calculateSTS(request: Request) {
@@ -548,9 +577,9 @@ export async function extractEmployeeHearingHistory(request: Request) {
     const employeeID = formData.get('employeeID') as string;
     
     try {
-        await checkEmployeeExists(employeeID); // will throw error if employee is not found
+        const employeeInfo: EmployeeInfo = await extractEmployeeInfoFromDatabase(employeeID);
         // Get employee hearing screenings from database
-        const history: HearingHistory = await extractEmployeeHearingHistoryFromDatabase(employeeID);
+        const history: HearingHistory = await extractEmployeeHearingHistoryFromDatabase(employeeInfo);
 
         return JSON.stringify({
             success: true,
@@ -561,6 +590,50 @@ export async function extractEmployeeHearingHistory(request: Request) {
         const errorMessage = "Error in database when extracting employee hearing history: " 
             + (error.message ?? "no error message provided by server");
         console.error(errorMessage);
+        return JSON.stringify({ success: false, message: errorMessage });
+    }
+}
+
+export async function extractAllEmployeeHearingHistories(request: Request) {
+    const formData = await request.formData();
+    const omitInactive: boolean = formData.get('omitInactive') === 'true';
+
+    try {
+        // Goal: Iterate through employees and individually get their hearing history
+        // TODO: While this works, it uses a lot of database queries. Create a DB function that can get multiple emp. histories in one query.
+
+        const employeeInfos: EmployeeInfo[] = await extractEmployeeInfosFromDatabase();
+        
+        const rawHistories: (HearingHistory | null)[] = await Promise.all(
+            employeeInfos.map(async (employeeInfo) => {
+                // Skip inactive employees if omitInactive is true
+                if (employeeInfo.lastActive && omitInactive) return null;  // Skip this iteration
+
+                // Get employee hearing screenings from database
+                let history: HearingHistory | null;
+                try {
+                    history = await extractEmployeeHearingHistoryFromDatabase(employeeInfo);
+                }
+                catch (error: any) {
+                    console.log(`Could not fetch hearing history for ${employeeInfo.id}: ${employeeInfo.firstName}.`)
+                    history = null;
+                }
+                return history;
+            })
+        );
+
+        // Filter out null entries
+        const histories: HearingHistory[] = rawHistories.filter((history) => history !== null);
+
+        return JSON.stringify({
+            success: true,
+            histories
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Error in database when extracting employee hearing histories: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage, error.stack);
         return JSON.stringify({ success: false, message: errorMessage });
     }
 }
