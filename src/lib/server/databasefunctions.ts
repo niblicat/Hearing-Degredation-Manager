@@ -3,10 +3,28 @@
 // This will make it easy to switch out our database provider if needed
 
 import { sql } from '@vercel/postgres';
-import { DatabaseError, type EmployeeInfo, type HearingHistory } from '../MyTypes';
+import { DatabaseError, type Admin, type Employee, type EmployeeInfo, type HearingHistory } from '../MyTypes';
 import { HearingDataOneEar, HearingScreening, PersonSex, UserHearingScreeningHistory } from '$lib/interpret';
 
 // EMPLOYEES
+/**
+ * @deprecated use extractEmployeeInfoFromDatabase instead
+**/
+export async function getEmployeesFromDatabase(): Promise<Employee[]> {
+    const employeeTable = await sql`SELECT * FROM Employee;`;
+
+    const employees: Employee[] = employeeTable.rows.map(row => ({
+        activeStatus: row.last_active,
+        employeeID: row.employee_id,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        email: row.email,
+        dob: row.date_of_birth,
+        sex: row.sex
+    }));
+
+    return employees;
+}
 
 export async function insertEmployeeIntoDatabase(firstName: string, lastName: string, email: string, dateOfBirth: string, sex: string, lastActive: string | null) {
     const result = await sql`
@@ -130,8 +148,7 @@ export async function extractEmployeeHearingHistoryFromDatabase(employeeID: stri
     const employeeInfo: EmployeeInfo = await extractEmployeeInfoFromDatabase(employeeID);
 
     const history: HearingHistory = {
-        dob: employeeInfo.dob,
-        sex: employeeInfo.sex,
+        employee: employeeInfo,
         screenings
     };
 
@@ -139,3 +156,17 @@ export async function extractEmployeeHearingHistoryFromDatabase(employeeID: stri
 }
 
 // ADMINS
+
+export async function getAdminsFromDatabase(): Promise<Admin[]> {
+    const adminTable = await sql`SELECT * FROM Administrator;`;
+
+    const admins: Admin[] = adminTable.rows.map(row => ({
+        name: row.name,
+        email: row.userstring,
+        id: row.id,
+        isOP: row.isop,
+        selected: false
+    }));
+
+    return admins;
+}

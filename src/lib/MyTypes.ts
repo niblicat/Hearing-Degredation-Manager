@@ -66,8 +66,7 @@ export type HearingData = {
 }
 
 export type HearingHistory = {
-    dob: Date,
-    sex: PersonSex,
+    employee: EmployeeInfo,
     screenings: HearingScreening[]
 }
 

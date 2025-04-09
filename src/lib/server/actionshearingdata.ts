@@ -253,7 +253,6 @@ export async function modifyHearingData(request: Request) {
 }
 
 /**
- * 
  * @deprecated use extractEmployeeHearingHistory instead
  */
 export async function fetchCalculateSTSData(request: Request) {
