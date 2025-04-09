@@ -2,6 +2,7 @@
 // This will hold all the clientside server callers to avoid repetition.
 // Make sure each function returns a type. Use try and catch when calling these to avoid unhandled errors.
 
+import type { HearingScreening } from "$lib/interpret";
 import type { HearingHistory } from "../MyTypes";
 
 // GETTERS
@@ -59,6 +60,30 @@ export async function getAllEmployeeHearingHistories(omitInactive: boolean): Pro
     if (!result["success"]) throw Error(result["message"] ?? "Failed to extract all employee hearing histories (missing message).");
 
     return result["histories"];
+}
+
+export async function getEmployeeHearingScreening(employeeID: string, year: string): Promise<HearingScreening> {
+    // create form data and populate it with the necessary fields
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('year', year);
+
+    const response = await fetch('/dashboard?/extractEmployeeHearingScreening', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
+    
+    // extractEmployeeHearingScreening() on the server will return both a success: boolean = true and screening: HearingScreening if it works
+    // otherwise, it will return success: boolean = false and message: string
+    
+    if (!result["success"]) throw Error(result["message"] ?? "Failed to extract the hearing screening (missing message).");
+
+    return result["screening"];
 }
 
 // SETTERS

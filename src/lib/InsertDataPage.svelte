@@ -11,6 +11,8 @@
     import SuccessMessage from './SuccessMessage.svelte';
     import { isNumber, validateFrequenciesLocally } from './utility';
 	import PageTitle from './PageTitle.svelte';
+	import { convertHearingDataOneEarToStrings, type HearingDataOneEarString, type HearingScreening } from './interpret';
+	import { getEmployeeHearingScreening } from './client/postrequests';
 
     interface Props {
         employees?: Array<Employee>,
@@ -107,31 +109,15 @@
 
     async function fetchHearingDataForYearFromServer(employeeID: string, year: string) {
         try {
-            const formData = new FormData();
-            formData.append('employeeID', employeeID);
-            formData.append('year', year);
+            let screening: HearingScreening = await getEmployeeHearingScreening(employeeID, year);
+            const leftScreeningStringified: HearingDataOneEarString = convertHearingDataOneEarToStrings(screening.leftEar);
+            const rightScreeningStringified: HearingDataOneEarString = convertHearingDataOneEarToStrings(screening.rightEar);
 
-            const response = await fetch('/dashboard?/fetchHearingDataForYear', {
-                method: 'POST',
-                body: formData,
-            });
-            
-            const serverResponse = await response.json();
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-            
-            if (result["success"]) {
-                const { year, leftEar, rightEar } = result.hearingData;
-                console.log(leftEar);
-                assignFrequencies(leftEar, rightEar);
-
-            } 
-            else {
-                displayError(`Failed to fetch hearing data for the selected year... ${result["message"] ?? "No error message supplied."}`);
-            }
+            assignFrequencies(leftScreeningStringified, rightScreeningStringified);
         }
-        catch (error) {
-            console.error('Error fetching hearing data:', error);
-            displayError('Error fetching hearing data');
+        catch (error: any) {
+            let errorMessage = error.message;
+            displayError(errorMessage ?? "An error occurred when fetching the year's hearing data");
         }
     }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from "$app/navigation";
 	import ErrorMessage from "$lib/ErrorMessage.svelte";
-	import { HearingDataOneEar, HearingScreening } from "$lib/interpret";
+	import { type HearingDataOneEar, type HearingScreening } from "$lib/interpret";
 	import type { HearingHistory } from "$lib/MyTypes";
     import { Button, ButtonGroup, Input, Label, Li, List } from "flowbite-svelte";
     import { getAllEmployeeHearingHistories, getEmployeeHearingHistory } from "$lib/client/postrequests"
@@ -23,13 +23,13 @@
         let historyFromServer: HearingHistory | undefined;
 
         try {
-            // getEmployeeHearingHistory() is found in serveraccessors.ts
+            // getEmployeeHearingHistory() is found in postrequests.ts
             historyFromServer = await getEmployeeHearingHistory(requestedID);
             success = true;  // set this to true to remove any previously showing errors
         }
         catch (error: any) {
             let errorMessage = error.message;
-            displayError(errorMessage ?? "An error occurred when modifying admin permissions");
+            displayError(errorMessage ?? "An error occurred when obtaining hearing history.");
         }
 
         // use the stored history to get whatever we need, like STS statuses and what not
@@ -49,13 +49,13 @@
         let historiesFromServer: HearingHistory[] = [];
 
         try {
-            // getAllEmployeeHearingHistories() is found in serveraccessors.ts
+            // getAllEmployeeHearingHistories() is found in postrequests.ts
             historiesFromServer = await getAllEmployeeHearingHistories(true);
             success = true;  // set this to true to remove any previously showing errors
         }
         catch (error: any) {
             let errorMessage = error.message;
-            displayError(errorMessage ?? "An error occurred when modifying admin permissions");
+            displayError(errorMessage ?? "An error occurred when obtaining hearing histories.");
         }
 
         // use the stored histories to get whatever we need, like STS statuses and what not

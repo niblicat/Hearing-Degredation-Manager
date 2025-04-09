@@ -2,7 +2,7 @@ import type { Session } from "@auth/sveltekit";
 import { redirect, type RequestEvent, type Server, type ServerLoadEvent } from "@sveltejs/kit"
 import { sql, type QueryResult, type QueryResultRow } from "@vercel/postgres";
 import { PageCategory, type HearingDataSingle } from "./MyTypes";
-import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex, AnomalyStatus } from './interpret';
+import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, PersonSex, AnomalyStatus } from './interpret';
 
 export function isNumber(value?: string | number): boolean {
     return ((value != null) &&
@@ -187,6 +187,7 @@ export function getPageCategory(page: string): PageCategory {
 
 // respects proper baselines
 export function calculateSTSClientSide(hearingData: any) {
+    // TODO: type hearing data (probably hearinghistory), which will remove the need to remap the hearingdata screenings
     if (!hearingData || !hearingData.screenings) {
         console.error("Invalid hearing data format");
         return [];
@@ -196,27 +197,35 @@ export function calculateSTSClientSide(hearingData: any) {
     const screenings = Object.entries(hearingData.screenings)
         .map(([year, data]) => {
             try {
-                return new HearingScreening(
-                    parseInt(year),
-                    new HearingDataOneEar(
-                        parseValueOrNull(data.left.hz500),
-                        parseValueOrNull(data.left.hz1000),
-                        parseValueOrNull(data.left.hz2000),
-                        parseValueOrNull(data.left.hz3000),
-                        parseValueOrNull(data.left.hz4000),
-                        parseValueOrNull(data.left.hz6000),
-                        parseValueOrNull(data.left.hz8000)
-                    ),
-                    new HearingDataOneEar(
-                        parseValueOrNull(data.right.hz500),
-                        parseValueOrNull(data.right.hz1000),
-                        parseValueOrNull(data.right.hz2000),
-                        parseValueOrNull(data.right.hz3000),
-                        parseValueOrNull(data.right.hz4000),
-                        parseValueOrNull(data.right.hz6000),
-                        parseValueOrNull(data.right.hz8000)
-                    )
-                );
+                const leftEarData = data.left;
+                const rightEarData = data.right;
+
+                // Populate left and right ear hearing data
+                const leftEar: HearingDataOneEar = {
+                    hz500: leftEarData["hz500"] ?? null,
+                    hz1000: leftEarData["hz1000"] ?? null,
+                    hz2000: leftEarData["hz2000"] ?? null,
+                    hz3000: leftEarData["hz3000"] ?? null,
+                    hz4000: leftEarData["hz4000"] ?? null,
+                    hz6000: leftEarData["hz6000"] ?? null,
+                    hz8000: leftEarData["hz8000"] ?? null
+                };
+
+                const rightEar: HearingDataOneEar = {
+                    hz500: rightEarData["hz500"] ?? null,
+                    hz1000: rightEarData["hz1000"] ?? null,
+                    hz2000: rightEarData["hz2000"] ?? null,
+                    hz3000: rightEarData["hz3000"] ?? null,
+                    hz4000: rightEarData["hz4000"] ?? null,
+                    hz6000: rightEarData["hz6000"] ?? null,
+                    hz8000: rightEarData["hz8000"] ?? null
+                };
+
+                return {
+                    year: Number(year),
+                    leftEar,
+                    rightEar
+                };
             } catch (err) {
                 console.error(`Error parsing screening data for year ${year}:`, err);
                 return null;
