@@ -1,7 +1,7 @@
 import type { Session } from "@auth/sveltekit";
 import { redirect, type RequestEvent, type Server, type ServerLoadEvent } from "@sveltejs/kit"
 import { sql, type QueryResult, type QueryResultRow } from "@vercel/postgres";
-import { PageCategory, type Admin, type Employee, type HearingDataSingle } from "./MyTypes";
+import { PageCategory, type HearingDataSingle } from "./MyTypes";
 import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex, AnomalyStatus } from './interpret';
 
 export function isNumber(value?: string | number): boolean {
@@ -134,23 +134,6 @@ export async function turnAwayNonAdmins(event: ServerLoadEvent) {
     }
 }
 
-export async function getEmployeesFromDatabase(): Promise<Employee[]> {
-    // TODO: move to databasefunctions
-    const employeeTable = await sql`SELECT * FROM Employee;`;
-
-    const employees: Employee[] = employeeTable.rows.map(row => ({
-        activeStatus: row.last_active,
-        employeeID: row.employee_id,
-        firstName: row.first_name,
-        lastName: row.last_name,
-        email: row.email,
-        dob: row.date_of_birth,
-        sex: row.sex
-    }));
-
-    return employees;
-}
-
 export async function getHearingDataFromDatabaseRow(row: QueryResultRow): Promise<HearingDataSingle> {
     const parsedHearingData: HearingDataSingle = {
         hz500: row["hz_500"] ?? "CNT",
@@ -163,21 +146,6 @@ export async function getHearingDataFromDatabaseRow(row: QueryResultRow): Promis
     };
 
     return parsedHearingData;
-}
-
-export async function getAdminsFromDatabase(): Promise<Admin[]> {
-    // TODO: move to databasefunctions
-    const adminTable = await sql`SELECT * FROM Administrator;`;
-
-    const admins: Admin[] = adminTable.rows.map(row => ({
-        name: row.name,
-        email: row.userstring,
-        id: row.id,
-        isOP: row.isop,
-        selected: false
-    }));
-
-    return admins;
 }
 
 export function extractFrequencies(earData: Record<string, any>): number[] {

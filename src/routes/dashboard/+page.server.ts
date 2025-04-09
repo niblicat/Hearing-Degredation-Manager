@@ -1,10 +1,11 @@
 import type { Actions, PageServerLoad } from './$types';
-import { getAdminsFromDatabase, getEmployeesFromDatabase, turnAwayNonAdmins } from '$lib/utility';
+import { turnAwayNonAdmins } from '$lib/utility';
 import { addHearingData, checkYearAvailability, modifyHearingData, fetchCalculateSTSData } from '$lib/server/actionshearingdata';
 import { fetchEmployeeInfo, fetchHearingData, fetchHearingDataForYear, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory } from '$lib/server/actionsemployees';
 import { addEmployee } from '$lib/server/actionsemployeeadd';
 import { deleteAdmins, modifyAdminName, modifyAdminPermissions } from '$lib/server/actionsadmins';
 import { extractAllEmployeeData, extractHearingData, extractBaselineHearingData, extractRecentHearingData } from '$lib/server/actionsmailing';
+import { getAdminsFromDatabase, getEmployeesFromDatabase } from '$lib/server/databasefunctions';
 
 
 export const load: PageServerLoad = async ( event ) => {
