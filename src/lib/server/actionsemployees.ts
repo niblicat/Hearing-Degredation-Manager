@@ -526,7 +526,7 @@ export async function extractEmployeeHearingScreenings(request: Request) {
     const employeeID = formData.get('employeeID') as string;
     
     try {
-        checkEmployeeExists(employeeID); // will throw error if employee is not found
+        await checkEmployeeExists(employeeID); // will throw error if employee is not found
         // Get employee hearing screenings from database
         const screenings: HearingScreening[] = await extractEmployeeHearingScreeningsFromDatabase(employeeID);
 
@@ -536,7 +536,7 @@ export async function extractEmployeeHearingScreenings(request: Request) {
         });
     } 
     catch (error: any) {
-        const errorMessage = "Error in database when adding employee: " 
+        const errorMessage = "Error in database when extracting employee hearing screenings: " 
             + (error.message ?? "no error message provided by server");
         console.error(errorMessage);
         return JSON.stringify({ success: false, message: errorMessage });
@@ -548,7 +548,7 @@ export async function extractEmployeeHearingHistory(request: Request) {
     const employeeID = formData.get('employeeID') as string;
     
     try {
-        checkEmployeeExists(employeeID); // will throw error if employee is not found
+        await checkEmployeeExists(employeeID); // will throw error if employee is not found
         // Get employee hearing screenings from database
         const history: HearingHistory = await extractEmployeeHearingHistoryFromDatabase(employeeID);
 
@@ -558,7 +558,7 @@ export async function extractEmployeeHearingHistory(request: Request) {
         });
     } 
     catch (error: any) {
-        const errorMessage = "Error in database when adding employee: " 
+        const errorMessage = "Error in database when extracting employee hearing history: " 
             + (error.message ?? "no error message provided by server");
         console.error(errorMessage);
         return JSON.stringify({ success: false, message: errorMessage });
