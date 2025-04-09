@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { turnAwayNonAdmins } from '$lib/utility';
 import { addHearingData, checkYearAvailability, modifyHearingData, fetchCalculateSTSData } from '$lib/server/actionshearingdata';
-import { fetchEmployeeInfo, fetchHearingData, fetchHearingDataForYear, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory, extractAllEmployeeHearingHistories } from '$lib/server/actionsemployees';
+import { fetchEmployeeInfo, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory, extractAllEmployeeHearingHistories, extractEmployeeHearingScreening } from '$lib/server/actionsemployees';
 import { addEmployee } from '$lib/server/actionsemployeeadd';
 import { deleteAdmins, modifyAdminName, modifyAdminPermissions } from '$lib/server/actionsadmins';
 import { extractAllEmployeeData, extractHearingData, extractBaselineHearingData, extractRecentHearingData } from '$lib/server/actionsmailing';
@@ -72,14 +72,6 @@ export const actions: Actions = {
     extractEmployeeInfo: async ({ request }) => {
         return extractEmployeeInfo(request);
     },
-    // ! to be removed later
-    fetchHearingData: async ({ request }) => {
-       return fetchHearingData(request);
-    },
-    // ! to be removed later
-    fetchHearingDataForYear: async ({ request }) => {
-        return fetchHearingDataForYear(request);
-     },
     modifyEmployeeName: async ({ request }) => {
         return modifyEmployeeName(request);
     },
@@ -98,6 +90,9 @@ export const actions: Actions = {
     // ! to be removed later
     calculateSTS: async ({ request }) => { 
         return calculateSTS(request);
+    },
+    extractEmployeeHearingScreening: async ({ request }) => {
+        return extractEmployeeHearingScreening(request);
     },
     extractEmployeeHearingScreenings: async ({ request }) => {
         return extractEmployeeHearingScreenings(request);

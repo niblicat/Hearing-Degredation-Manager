@@ -124,6 +124,9 @@
         formData.append('employeeID', selectedEmployee.data.employeeID);
 
         // Fetch employee details from the server and years for other dropdown
+        // ! This function is doing way too much. 
+        // ! use getEmployeeHearingHistory() from postrequests.ts to condense all this into one function call
+        // ! See the Debug.svelte page for an example usage
         try {
             // Fetch employee information
             const dataResponse = await fetch('/dashboard?/fetchEmployeeInfo', {
