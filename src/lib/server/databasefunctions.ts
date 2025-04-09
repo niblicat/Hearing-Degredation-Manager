@@ -120,7 +120,7 @@ export async function extractEmployeeHearingScreeningsFromDatabase(employeeID: s
             hearingDataByYear[yearKey].leftEar = frequencies;
         } else {
             const errorMessage = `Unexpected ear side: ${row.ear}. Please contact the database administrator to fix the ear sides to either 'left' or 'right'`;
-            throw new DatabaseError(errorMessage);
+            throw new Error(errorMessage);
         }
     });
     
