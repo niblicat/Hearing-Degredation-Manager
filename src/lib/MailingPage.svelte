@@ -5,6 +5,7 @@
     import { AnomalyStatus } from "./interpret";
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
+    import { calculateSTSClientSide } from './utility';
 
     interface Props {
         employees: Array<Employee>;
