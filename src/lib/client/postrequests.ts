@@ -41,7 +41,7 @@ export async function getEmployeeHearingHistory(employeeID: string): Promise<Hea
 export async function getAllEmployeeHearingHistories(omitInactive: boolean): Promise<HearingHistory[]> {
     // create form data and populate it with the necessary fields
     const formData = new FormData();
-    formData.append('omitInactive', omitInactive.toString()); // extractEmployeeHearingHistory expects employeeID
+    formData.append('omitInactive', omitInactive.toString()); // extractEmployeeHearingHistory expects omitInactive
 
     const response = await fetch('/dashboard?/extractAllEmployeeHearingHistories', {
         method: 'POST',
@@ -53,7 +53,7 @@ export async function getAllEmployeeHearingHistories(omitInactive: boolean): Pro
     
     const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
     
-    // extractEmployeeHearingHistory() on the server will return both a success: boolean = true and history: HearingHistory if it works
+    // extractAllEmployeeHearingHistories() on the server will return both a success: boolean = true and histories: HearingHistory[] if it works
     // otherwise, it will return success: boolean = false and message: string
     
     if (!result["success"]) throw Error(result["message"] ?? "Failed to extract all employee hearing histories (missing message).");
