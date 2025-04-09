@@ -21,13 +21,13 @@ function findAverage(...args: number[]) {
     return average;
 }
 
-// used to identify hearing anomolies for each ear
+// used to identify hearing anomalies for each ear
 export enum AnomalyStatus {
     None = 0,
-    Base = 1,
+    Baseline = 1,
     Same = 2,
     Better = 3,
-    Improvement = 4,
+    NewBaseline = 4,
     Worse = 5,
     STS = 6,
     Warning = 7,
@@ -123,7 +123,7 @@ export class UserHearingScreeningHistory {
         if (yearPriorAverageChange >= 10) return AnomalyStatus.Warning;
         // Only check for CNT after handling the STS case
         if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
-        else if (baselineAverageChange <= -5) return AnomalyStatus.Improvement; // baseline redefinition (-7 may be different number)
+        else if (baselineAverageChange <= -7) return AnomalyStatus.NewBaseline; // baseline redefinition (-7 may be different number)
         else if (yearPriorAverageChange >= 3) return AnomalyStatus.Worse; // i think +/-3 is the correct turning point
         else if (yearPriorAverageChange <= -3) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same;
@@ -148,7 +148,7 @@ export class UserHearingScreeningHistory {
      */
     private GetAgeCorrectiveDecibelAdjustment(baselineAge: number): HertzCorrectionForAge {
         function GetRowValue(val: number): number {
-            return Math.min(Math.max(val, 20), 60);
+            return Math.min(Math.max(val, 19), 60); 
         }
         let correctionTable: Array<HertzCorrectionForAge>;
         switch (this.sex) {
@@ -162,15 +162,17 @@ export class UserHearingScreeningHistory {
                 correctionTable = AGE_CORRECTION_TABLE_MALE;
                 break;
         }
-        // need to clamp values between 20 and 60 because the age table does not
-        // have data for outside that range
+        
+        // Clamp ages to the range supported by the table (19-60)
         let baselineAgeRowValue = GetRowValue(baselineAge);
         let currentAgeRowValue = GetRowValue(this.age);
 
-        let baselineCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == baselineAge);
-        let currentCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == this.age);
-        if (!baselineCorrection) throw error; // TODO: specific error
-        if (!currentCorrection) throw error; // TODO: specific error
+        // Look up the corrections using the clamped age values
+        let baselineCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == baselineAgeRowValue);
+        let currentCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == currentAgeRowValue);
+        
+        if (!baselineCorrection) throw new Error(`Age correction table does not have an adjustment for age ${baselineAgeRowValue}.`);
+        if (!currentCorrection) throw new Error(`Age correction table does not have an adjustment for age ${currentAgeRowValue}.`);
 
         let difference: HertzCorrectionForAge = { 
             age: 0,
@@ -191,7 +193,20 @@ export class UserHearingScreeningHistory {
      */
     public GenerateHearingReport(): EarAnomalyStatus[] {
         let arrayLength = this.screenings.length;
-        if (arrayLength == 0) throw error; // TODO: throw specific error
+        if (arrayLength == 0) {
+            console.error("No screenings available");
+            return [];
+        }
+        if (arrayLength == 1) {
+            // Only one screening, so it's the baseline with no comparison
+            return [new EarAnomalyStatus(
+                AnomalyStatus.Baseline, 
+                AnomalyStatus.Baseline, 
+                this.screenings[0].year, 
+                this.screenings[0].year, 
+                this.screenings[0].year
+            )];
+        }
 
         let reportArray: EarAnomalyStatus[] = [];
         // Record the average for each each and move the index when the average is Better
@@ -206,7 +221,7 @@ export class UserHearingScreeningHistory {
         bestRightEarAverage = this.GetAverageHertzForSTSRangeForOneEar(this.screenings[0].rightEar);
 
         // push base status for the first hearing screening
-        reportArray.push(new EarAnomalyStatus(AnomalyStatus.Base, AnomalyStatus.Base, this.screenings[0].year, this.screenings[0].year, this.screenings[0].year));
+        reportArray.push(new EarAnomalyStatus(AnomalyStatus.Baseline, AnomalyStatus.Baseline, this.screenings[0].year, this.screenings[0].year, this.screenings[0].year));
 
         for (var i = 1; i < arrayLength; i++) {
             let previousScreening: HearingScreening = this.screenings[i - 1];

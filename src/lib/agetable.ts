@@ -10,6 +10,7 @@ export type HertzCorrectionForAge = {
 };
 
 export const AGE_CORRECTION_TABLE_MALE: Array<HertzCorrectionForAge> = [
+    { age: 19, hz1000: 0, hz2000: 0, hz3000: 0, hz4000: 0, hz6000: 0 },
     { age: 20, hz1000: 5, hz2000: 3, hz3000: 4, hz4000: 5, hz6000: 8 },
     { age: 21, hz1000: 5, hz2000: 3, hz3000: 4, hz4000: 5, hz6000: 8 },
     { age: 22, hz1000: 5, hz2000: 3, hz3000: 4, hz4000: 5, hz6000: 8 },
@@ -54,6 +55,7 @@ export const AGE_CORRECTION_TABLE_MALE: Array<HertzCorrectionForAge> = [
 ]
 
 export const AGE_CORRECTION_TABLE_FEMALE: Array<HertzCorrectionForAge> = [
+    { age: 19, hz1000: 0, hz2000: 0, hz3000: 0, hz4000: 0, hz6000: 0 },
     { age: 20, hz1000: 7, hz2000: 4, hz3000: 3, hz4000: 3, hz6000: 6 },
     { age: 21, hz1000: 7, hz2000: 4, hz3000: 4, hz4000: 3, hz6000: 6 },
     { age: 22, hz1000: 7, hz2000: 4, hz3000: 4, hz4000: 4, hz6000: 6 },
