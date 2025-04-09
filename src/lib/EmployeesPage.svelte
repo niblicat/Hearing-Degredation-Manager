@@ -6,12 +6,11 @@
     import { AnomalyStatus } from "./interpret";
     import type { Employee, EmployeeSearchable } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
-    import { extractFrequencies } from './utility';
+    import { calculateSTSClientSide } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import EmployeeData from './EmployeeData.svelte';
-    import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from './interpret';
 
     interface Props {
         employees: Array<Employee>;
@@ -27,6 +26,10 @@
     
     let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string}>>([]);
 
+    let allHearingData = $state<any>(null);
+    let allHearingReports = $state<Array<any>>([]);
+    let allYearScreenings = $state<Record<string, any>>({});
+
     // Selected employee and year
     let selectedYear = $state("No year selected");
     let selectedEmail = $state("No data selected");
@@ -35,16 +38,6 @@
     let STSstatusRight = $state("No data selected");
     let STSstatusLeft = $state("No data selected");
     let selectedSex = $state("No data selected");
-
-    const blankFrequencies = {
-        hz500: "",
-        hz1000: "",
-        hz2000: "",
-        hz3000: "",
-        hz4000: "",
-        hz6000: "",
-        hz8000: ""
-    };
 
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
@@ -58,9 +51,16 @@
 
     let yearItems = $state<Array<string>>([]);
 
-    function displayError(message: string) {
+    function displayError(message: string, error?: any) {
         errorMessage = message;
+        if (error) {
+            console.error(message, error);
+        }
         success = false;
+    }
+    function displayInfo(message: string) {
+        errorMessage = message;
+        success = true; // This will style it as an info message, not an error
     }
 
     const undefinedEmployee: Employee = {
@@ -108,7 +108,6 @@
         rightNewHearingData.length = 0;
         leftBaselineHearingData.length = 0;
         leftNewHearingData.length = 0;
-        hearingHistory.length = 0;
     }
 
     // Functions to update selected employee and year
@@ -126,11 +125,12 @@
 
         // Fetch employee details from the server and years for other dropdown
         try {
-            // data stuff first
+            // Fetch employee information
             const dataResponse = await fetch('/dashboard?/fetchEmployeeInfo', {
                 method: 'POST',
                 body: formData,
             });
+            
             const serverDataResponse = await dataResponse.json();
             const dataResult = JSON.parse(JSON.parse(serverDataResponse.data)[0]);
 
@@ -147,9 +147,11 @@
                 selectedEmail = "Error fetching data: not a data success";
                 selectedDOB = "Error fetching data: not a data success";
                 selectedStatus = "Error fetching data: not a data success";
+                displayError('Failed to fetch employee information');
+                return;
             }
 
-            // years stuff next
+            // Fetch available years
             const yearsResponse = await fetch('/dashboard?/fetchYears', {
                 method: 'POST',
                 body: formData,
@@ -158,22 +160,101 @@
             const serverYearsResponse = await yearsResponse.json();
             const yearsResult = JSON.parse(JSON.parse(serverYearsResponse.data)[0]);
 
-            console.log(yearsResult);
-
             if (yearsResult["success"]) {
                 success = true;
                 yearItems = yearsResult.years.map(String);
-                console.log(yearItems);
+
+                // shows a helpful message when there's no data
+                if (yearItems.length === 0) {
+                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
+                    // Initialize empty data structures for a new employee with no data
+                    hearingHistory = [];
+                    allHearingData = null;
+                    allHearingReports = [];
+                    allYearScreenings = {};
+                    return; // Exit early since there's no data to fetch
+                }
             }
             else {
-                yearItems = [];
-                displayError('No years found for the selected employee');
+                // Check if this is a "no data" error
+                if (yearsResult.message && yearsResult.message.includes("No years found")) {
+                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
+                    hearingHistory = [];
+                    allHearingData = null;
+                    allHearingReports = [];
+                    allYearScreenings = {};
+                    return; // Exit early
+                } else {
+                    // Only show an error for actual errors, not for expected "no data" cases
+                    displayError('Error fetching years data: ' + (yearsResult.message || 'Unknown error'));
+                    return;
+                }
+            }
+
+            // Fetch all hearing data at once
+            const hearingResponse = await fetch('/dashboard?/fetchCalculateSTSData', { 
+                method: 'POST',
+                body: formData,
+            });
+
+            const hearingServerResponse = await hearingResponse.json();
+            const hearingResult = JSON.parse(JSON.parse(hearingServerResponse.data)[0]);
+
+            if (hearingResult["success"]) {
+                // Store all hearing data
+                allHearingData = hearingResult.hearingData;
+
+                try {
+                    // Pre-calculate STS reports for all years
+                    allHearingReports = calculateSTSClientSide(allHearingData);
+                    
+                    // Store screenings by year for quick access
+                    Object.entries(allHearingData.screenings).forEach(([year, data]) => {
+                        allYearScreenings[year] = data;
+                    });
+
+                    // Create the hearing history display info
+                    hearingHistory = allHearingReports.map((report: any) => ({
+                        year: report.reportYear.toString(),
+                        leftStatus: GetAnomalyStatusText(report.leftStatus),
+                        rightStatus: GetAnomalyStatusText(report.rightStatus)
+                    }));
+                    
+                    // Sort by year (newest first)
+                    hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+                } catch (calcError) {
+                    console.error('Error calculating STS:', calcError);
+                    displayError('Error calculating hearing thresholds. Please check the hearing data format.');
+                    return;
+                }
+            }
+            else {
+                // Check if this is a "no data" error or another type of error
+                if (hearingResult.message && (
+                    hearingResult.message.includes("not found") || 
+                    hearingResult.message.includes("No hearing data") ||
+                    hearingResult.message.includes("no data") ||
+                    hearingResult.message.includes("no screening")
+                )) {
+                    // This is expected for new employees - don't show an error
+                    console.log("No hearing data available for this employee");
+                    // We already showed the info message earlier based on empty years
+                    // Just make sure the data structures are properly initialized
+                    hearingHistory = [];
+                    allHearingData = null;
+                    allHearingReports = [];
+                    allYearScreenings = {};
+                } else {
+                    // This is an actual error
+                    displayError((hearingResult.message || 'Unknown error'));
+                }
+                return;
             }
         } 
         catch (error) {
             console.error('Error fetching data:', error);
             yearItems = [];
-            displayError('Error fetching data');
+            displayError('Error fetching data from server. Please try again later.');
         }
     }
 
@@ -184,119 +265,128 @@
         return filterable.filter(item => item.includes(filter));
     });
 
+    // Updated selectYear function that doesn't make API calls but uses cached data
     async function selectYear(year: string): Promise<void> {
         selectedYear = year;
         yearMenuOpen = false;
 
-        await fetchUpdatedHearingData();
-
-        // Creating form data
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('year', selectedYear);
+        if (!allHearingData || !allHearingReports) {
+            displayError('No hearing data available');
+            return;
+        }
 
         try {
-            const response = await fetch('/dashboard?/fetchCalculateSTSData', { 
-                method: 'POST',
-                body: formData,
-            });
+            // Find the test result that matches the selected year from the pre-calculated reports
+            const selectedYearReport = allHearingReports.find(
+                (report: any) => report.reportYear === parseInt(year, 10)
+            );
 
-            const serverResponse = await response.json();
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-
-            if (result["success"]) {
-                success = true;
-                // Perform STS calculation on the client side
-                const hearingReport = calculateSTSClientSide(
-                    result.hearingData, 
-                    parseInt(selectedYear)
-                );
-
-                // Find the test result that matches the selected year
-                const selectedYearReport = hearingReport.find(
-                    (report: any) => report.reportYear === parseInt(year, 10)
-                );
-
-                if (selectedYearReport) {
-                    STSstatusRight = GetAnomalyStatusText(selectedYearReport.rightStatus);
-                    STSstatusLeft = GetAnomalyStatusText(selectedYearReport.leftStatus);
-                } else {
-                    STSstatusRight = "No Data";
-                    STSstatusLeft = "No Data";
-                }
-
-                // Build the full hearing history from all years
-                hearingHistory = hearingReport.map((report: any) => ({
-                    year: report.reportYear.toString(),
-                    leftStatus: GetAnomalyStatusText(report.leftStatus),
-                    rightStatus: GetAnomalyStatusText(report.rightStatus)
-                }));
-                
-                // Sort by year (newest first)
-                hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+            if (selectedYearReport) {
+                STSstatusRight = GetAnomalyStatusText(selectedYearReport.rightStatus);
+                STSstatusLeft = GetAnomalyStatusText(selectedYearReport.leftStatus);
+            } else {
+                STSstatusRight = "No Data";
+                STSstatusLeft = "No Data";
             }
-            else {
-                displayError(result.message);
-            }
+
+            // Update the graph data without making an API call
+            updateHearingDataDisplay(year);
         } catch (error) {
-            const errorMessage = 'Error fetching hearing data: ' + error;
+            const errorMessage = 'Error processing hearing data: ' + error;
             console.error(errorMessage);
             displayError(errorMessage);
         }
     }
 
-    function calculateSTSClientSide(hearingData: any, currentYear: number) {
-        // Convert raw hearing data to the format required by UserHearingScreeningHistory
-        const screenings = Object.entries(hearingData.screenings)
-            .map(([year, data]) => new HearingScreening(
-                parseInt(year),
-                new HearingDataOneEar(
-                    data.left.hz500 ?? null,
-                    data.left.hz1000 ?? null,
-                    data.left.hz2000 ?? null,
-                    data.left.hz3000 ?? null,
-                    data.left.hz4000 ?? null,
-                    data.left.hz6000 ?? null,
-                    data.left.hz8000 ?? null
-                ),
-                new HearingDataOneEar(
-                    data.right.hz500 ?? null,
-                    data.right.hz1000 ?? null,
-                    data.right.hz2000 ?? null,
-                    data.right.hz3000 ?? null,
-                    data.right.hz4000 ?? null,
-                    data.right.hz6000 ?? null,
-                    data.right.hz8000 ?? null
-                )
-            ));
+    // Function that updates the graph data from cached data
+    function updateHearingDataDisplay(year: string): void {
+        try {
+            // Clear previous data
+            resetData();
 
-        // Calculate age based on date of birth and current year
-        const dob = new Date(hearingData.dateOfBirth);
-        const dobYear = dob.getFullYear();
-        const age = currentYear - dobYear;
+            // Find the baseline years from the selected year report
+            const selectedYearReport = allHearingReports.find(
+                (report: any) => report.reportYear === parseInt(year, 10)
+            );
 
-        // Determine sex
-        const personSex = hearingData.sex === "Male" ? PersonSex.Male : 
-                        hearingData.sex === "Female" ? PersonSex.Female : 
-                        PersonSex.Other;
+            if (!selectedYearReport) {
+                displayError('No report found for the selected year');
+                return;
+            }
 
-        // Create UserHearingScreeningHistory instance
-        const userHearingHistory = new UserHearingScreeningHistory(
-            age, 
-            personSex, 
-            currentYear, 
-            screenings
-        );
+            // Get baseline year data for left and right ears
+            const leftBaselineYear = selectedYearReport.leftBaselineYear?.toString();
+            const rightBaselineYear = selectedYearReport.rightBaselineYear?.toString();
+            
+            // Get current year data
+            const currentYearData = allYearScreenings[year];
+            
+            if (!currentYearData) {
+                displayError('No hearing data found for the selected year');
+                return;
+            }
 
-        // Generate hearing report
-        const hearingReport = userHearingHistory.GenerateHearingReport();
+            // Extract data for the graphs
+            if (leftBaselineYear && allYearScreenings[leftBaselineYear]?.left) {
+                leftBaselineHearingData = [
+                    allYearScreenings[leftBaselineYear].left.hz500,
+                    allYearScreenings[leftBaselineYear].left.hz1000,
+                    allYearScreenings[leftBaselineYear].left.hz2000,
+                    allYearScreenings[leftBaselineYear].left.hz3000,
+                    allYearScreenings[leftBaselineYear].left.hz4000,
+                    allYearScreenings[leftBaselineYear].left.hz6000,
+                    allYearScreenings[leftBaselineYear].left.hz8000,
+                ].filter(value => value !== null);
+            }
 
-        return hearingReport;
+            if (rightBaselineYear && allYearScreenings[rightBaselineYear]?.right) {
+                rightBaselineHearingData = [
+                    allYearScreenings[rightBaselineYear].right.hz500,
+                    allYearScreenings[rightBaselineYear].right.hz1000,
+                    allYearScreenings[rightBaselineYear].right.hz2000,
+                    allYearScreenings[rightBaselineYear].right.hz3000,
+                    allYearScreenings[rightBaselineYear].right.hz4000,
+                    allYearScreenings[rightBaselineYear].right.hz6000,
+                    allYearScreenings[rightBaselineYear].right.hz8000,
+                ].filter(value => value !== null);
+            }
+
+            // Current year data
+            if (currentYearData.left) {
+                leftNewHearingData = [
+                    currentYearData.left.hz500,
+                    currentYearData.left.hz1000,
+                    currentYearData.left.hz2000,
+                    currentYearData.left.hz3000,
+                    currentYearData.left.hz4000,
+                    currentYearData.left.hz6000,
+                    currentYearData.left.hz8000,
+                ].filter(value => value !== null);
+            }
+
+            if (currentYearData.right) {
+                rightNewHearingData = [
+                    currentYearData.right.hz500,
+                    currentYearData.right.hz1000,
+                    currentYearData.right.hz2000,
+                    currentYearData.right.hz3000,
+                    currentYearData.right.hz4000,
+                    currentYearData.right.hz6000,
+                    currentYearData.right.hz8000,
+                ].filter(value => value !== null);
+            }
+        }
+        catch (error) {
+            console.error('Error updating hearing data display:', error);
+            displayError('Error updating hearing data display');
+        }
     }
 
-    // Helper function to get the readable status
+   // Helper function to get the readable status
     function GetAnomalyStatusText(status: AnomalyStatus): string {
-        return AnomalyStatus[status] ?? "Unknown";
+        return AnomalyStatus[status].replace(/([a-z])([A-Z])/g, (match: string, lower: string, upper: string) => {
+            return lower + " " + upper;
+        }) ?? "Unknown";
     }
 
     //DATA MODIFICATION STUFF
@@ -494,56 +584,6 @@
             displayError(errorMessage);
         }
     }
-
-    export async function fetchUpdatedHearingData() {
-        try {
-            const formData = new FormData();
-            formData.append('employeeID', selectedEmployee.data.employeeID);
-            formData.append('year', selectedYear);
-            const response = await fetch('/dashboard?/fetchHearingData', {
-                method: 'POST',
-                body: formData,
-            });
-            
-            const serverResponse = await response.json();
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-            
-            if (result["success"]) {
-                const { baselineData, newData } = result.hearingData;
-
-                // Clear previous data
-                resetData();
-
-                // Extract frequencies and populate arrays
-                // For right ear baseline data
-                if (baselineData.rightEar) {
-                    rightBaselineHearingData.push(...extractFrequencies(baselineData.rightEar));
-                }
-
-                // For right ear new data
-                if (newData.rightEar) {
-                    rightNewHearingData.push(...extractFrequencies(newData.rightEar));
-                }
-
-                // For left ear baseline data
-                if (baselineData.leftEar) {
-                    leftBaselineHearingData.push(...extractFrequencies(baselineData.leftEar));
-                }
-
-                // For left ear new data
-                if (newData.leftEar) {
-                    leftNewHearingData.push(...extractFrequencies(newData.leftEar));
-                }
-            } 
-            else {
-                displayError('Failed to fetch hearing data for the selected year');
-            }
-        }
-        catch (error) {
-            console.error('Error fetching hearing data:', error);
-            displayError('Error fetching hearing data');
-        }
-    }
 </script>
 
 <!-- TITLE PAGE SECTION -->
@@ -588,13 +628,17 @@
                 <div class="p-3">
                     <Search size="md" bind:value={inputValueYear}/>
                 </div>
-                {#each filteredYears as year}
-                    <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
-                        <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectYear(year)}>
-                            {year}
-                        </button>
-                    </li>
-                {/each}
+                {#if yearItems.length === 0}
+                    <li class="rounded p-2 text-gray-500 italic">No hearing data available for this employee</li>
+                {:else}
+                    {#each filteredYears as year}
+                        <li class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <button type="button" class="w-full text-left cursor-pointer" onclick={() => selectYear(year)}>
+                                {year}
+                            </button>
+                        </li>
+                    {/each}
+                {/if}
             </Dropdown>
         {/if}
 
