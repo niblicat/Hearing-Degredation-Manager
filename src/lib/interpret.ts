@@ -30,8 +30,7 @@ export enum AnomalyStatus {
     NewBaseline = 4,
     Worse = 5,
     STS = 6,
-    Warning = 7,
-    CNT = 8
+    CNT = 7
 }
 
 class EarAnomalyStatus {
@@ -109,7 +108,7 @@ export class UserHearingScreeningHistory {
     private GetStatusForEar(baselineEarData: HearingDataOneEar, beforeEarData: HearingDataOneEar, afterEarData: HearingDataOneEar, correction: HertzCorrectionForAge): AnomalyStatus {
         // Get the status for one ear
         let baselineAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(baselineEarData, afterEarData, correction); // compares current year and BASELINE (only main 3 points WITH AGE )
-        let yearPriorAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(beforeEarData, afterEarData, correction, false); // compares current year and YEAR PRIOR (only main 3 points WITH AGE )
+        let yearPriorAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(beforeEarData, afterEarData, correction); // compares current year and YEAR PRIOR (only main 3 points WITH AGE )
 
         // a larger value is worse
         
@@ -120,13 +119,12 @@ export class UserHearingScreeningHistory {
             }
             return AnomalyStatus.STS;
         }
-        if (yearPriorAverageChange >= 10) return AnomalyStatus.Warning;
         // Only check for CNT after handling the STS case
         if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
-        else if (baselineAverageChange <= -7) return AnomalyStatus.NewBaseline; // baseline redefinition (-7 may be different number)
-        else if (yearPriorAverageChange >= 3) return AnomalyStatus.Worse; // i think +/-3 is the correct turning point
-        else if (yearPriorAverageChange <= -3) return AnomalyStatus.Better; 
-        else return AnomalyStatus.Same;
+        else if (baselineAverageChange <= -7) return AnomalyStatus.NewBaseline; // baseline redefinition  //!! Needs to be adjusted per Dr. Ott
+        else if (yearPriorAverageChange >= 10) return AnomalyStatus.Worse;
+        else if (yearPriorAverageChange <= -10) return AnomalyStatus.Better; 
+        else return AnomalyStatus.Same; // anything from -10 to 10 is defined as same (per Dr. Ott)
     }
 
     private confirmCNT(hdata: HearingDataOneEar): boolean {
@@ -386,13 +384,6 @@ export class UserHearingScreeningHistory {
 
         return average;
     }
-}
-
-// ! this is a duplicate of hearing screening, remove one of them
-interface HearingDataEntry {
-    year: number;
-    left: { hz500: number; hz1000: number; hz2000: number; hz3000: number; hz4000: number; hz6000: number; hz8000: number };
-    right: { hz500: number; hz1000: number; hz2000: number; hz3000: number; hz4000: number; hz6000: number; hz8000: number };
 }
 
 
