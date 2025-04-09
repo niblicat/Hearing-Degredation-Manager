@@ -29,11 +29,11 @@ export enum AnomalyStatus {
     Better = 3,
     NewBaseline = 4,
     Worse = 5,
-    STS = 6,
+    PossibleSTS = 6,
     CNT = 7
 }
 
-class EarAnomalyStatus {
+export class EarAnomalyStatus {
     leftStatus: AnomalyStatus;
     rightStatus: AnomalyStatus;
     reportYear: number;
@@ -104,24 +104,23 @@ export class UserHearingScreeningHistory {
     /**
      * GetStatusForEar
      * Returns the anomaly status for an ear given data for two years
+     * A LARGER VALUE IS WORSE
      */
     private GetStatusForEar(baselineEarData: HearingDataOneEar, beforeEarData: HearingDataOneEar, afterEarData: HearingDataOneEar, correction: HertzCorrectionForAge): AnomalyStatus {
         // Get the status for one ear
         let baselineAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(baselineEarData, afterEarData, correction); // compares current year and BASELINE (only main 3 points WITH AGE )
         let yearPriorAverageChange = this.GetAverageDecibelChangeForOneEarForMainLevels(beforeEarData, afterEarData, correction); // compares current year and YEAR PRIOR (only main 3 points WITH AGE )
 
-        // a larger value is worse
-        
         if (baselineAverageChange >= 10) {
             // Check for CNT specifically in current year or baseline, which are used for STS determination
             if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) {
                 return AnomalyStatus.CNT;
             }
-            return AnomalyStatus.STS;
+            return AnomalyStatus.PossibleSTS;
         }
         // Only check for CNT after handling the STS case
         if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
-        else if (baselineAverageChange <= -7) return AnomalyStatus.NewBaseline; // baseline redefinition  //!! Needs to be adjusted per Dr. Ott
+        // else if (baselineAverageChange <= -7) return AnomalyStatus.NewBaseline; // baseline redefinition  //!! Needs to be adjusted per Dr. Ott
         else if (yearPriorAverageChange >= 10) return AnomalyStatus.Worse;
         else if (yearPriorAverageChange <= -10) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same; // anything from -10 to 10 is defined as same (per Dr. Ott)

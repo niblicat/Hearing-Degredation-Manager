@@ -1,8 +1,8 @@
 <script lang="ts">
     import { ButtonGroup, Button, Footer, Spinner } from 'flowbite-svelte';
-    import type { Employee, HearingData, HearingDataSingle } from './MyTypes';
+    import type { Employee, HearingData, HearingDataSingle, HearingHistory } from './MyTypes';
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
-    import { AnomalyStatus } from "./interpret";
+    import { AnomalyStatus, EarAnomalyStatus, PersonSex } from "./interpret";
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import { calculateSTSClientSide } from './utility';
@@ -21,7 +21,7 @@
     let STSstatusRight = $state("No data selected");
     let STSstatusLeft = $state("No data selected");
 
-    interface EarData {
+    interface EarData { // just use HearingDataSingle instead?
         hz500: number;
         hz1000: number;
         hz2000: number;
@@ -53,24 +53,6 @@
         sex: string;
     }
 
-    interface HearingReportItem {
-        reportYear: number;
-        leftStatus: AnomalyStatus;
-        rightStatus: AnomalyStatus;
-    }
-
-    interface STSCalculationResult {
-        success: boolean;
-        hearingReport: HearingReportItem[];
-        error?: string;
-    }
-
-    interface HearingDataExtractResult {
-        success: boolean;
-        hearingData: HearingDataResult[];
-        error?: string;
-    }
-
     function displayError(message: string): void {
         errorMessage = message;
         success = false;
@@ -90,13 +72,18 @@
             }));
     }
 
-    // Helper function to get the readable status
     const getAnomalyStatusText = (status: AnomalyStatus): string => {
-        return AnomalyStatus[status] || "Unknown";
+        return AnomalyStatus[status].replace(/([a-z])([A-Z])/g, (match: string, lower: string, upper: string) => {
+            return lower + " " + upper;
+        }) ?? "Unknown";
     };
 
     // Get hearing data from server for a list of employee IDs
-    async function fetchHearingData(employeeIDs: string[]): Promise<HearingDataExtractResult> {
+    async function fetchHearingData(employeeIDs: string[]): Promise<{
+        success: boolean;
+        hearingData: HearingDataResult[];
+        error?: string;
+    }> {
         const formData = new FormData();
         formData.append('employeeIDs', JSON.stringify(employeeIDs));
         
@@ -109,185 +96,144 @@
         return JSON.parse(JSON.parse(serverResponse.data)[0]);
     }
 
-    // Get STS calculation for an employee for a specific year
-    async function calculateSTS(employeeID: string, year: number | string, sex: string): Promise<STSCalculationResult> {
-        const formData = new FormData();
-        formData.append('employeeID', employeeID);
-        formData.append('year', String(year));
-        formData.append('sex', sex);
-
-        const response = await fetch('/dashboard?/calculateSTS', { 
-            method: 'POST',
-            body: formData,
-        });
-
-        const serverResponse = await response.json();
-        return JSON.parse(JSON.parse(serverResponse.data)[0]);
-    }
-
-    // Get ear data from hearing data
-    function extractEarData(hearingData: HearingDataResult[], year: number, ear: string): EarData {
-        const data = hearingData
-            .filter(data => data.year === year && data.ear === ear)
-            .reduce((acc, data) => {
-                return {
-                    hz500: data.hz500 ?? 0,
-                    hz1000: data.hz1000 ?? 0,
-                    hz2000: data.hz2000 ?? 0,
-                    hz3000: data.hz3000 ?? 0,
-                    hz4000: data.hz4000 ?? 0,
-                    hz6000: data.hz6000 ?? 0,
-                    hz8000: data.hz8000 ?? 0
+    // Convert server hearing data to the format expected by calculateSTSClientSide
+    function convertToHearingHistory(
+        employeeData: HearingDataResult[], 
+        dateOfBirth: string, 
+        sex: string
+    ): HearingHistory {
+        // Group data by year
+        const yearData = employeeData.reduce((acc, data) => {
+            if (!acc[data.year]) {
+                acc[data.year] = {
+                    left: { 
+                        hz500: null, hz1000: null, hz2000: null, 
+                        hz3000: null, hz4000: null, hz6000: null, hz8000: null 
+                    },
+                    right: { 
+                        hz500: null, hz1000: null, hz2000: null, 
+                        hz3000: null, hz4000: null, hz6000: null, hz8000: null 
+                    }
                 };
-            }, {
-                hz500: 0, hz1000: 0, hz2000: 0, hz3000: 0, hz4000: 0, hz6000: 0, hz8000: 0
-            } as EarData);
-        
-        return data;
-    }
-
-    // Find baseline year for an employee
-    async function findBaselineYear(
-        employee: EmployeeForCSV, 
-        hearingData: HearingDataResult[]
-    ): Promise<{ year: number | null, leftEarData: EarData, rightEarData: EarData }> {
-        // Initialize default return values
-        const defaultEarData: EarData = { 
-            hz500: 0, hz1000: 0, hz2000: 0, hz3000: 0, hz4000: 0, hz6000: 0, hz8000: 0 
-        };
-        
-        // Get unique years for this employee, sorted chronologically
-        const years = [...new Set(
-            hearingData
-                .filter(data => data.id === employee.employeeID)
-                .map(data => data.year)
-        )].sort();
-        
-        // Check each year to find baseline data
-        for (const year of years) {
-            const result = await calculateSTS(employee.employeeID, year, employee.sex);
-            
-            if (!result.success) continue;
-            
-            const selectedYearReport = result.hearingReport.find(report => 
-                report.reportYear === Number(year)
-            );
-
-            if (!selectedYearReport) continue;
-            
-            const leftStatus = getAnomalyStatusText(selectedYearReport.leftStatus);
-            const rightStatus = getAnomalyStatusText(selectedYearReport.rightStatus);
-            
-            // If this is baseline data, extract the ear data and return
-            if (leftStatus === 'Base' && rightStatus === 'Base') {
-                const employeeHearingData = hearingData.filter(data => data.id === employee.employeeID);
-                const leftEarData = extractEarData(employeeHearingData, year, 'left');
-                const rightEarData = extractEarData(employeeHearingData, year, 'right');
-                
-                return { year, leftEarData, rightEarData };
             }
-        }
-        
-        // No baseline found
-        return { year: null, leftEarData: defaultEarData, rightEarData: defaultEarData };
-    }
-
-    // Get current year data and status for an employee
-    async function getCurrentYearData(
-        employee: EmployeeForCSV, 
-        hearingData: HearingDataResult[],
-        mostRecentYear: number
-    ): Promise<{ leftEarData: EarData, rightEarData: EarData, leftStatus: string, rightStatus: string }> {
-        // Initialize default values
-        const defaultEarData: EarData = { 
-            hz500: 0, hz1000: 0, hz2000: 0, hz3000: 0, hz4000: 0, hz6000: 0, hz8000: 0 
-        };
-        let leftStatus = "No Data";
-        let rightStatus = "No Data";
-        
-        // Get employee hearing data for the most recent year
-        const employeeHearingData = hearingData.filter(data => data.id === employee.employeeID);
-        const leftEarData = extractEarData(employeeHearingData, mostRecentYear, 'left');
-        const rightEarData = extractEarData(employeeHearingData, mostRecentYear, 'right');
-        
-        // Get STS status for the most recent year
-        const result = await calculateSTS(employee.employeeID, mostRecentYear, employee.sex);
-        
-        if (result.success) {
-            const recentYearReport = result.hearingReport.find(report => 
-                report.reportYear === mostRecentYear
-            );
-
-            if (recentYearReport) {
-                leftStatus = getAnomalyStatusText(recentYearReport.leftStatus);
-                rightStatus = getAnomalyStatusText(recentYearReport.rightStatus);
+            
+            // Populate the correct ear's data
+            if (data.ear === 'left') {
+                acc[data.year].left = {
+                    hz500: data.hz500,
+                    hz1000: data.hz1000,
+                    hz2000: data.hz2000,
+                    hz3000: data.hz3000,
+                    hz4000: data.hz4000,
+                    hz6000: data.hz6000,
+                    hz8000: data.hz8000
+                };
+            } else if (data.ear === 'right') {
+                acc[data.year].right = {
+                    hz500: data.hz500,
+                    hz1000: data.hz1000,
+                    hz2000: data.hz2000,
+                    hz3000: data.hz3000,
+                    hz4000: data.hz4000,
+                    hz6000: data.hz6000,
+                    hz8000: data.hz8000
+                };
             }
-        }
-        
-        return { leftEarData, rightEarData, leftStatus, rightStatus };
+            
+            return acc;
+        }, {} as Record<string, any>);
+
+        // Create the hearing history object
+        return {
+            dateOfBirth: dateOfBirth,
+            sex: sex,
+            screenings: yearData
+        };
     }
 
-    // Create CSV data for a single employee
-    async function createEmployeeCSVRow(
-        employee: EmployeeForCSV, 
-        hearingData: HearingDataResult[]
-    ): Promise<string[] | null> {
-        // Filter data for this employee
-        const csvHearingData = hearingData.filter(data => data.id === employee.employeeID);
+    // Process employee data and generate CSV rows
+    async function processEmployeeData(
+        employeeList: EmployeeForCSV[], 
+        hearingDataResults: HearingDataResult[]
+    ): Promise<string[][]> {
+        const rows: string[][] = [];
         
-        if (csvHearingData.length === 0) {
-            console.log(`No hearing data found for employee ${employee.firstName} ${employee.lastName}`);
-            return null;
+        for (const employee of employeeList) {
+            // Filter hearing data for this employee
+            const employeeHearingData = hearingDataResults.filter(
+                data => data.id === employee.employeeID
+            );
+            
+            if (employeeHearingData.length === 0) {
+                console.log(`No hearing data found for employee ${employee.firstName} ${employee.lastName}`);
+                continue;
+            }
+            
+            // Get years for this employee
+            const years = [...new Set(employeeHearingData.map(data => data.year))].sort((a, b) => a - b);
+            if (years.length === 0) continue;
+            
+            // Convert to hearing history format
+            const hearingHistory = convertToHearingHistory(
+                employeeHearingData,
+                employee.dob,
+                employee.sex
+            );
+            
+            // Calculate STS using client-side function
+            const stsReports = calculateSTSClientSide(hearingHistory);
+            if (!stsReports || stsReports.length === 0) continue;
+            
+            // First year is baseline
+            const baselineYear = years[0];
+            const baselineReport = stsReports.find(report => report.reportYear === baselineYear);
+            if (!baselineReport) continue;
+            
+            // Most recent year for current data
+            const currentYear = years[years.length - 1];
+            const currentReport = stsReports.find(report => report.reportYear === currentYear);
+            if (!currentReport) continue;
+            
+            // Extract data for baseline and current years
+            const baselineData = hearingHistory.screenings[baselineYear.toString()];
+            const currentData = hearingHistory.screenings[currentYear.toString()];
+            
+            if (!baselineData || !currentData) continue;
+            
+            // Create CSV row for this employee
+            const row = [
+                employee.employeeID,
+                employee.firstName,
+                employee.lastName,
+                employee.email,
+                employee.dob,
+                employee.sex,
+                baselineYear.toString(),
+                String(baselineData.left.hz500 ?? ''), String(baselineData.left.hz1000 ?? ''), 
+                String(baselineData.left.hz2000 ?? ''), String(baselineData.left.hz3000 ?? ''),
+                String(baselineData.left.hz4000 ?? ''), String(baselineData.left.hz6000 ?? ''), 
+                String(baselineData.left.hz8000 ?? ''),
+                String(baselineData.right.hz500 ?? ''), String(baselineData.right.hz1000 ?? ''), 
+                String(baselineData.right.hz2000 ?? ''), String(baselineData.right.hz3000 ?? ''),
+                String(baselineData.right.hz4000 ?? ''), String(baselineData.right.hz6000 ?? ''), 
+                String(baselineData.right.hz8000 ?? ''),
+                currentYear.toString(),
+                String(currentData.left.hz500 ?? ''), String(currentData.left.hz1000 ?? ''), 
+                String(currentData.left.hz2000 ?? ''), String(currentData.left.hz3000 ?? ''),
+                String(currentData.left.hz4000 ?? ''), String(currentData.left.hz6000 ?? ''), 
+                String(currentData.left.hz8000 ?? ''),
+                String(currentData.right.hz500 ?? ''), String(currentData.right.hz1000 ?? ''), 
+                String(currentData.right.hz2000 ?? ''), String(currentData.right.hz3000 ?? ''),
+                String(currentData.right.hz4000 ?? ''), String(currentData.right.hz6000 ?? ''), 
+                String(currentData.right.hz8000 ?? ''),
+                getAnomalyStatusText(currentReport.leftStatus), 
+                getAnomalyStatusText(currentReport.rightStatus)
+            ];
+            
+            rows.push(row);
         }
-
-        // Find baseline data
-        const { year: baselineYear, leftEarData: baselineLeftEarData, rightEarData: baselineRightEarData } = 
-            await findBaselineYear(employee, hearingData);
         
-        if (baselineYear === null) {
-            console.log(`No baseline data found for employee ${employee.firstName} ${employee.lastName}`);
-            return null;
-        }
-        
-        // Get the most recent year's data
-        const years = [...new Set(csvHearingData.map(data => data.year))].sort();
-        const mostRecentYear = years[years.length - 1];
-        
-        const { 
-            leftEarData: recentLeftEarData, 
-            rightEarData: recentRightEarData,
-            leftStatus: recentLeftStatus,
-            rightStatus: recentRightStatus
-        } = await getCurrentYearData(employee, hearingData, mostRecentYear);
-        
-        // Build the row with both baseline and most recent data
-        return [
-            employee.employeeID,
-            employee.firstName,
-            employee.lastName,
-            employee.email,
-            employee.dob,
-            employee.sex,
-            String(baselineYear),
-            String(baselineLeftEarData.hz500), String(baselineLeftEarData.hz1000), 
-            String(baselineLeftEarData.hz2000), String(baselineLeftEarData.hz3000),
-            String(baselineLeftEarData.hz4000), String(baselineLeftEarData.hz6000), 
-            String(baselineLeftEarData.hz8000),
-            String(baselineRightEarData.hz500), String(baselineRightEarData.hz1000), 
-            String(baselineRightEarData.hz2000), String(baselineRightEarData.hz3000),
-            String(baselineRightEarData.hz4000), String(baselineRightEarData.hz6000), 
-            String(baselineRightEarData.hz8000),
-            String(mostRecentYear),
-            String(recentLeftEarData.hz500), String(recentLeftEarData.hz1000), 
-            String(recentLeftEarData.hz2000), String(recentLeftEarData.hz3000),
-            String(recentLeftEarData.hz4000), String(recentLeftEarData.hz6000), 
-            String(recentLeftEarData.hz8000),
-            String(recentRightEarData.hz500), String(recentRightEarData.hz1000), 
-            String(recentRightEarData.hz2000), String(recentRightEarData.hz3000),
-            String(recentRightEarData.hz4000), String(recentRightEarData.hz6000), 
-            String(recentRightEarData.hz8000),
-            recentLeftStatus, recentRightStatus
-        ];
+        return rows;
     }
 
     // Create CSV content from employee data
@@ -304,29 +250,30 @@
         // Get employee IDs for the server request
         const employee_IDs = employeeList.map(employee => employee.employeeID);
         
-        // Fetch hearing data from server (single server call)
-        const result = await fetchHearingData(employee_IDs);
+        try {
+            // Fetch hearing data from server (single server call)
+            const result = await fetchHearingData(employee_IDs);
 
-        if (!result.success) {
-            throw new Error(result.error ?? "Failed to generate report");
-        }
-
-        // Process each employee
-        const rows: string[] = [];
-        
-        for (const employee of employeeList) {
-            const rowData = await createEmployeeCSVRow(employee, result.hearingData);
-            if (rowData) {
-                rows.push(rowData.join(','));
+            if (!result.success) {
+                throw new Error(result.error ?? "Failed to generate report");
             }
-        }
 
-        if (rows.length === 0) {
-            console.log("No baseline data found for any employee.");
-            return "No data found that matches the criteria.";
+            // Process all employees
+            const rows = await processEmployeeData(employeeList, result.hearingData);
+
+            if (rows.length === 0) {
+                console.log("No data found for any employee.");
+                return "No data found that matches the criteria.";
+            }
+            
+            // Convert rows to CSV strings
+            const csvRows = rows.map(row => row.join(','));
+            return [headers.join(','), ...csvRows].join('\n');
+            
+        } catch (error) {
+            console.error("Error creating CSV:", error);
+            throw new Error(error instanceof Error ? error.message : "Unknown error occurred");
         }
-        
-        return ([headers.join(','), ...rows].join('\n'));
     };
     
     // Handle export functionality

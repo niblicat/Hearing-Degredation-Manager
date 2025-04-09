@@ -1,10 +1,9 @@
 <script lang="ts">
 
-    import { Button, Search, Modal, Label, Input, Radio, Tooltip } from 'flowbite-svelte';
+    import { Button, Search, Modal, Label, Input, Radio, Tooltip, Dropdown } from 'flowbite-svelte';
     import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
-    import { Dropdown } from 'flowbite-svelte';
-    import { AnomalyStatus } from "./interpret";
-    import type { Employee, EmployeeSearchable } from './MyTypes';
+    import { AnomalyStatus, EarAnomalyStatus } from "./interpret";
+    import type { Employee, EmployeeSearchable, HearingHistory } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { calculateSTSClientSide } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
@@ -26,8 +25,9 @@
     
     let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string}>>([]);
 
-    let allHearingData = $state<any>(null);
-    let allHearingReports = $state<Array<any>>([]);
+    let allHearingData = $state<HearingHistory[]>([]);
+
+    let allHearingReports = $state<EarAnomalyStatus[]>([]);
     let allYearScreenings = $state<Record<string, any>>({});
 
     // Selected employee and year
@@ -278,7 +278,7 @@
         try {
             // Find the test result that matches the selected year from the pre-calculated reports
             const selectedYearReport = allHearingReports.find(
-                (report: any) => report.reportYear === parseInt(year, 10)
+                (report) => report.reportYear === parseInt(year, 10)
             );
 
             if (selectedYearReport) {
@@ -306,7 +306,7 @@
 
             // Find the baseline years from the selected year report
             const selectedYearReport = allHearingReports.find(
-                (report: any) => report.reportYear === parseInt(year, 10)
+                (report) => report.reportYear === parseInt(year, 10)
             );
 
             if (!selectedYearReport) {
@@ -315,8 +315,8 @@
             }
 
             // Get baseline year data for left and right ears
-            const leftBaselineYear = selectedYearReport.leftBaselineYear?.toString();
-            const rightBaselineYear = selectedYearReport.rightBaselineYear?.toString();
+            const leftBaselineYear = selectedYearReport.leftBaselineYear.toString();
+            const rightBaselineYear = selectedYearReport.rightBaselineYear.toString();
             
             // Get current year data
             const currentYearData = allYearScreenings[year];
