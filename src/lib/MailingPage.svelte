@@ -6,6 +6,7 @@
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import { calculateSTSClientSide } from './utility';
+	import { DatasetController } from 'chart.js';
 
     interface Props {
         employees: Array<Employee>;
@@ -17,19 +18,6 @@
     let errorMessage = $state("");
     let loadingTemplate = $state(false);
     let loadingCSV = $state(false);
-
-    let STSstatusRight = $state("No data selected");
-    let STSstatusLeft = $state("No data selected");
-
-    interface EarData { // just use HearingDataSingle instead?
-        hz500: number;
-        hz1000: number;
-        hz2000: number;
-        hz3000: number;
-        hz4000: number;
-        hz6000: number;
-        hz8000: number;
-    }
 
     interface HearingDataResult {
         id: string;
@@ -100,7 +88,7 @@
     function convertToHearingHistory(
         employeeData: HearingDataResult[], 
         dateOfBirth: string, 
-        sex: string
+        sex: PersonSex
     ): HearingHistory {
         // Group data by year
         const yearData = employeeData.reduce((acc, data) => {
@@ -173,11 +161,17 @@
             const years = [...new Set(employeeHearingData.map(data => data.year))].sort((a, b) => a - b);
             if (years.length === 0) continue;
             
+
+            // Convert string sex to PersonSex enum
+            const personSex = employee.sex === "Female" ? PersonSex.Female : 
+                            employee.sex === "Male" ? PersonSex.Male : 
+                            PersonSex.Other;
+
             // Convert to hearing history format
             const hearingHistory = convertToHearingHistory(
                 employeeHearingData,
                 employee.dob,
-                employee.sex
+                personSex
             );
             
             // Calculate STS using client-side function
@@ -199,6 +193,10 @@
             const currentData = hearingHistory.screenings[currentYear.toString()];
             
             if (!baselineData || !currentData) continue;
+
+            const formatHearingValue = (value: number | null): string => {
+                return value === null ? "CNT" : String(value);
+            };
             
             // Create CSV row for this employee
             const row = [
@@ -209,23 +207,23 @@
                 employee.dob,
                 employee.sex,
                 baselineYear.toString(),
-                String(baselineData.left.hz500 ?? ''), String(baselineData.left.hz1000 ?? ''), 
-                String(baselineData.left.hz2000 ?? ''), String(baselineData.left.hz3000 ?? ''),
-                String(baselineData.left.hz4000 ?? ''), String(baselineData.left.hz6000 ?? ''), 
-                String(baselineData.left.hz8000 ?? ''),
-                String(baselineData.right.hz500 ?? ''), String(baselineData.right.hz1000 ?? ''), 
-                String(baselineData.right.hz2000 ?? ''), String(baselineData.right.hz3000 ?? ''),
-                String(baselineData.right.hz4000 ?? ''), String(baselineData.right.hz6000 ?? ''), 
-                String(baselineData.right.hz8000 ?? ''),
+                formatHearingValue(baselineData.left.hz500), formatHearingValue(baselineData.left.hz1000), 
+                formatHearingValue(baselineData.left.hz2000), formatHearingValue(baselineData.left.hz3000),
+                formatHearingValue(baselineData.left.hz4000), formatHearingValue(baselineData.left.hz6000), 
+                formatHearingValue(baselineData.left.hz8000),
+                formatHearingValue(baselineData.right.hz500), formatHearingValue(baselineData.right.hz1000), 
+                formatHearingValue(baselineData.right.hz2000), formatHearingValue(baselineData.right.hz3000),
+                formatHearingValue(baselineData.right.hz4000), formatHearingValue(baselineData.right.hz6000), 
+                formatHearingValue(baselineData.right.hz8000),
                 currentYear.toString(),
-                String(currentData.left.hz500 ?? ''), String(currentData.left.hz1000 ?? ''), 
-                String(currentData.left.hz2000 ?? ''), String(currentData.left.hz3000 ?? ''),
-                String(currentData.left.hz4000 ?? ''), String(currentData.left.hz6000 ?? ''), 
-                String(currentData.left.hz8000 ?? ''),
-                String(currentData.right.hz500 ?? ''), String(currentData.right.hz1000 ?? ''), 
-                String(currentData.right.hz2000 ?? ''), String(currentData.right.hz3000 ?? ''),
-                String(currentData.right.hz4000 ?? ''), String(currentData.right.hz6000 ?? ''), 
-                String(currentData.right.hz8000 ?? ''),
+                formatHearingValue(currentData.left.hz500), formatHearingValue(currentData.left.hz1000), 
+                formatHearingValue(currentData.left.hz2000), formatHearingValue(currentData.left.hz3000),
+                formatHearingValue(currentData.left.hz4000), formatHearingValue(currentData.left.hz6000), 
+                formatHearingValue(currentData.left.hz8000),
+                formatHearingValue(currentData.right.hz500), formatHearingValue(currentData.right.hz1000), 
+                formatHearingValue(currentData.right.hz2000), formatHearingValue(currentData.right.hz3000),
+                formatHearingValue(currentData.right.hz4000), formatHearingValue(currentData.right.hz6000), 
+                formatHearingValue(currentData.right.hz8000),
                 getAnomalyStatusText(currentReport.leftStatus), 
                 getAnomalyStatusText(currentReport.rightStatus)
             ];
