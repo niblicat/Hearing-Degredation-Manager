@@ -8,6 +8,7 @@
     import { EditOutline, InfoCircleOutline } from 'flowbite-svelte-icons';
     import ErrorMessage from './ErrorMessage.svelte';
     import PageTitle from './PageTitle.svelte';
+	import { updateAdminName, updateAdminPermissions, removeAdmins } from './client/postrequests.js';
 
     interface Props {
         admins: Array<Admin>;
@@ -56,29 +57,12 @@
     }
 
     async function modifyAdminPermissions(admin: Admin): Promise<void> {
-        const formData = new FormData();
-        formData.append('adminID', admin.id);
-        formData.append('isOp', (!admin.isOP).toString());
-
-        const response = await fetch('/dashboard?/modifyAdminPermissions', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            await updateAdminPermissions(admin.id, !admin.isOP);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                await invalidateAll();
-                adminsMap = adminsMap; // update the DOM
-            }
-            else {
-                displayError(result["message"]  ?? "Failed to modify admin permissions.");
-            }
+            success = true;
+            await invalidateAll(); // since admins list changed, we need to reload it
+            adminsMap = adminsMap;
         }
         catch (error: any) {
             let errorMessage = error.message;
@@ -87,33 +71,16 @@
     }
 
     async function modifyAdminName(admin: Admin): Promise<void> {
-        const formData = new FormData();
-        formData.append('adminID', admin.id);
-        formData.append('newName', newName);
-
-        const response = await fetch('/dashboard?/modifyAdminName', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            await updateAdminName(admin.id, newName);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                await invalidateAll();
-                adminsMap = adminsMap; // update the DOM
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            await invalidateAll(); // since admins list changed, we need to reload it
+            adminsMap = adminsMap;
         }
         catch (error: any) {
             let errorMessage = error.message;
-            displayError(errorMessage);
+            displayError(errorMessage ?? "An error occurred when modifying admin permissions");
         }
     }
 
@@ -123,34 +90,19 @@
             return;
         }
 
-        // Get google IDs of admins to delete
-        const adminIDsToDelete = selectedAdmins.map(admin => admin.id);
-
-        // Prepare the request payload
-        const formData = new FormData();
-        formData.append('adminIDs', JSON.stringify(adminIDsToDelete));
+        // Get IDs of admins to delete
+        const adminIDsToDelete: string[] = selectedAdmins.map(admin => admin.id);
 
         try {
-            const response = await fetch('/dashboard?/deleteAdmins', {
-                method: 'POST',
-                body: formData,
-            });
+            await removeAdmins(adminIDsToDelete);
 
-            const serverResponse = await response.json();
-            console.log(response);
-
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-
-            if (result["success"]) {
-                // Remove deleted admins from local view
-                success = true;
-                await invalidateAll(); // Refresh the page or data
-                adminsMap = adminsMap;
-            } else {
-                displayError(serverResponse.message ?? "Failed to delete selected users.");
-            }
-        } catch (error: any) {
-            displayError("An error occurred while deleting users: " + error.message);
+            success = true;
+            await invalidateAll(); // since admins list changed, we need to reload it
+            adminsMap = adminsMap;
+        }
+        catch (error: any) {
+            let errorMessage = error.message;
+            displayError(errorMessage ?? "An error occurred when modifying admin permissions");
         }
     }
     

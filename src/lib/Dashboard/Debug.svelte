@@ -4,7 +4,7 @@
 	import { HearingDataOneEar, HearingScreening } from "$lib/interpret";
 	import type { HearingHistory } from "$lib/MyTypes";
     import { Button, ButtonGroup, Input, Label, Li, List } from "flowbite-svelte";
-    import { getEmployeeHearingHistory } from "$lib/clientaccessors"
+    import { getEmployeeHearingHistory } from "$lib/client/postrequests"
 
     // initialize these as such so no error message is presented on load
     let success: boolean = $state(true);
