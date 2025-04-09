@@ -17,7 +17,7 @@ export type EmployeeInfo = {
     lastName: string,
     email: string,
     dob: Date,
-    lastActive: Date,
+    lastActive: Date | null,
     sex: PersonSex
 }
 

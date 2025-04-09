@@ -25,6 +25,9 @@ interface HearingData {
     hz8000: number | null;
 }
 
+/**
+ * @deprecated use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
+ */
 export async function extractBaselineHearingData(request: Request) {
     try {
         const formData = await request.formData();
@@ -87,6 +90,9 @@ export async function extractBaselineHearingData(request: Request) {
     }
 }
 
+/**
+ * @deprecated use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
+ */
 export async function extractRecentHearingData(request: Request) {
     try {
         const formData = await request.formData();
@@ -149,6 +155,9 @@ export async function extractRecentHearingData(request: Request) {
     }
 }
 
+/**
+ * @deprecated use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
+ */
 export async function extractAllEmployeeData(request: Request) {
     try {
         // You can process request if needed
@@ -179,6 +188,9 @@ export async function extractAllEmployeeData(request: Request) {
     }
 }
 
+/**
+ * @deprecated use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
+ */
 export async function extractHearingData(request: Request) {
     try {
         const formData = await request.formData();

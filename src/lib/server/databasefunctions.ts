@@ -8,7 +8,7 @@ import { HearingDataOneEar, HearingScreening, PersonSex, UserHearingScreeningHis
 
 // EMPLOYEES
 /**
- * @deprecated use extractEmployeeInfoFromDatabase instead
+ * @deprecated use getEmployeeInfosFromDataBase instead
 **/
 export async function getEmployeesFromDatabase(): Promise<Employee[]> {
     const employeeTable = await sql`SELECT * FROM Employee;`;
@@ -64,18 +64,47 @@ export async function extractEmployeeInfoFromDatabase(employeeID: string): Promi
     const sexRaw = employeeRaw.sex.toLowerCase();
     const personSex: PersonSex = sexRaw === "male" ? PersonSex.Male : sexRaw === "female" ? PersonSex.Female : PersonSex.Other;
 
+    const lastActive: null | Date = employeeRaw.last_active ? new Date(employeeRaw.last_active) : null;
+
     // build and return employee info
     const employeeInfo: EmployeeInfo = {
         id: parseInt(employeeID),
         firstName: employeeRaw.first_name,
         lastName: employeeRaw.last_name,
         email: employeeRaw.email,
-        dob: new Date(employeeRaw.dob),
-        lastActive: new Date(employeeRaw.last_active),
+        dob: new Date(employeeRaw.date_of_birth),
+        lastActive: lastActive,
         sex: personSex
     }
 
     return employeeInfo;
+}
+
+export async function extractEmployeeInfosFromDatabase(): Promise<EmployeeInfo[]> {
+    const query = await sql`SELECT * FROM Employee;`;
+
+    const employeesRaw = query.rows;
+
+    const employeeInfos: EmployeeInfo[] = employeesRaw.map((employeeRaw) => {
+        // interpret sex from lowercase version of database field
+        const sexRaw = employeeRaw.sex.toLowerCase();
+        const personSex: PersonSex = sexRaw === "male" ? PersonSex.Male : sexRaw === "female" ? PersonSex.Female : PersonSex.Other;
+
+        const lastActive: null | Date = employeeRaw.last_active ? new Date(employeeRaw.last_active) : null;
+
+        const employeeInfo: EmployeeInfo = {
+            id: parseInt(employeeRaw.employee_id),
+            firstName: employeeRaw.first_name,
+            lastName: employeeRaw.last_name,
+            email: employeeRaw.email,
+            dob: new Date(employeeRaw.date_of_birth),
+            lastActive: lastActive,
+            sex: personSex
+        }
+        return employeeInfo;
+    })
+
+    return employeeInfos;
 }
 
 export async function extractEmployeeHearingScreeningsFromDatabase(employeeID: string): Promise<HearingScreening[]> {
@@ -142,10 +171,9 @@ export async function extractEmployeeHearingScreeningsFromDatabase(employeeID: s
     return screenings;
 }
 
-export async function extractEmployeeHearingHistoryFromDatabase(employeeID: string): Promise<HearingHistory> {
+export async function extractEmployeeHearingHistoryFromDatabase(employeeInfo: EmployeeInfo): Promise<HearingHistory> {
     // get the hearing screenings
-    const screenings: HearingScreening[] = await extractEmployeeHearingScreeningsFromDatabase(employeeID);
-    const employeeInfo: EmployeeInfo = await extractEmployeeInfoFromDatabase(employeeID);
+    const screenings: HearingScreening[] = await extractEmployeeHearingScreeningsFromDatabase(employeeInfo.id.toString());
 
     const history: HearingHistory = {
         employee: employeeInfo,

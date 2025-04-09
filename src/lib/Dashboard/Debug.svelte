@@ -4,7 +4,7 @@
 	import { HearingDataOneEar, HearingScreening } from "$lib/interpret";
 	import type { HearingHistory } from "$lib/MyTypes";
     import { Button, ButtonGroup, Input, Label, Li, List } from "flowbite-svelte";
-    import { getEmployeeHearingHistory } from "$lib/client/postrequests"
+    import { getAllEmployeeHearingHistories, getEmployeeHearingHistory } from "$lib/client/postrequests"
 
     // initialize these as such so no error message is presented on load
     let success: boolean = $state(true);
@@ -42,18 +42,36 @@
         if (e.key == "Enter") await updateHearingHistory();
     }
 
+    let histories: HearingHistory[] = $state([]); // will be JSON as string
+
+    async function updateHearingHistories(): Promise<void> {
+        // store histories we obtain from the server
+        let historiesFromServer: HearingHistory[] = [];
+
+        try {
+            // getAllEmployeeHearingHistories() is found in serveraccessors.ts
+            historiesFromServer = await getAllEmployeeHearingHistories(true);
+            success = true;  // set this to true to remove any previously showing errors
+        }
+        catch (error: any) {
+            let errorMessage = error.message;
+            displayError(errorMessage ?? "An error occurred when modifying admin permissions");
+        }
+
+        // use the stored histories to get whatever we need, like STS statuses and what not
+
+        // for this implementation, we will just update the presented history with the returned history
+        histories = historiesFromServer;
+    }
+
+
+    function clearOutputs(e: MouseEvent): void {
+        errorMessage = ""
+        success = true;
+        histories = [];
+        history = undefined;
+    }
 </script>
-
-<ErrorMessage {errorMessage} {success} />
-
-<Label for="employee_id" class="mb-2">Employee ID</Label>
-<ButtonGroup>
-    <Input type="text" id="employee_id" placeholder="Use a number here (like 39)" 
-        bind:value={requestedID} on:keydown={updateHearingHistoryKeydown} required />
-    <Button color="yellow" class="cursor-pointer" on:click={updateHearingHistory}>
-        Get All Hearing Data for Employee
-    </Button>
-</ButtonGroup>
 
 {#snippet displayHearingDataOneEar(earData: HearingDataOneEar)}
     <List class="ps-10 mt-2 space-y-1" tag="ul">
@@ -67,9 +85,18 @@
     </List>
 {/snippet}
 
-{#if history}
+{#snippet displayingEmployeeHistory(history: HearingHistory)}
     <div>
-        {history.employee.dob} {history.employee.email} {history.employee.firstName} {history.employee.sex} {history.employee.lastActive}
+        Name: {history.employee.firstName} {history.employee.lastName}
+    </div>
+    <div>
+        DOB: {history.employee.dob}
+    </div>
+    <div>
+        Last Active: {history.employee.lastActive ? history.employee.lastActive : "null"}
+    </div>
+    <div>
+        Sex: {history.employee.sex}
     </div>
 
     Hearing History:
@@ -89,4 +116,37 @@
             </Li>
         {/each}
     </List>
+{/snippet}
+
+<ErrorMessage {errorMessage} {success} />
+
+<Button color="red" class="cursor-pointer" on:click={clearOutputs}>
+    Clear All Outputs
+</Button>
+
+<br>
+<br>
+
+<Label for="employee_id" class="mb-2">Employee ID</Label>
+<ButtonGroup>
+    <Input type="text" id="employee_id" placeholder="Use a number here (like 39)" 
+        bind:value={requestedID} on:keydown={updateHearingHistoryKeydown} required />
+    <Button color="yellow" class="cursor-pointer" on:click={updateHearingHistory}>
+        Get All Hearing Data for Employee
+    </Button>
+</ButtonGroup>
+
+{#if history}
+    {@render displayingEmployeeHistory(history)}
 {/if}
+
+<br>
+<br>
+
+<Button color="yellow" class="cursor-pointer" on:click={updateHearingHistories}>
+    Get All Hearing Data for Every Employee
+</Button>
+
+{#each histories as history}
+    {@render displayingEmployeeHistory(history)}
+{/each}
