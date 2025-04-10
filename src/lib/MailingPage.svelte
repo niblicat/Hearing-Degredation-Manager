@@ -1,8 +1,8 @@
 <script lang="ts">
     import { ButtonGroup, Button, Footer, Spinner } from 'flowbite-svelte';
-    import type { Employee, HearingData, HearingDataSingle, HearingHistory } from './MyTypes';
+    import type { Employee, HearingData, HearingDataSingle, HearingHistory, EmployeeInfo, ExtendedHearingHistory } from './MyTypes';
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
-    import { AnomalyStatus, EarAnomalyStatus, PersonSex } from "./interpret";
+    import { AnomalyStatus, type EarAnomalyStatus, PersonSex } from "./interpret";
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import { calculateSTSClientSide } from './utility';
@@ -85,57 +85,67 @@
     }
 
     // Convert server hearing data to the format expected by calculateSTSClientSide
-    function convertToHearingHistory(
-        employeeData: HearingDataResult[], 
-        dateOfBirth: string, 
-        sex: PersonSex
-    ): HearingHistory {
-        // Group data by year
-        const yearData = employeeData.reduce((acc, data) => {
-            if (!acc[data.year]) {
-                acc[data.year] = {
-                    left: { 
-                        hz500: null, hz1000: null, hz2000: null, 
-                        hz3000: null, hz4000: null, hz6000: null, hz8000: null 
-                    },
-                    right: { 
-                        hz500: null, hz1000: null, hz2000: null, 
-                        hz3000: null, hz4000: null, hz6000: null, hz8000: null 
-                    }
+    function convertToHearingHistory(employeeData: HearingDataResult[], dateOfBirth: Date,  sex: PersonSex): ExtendedHearingHistory {
+        // Group data by year first to organize the data
+        const yearGroups = employeeData.reduce((groups, data) => {
+            if (!groups[data.year]) {
+                groups[data.year] = {
+                    year: data.year,
+                    leftData: [],
+                    rightData: []
                 };
             }
             
             // Populate the correct ear's data
             if (data.ear === 'left') {
-                acc[data.year].left = {
-                    hz500: data.hz500,
-                    hz1000: data.hz1000,
-                    hz2000: data.hz2000,
-                    hz3000: data.hz3000,
-                    hz4000: data.hz4000,
-                    hz6000: data.hz6000,
-                    hz8000: data.hz8000
-                };
+                groups[data.year].leftData = data;
             } else if (data.ear === 'right') {
-                acc[data.year].right = {
-                    hz500: data.hz500,
-                    hz1000: data.hz1000,
-                    hz2000: data.hz2000,
-                    hz3000: data.hz3000,
-                    hz4000: data.hz4000,
-                    hz6000: data.hz6000,
-                    hz8000: data.hz8000
-                };
+                groups[data.year].rightData = data;
             }
             
-            return acc;
-        }, {} as Record<string, any>);
+            return groups;
+        }, {} as Record<number, any>);
+        
+        // Convert directly to an array of HearingScreening objects
+        const screeningsArray = Object.values(yearGroups).map(group => ({
+            year: group.year,
+            leftEar: {
+                hz500: group.leftData.hz500 ?? null,
+                hz1000: group.leftData.hz1000 ?? null,
+                hz2000: group.leftData.hz2000 ?? null,
+                hz3000: group.leftData.hz3000 ?? null,
+                hz4000: group.leftData.hz4000 ?? null,
+                hz6000: group.leftData.hz6000 ?? null,
+                hz8000: group.leftData.hz8000 ?? null
+            },
+            rightEar: {
+                hz500: group.rightData.hz500 ?? null,
+                hz1000: group.rightData.hz1000 ?? null,
+                hz2000: group.rightData.hz2000 ?? null,
+                hz3000: group.rightData.hz3000 ?? null,
+                hz4000: group.rightData.hz4000 ?? null,
+                hz6000: group.rightData.hz6000 ?? null,
+                hz8000: group.rightData.hz8000 ?? null
+            }
+        }));
 
-        // Create the hearing history object
+        // Create an employee info object with the provided data
+        const employeeInfo: EmployeeInfo = {
+            id: -1, // Placeholder ID since it's not provided in the parameters
+            firstName: "", // Placeholder first name
+            lastName: "", // Placeholder last name
+            email: "", // Placeholder email
+            dob: dateOfBirth,
+            lastActive: null,
+            sex: sex
+        };
+        
+        // Return with the additional properties that calculateSTSClientSide expects
         return {
-            dateOfBirth: dateOfBirth,
-            sex: sex,
-            screenings: yearData
+            employee: employeeInfo,
+            screenings: screeningsArray,
+            dateOfBirth: dateOfBirth, 
+            sex: sex 
         };
     }
 
@@ -170,7 +180,7 @@
             // Convert to hearing history format
             const hearingHistory = convertToHearingHistory(
                 employeeHearingData,
-                employee.dob,
+                new Date(employee.dob),
                 personSex
             );
             
@@ -189,9 +199,9 @@
             if (!currentReport) continue;
             
             // Extract data for baseline and current years
-            const baselineData = hearingHistory.screenings[baselineYear.toString()];
-            const currentData = hearingHistory.screenings[currentYear.toString()];
-            
+            const baselineData = hearingHistory.screenings.find(screening => screening.year === baselineYear);
+            const currentData = hearingHistory.screenings.find(screening => screening.year === currentYear);
+
             if (!baselineData || !currentData) continue;
 
             const formatHearingValue = (value: number | null): string => {
@@ -207,23 +217,23 @@
                 employee.dob,
                 employee.sex,
                 baselineYear.toString(),
-                formatHearingValue(baselineData.left.hz500), formatHearingValue(baselineData.left.hz1000), 
-                formatHearingValue(baselineData.left.hz2000), formatHearingValue(baselineData.left.hz3000),
-                formatHearingValue(baselineData.left.hz4000), formatHearingValue(baselineData.left.hz6000), 
-                formatHearingValue(baselineData.left.hz8000),
-                formatHearingValue(baselineData.right.hz500), formatHearingValue(baselineData.right.hz1000), 
-                formatHearingValue(baselineData.right.hz2000), formatHearingValue(baselineData.right.hz3000),
-                formatHearingValue(baselineData.right.hz4000), formatHearingValue(baselineData.right.hz6000), 
-                formatHearingValue(baselineData.right.hz8000),
+                formatHearingValue(baselineData.leftEar.hz500), formatHearingValue(baselineData.leftEar.hz1000), 
+                formatHearingValue(baselineData.leftEar.hz2000), formatHearingValue(baselineData.leftEar.hz3000),
+                formatHearingValue(baselineData.leftEar.hz4000), formatHearingValue(baselineData.leftEar.hz6000), 
+                formatHearingValue(baselineData.leftEar.hz8000),
+                formatHearingValue(baselineData.rightEar.hz500), formatHearingValue(baselineData.rightEar.hz1000), 
+                formatHearingValue(baselineData.rightEar.hz2000), formatHearingValue(baselineData.rightEar.hz3000),
+                formatHearingValue(baselineData.rightEar.hz4000), formatHearingValue(baselineData.rightEar.hz6000), 
+                formatHearingValue(baselineData.rightEar.hz8000),
                 currentYear.toString(),
-                formatHearingValue(currentData.left.hz500), formatHearingValue(currentData.left.hz1000), 
-                formatHearingValue(currentData.left.hz2000), formatHearingValue(currentData.left.hz3000),
-                formatHearingValue(currentData.left.hz4000), formatHearingValue(currentData.left.hz6000), 
-                formatHearingValue(currentData.left.hz8000),
-                formatHearingValue(currentData.right.hz500), formatHearingValue(currentData.right.hz1000), 
-                formatHearingValue(currentData.right.hz2000), formatHearingValue(currentData.right.hz3000),
-                formatHearingValue(currentData.right.hz4000), formatHearingValue(currentData.right.hz6000), 
-                formatHearingValue(currentData.right.hz8000),
+                formatHearingValue(currentData.leftEar.hz500), formatHearingValue(currentData.leftEar.hz1000), 
+                formatHearingValue(currentData.leftEar.hz2000), formatHearingValue(currentData.leftEar.hz3000),
+                formatHearingValue(currentData.leftEar.hz4000), formatHearingValue(currentData.leftEar.hz6000), 
+                formatHearingValue(currentData.leftEar.hz8000),
+                formatHearingValue(currentData.rightEar.hz500), formatHearingValue(currentData.rightEar.hz1000), 
+                formatHearingValue(currentData.rightEar.hz2000), formatHearingValue(currentData.rightEar.hz3000),
+                formatHearingValue(currentData.rightEar.hz4000), formatHearingValue(currentData.rightEar.hz6000), 
+                formatHearingValue(currentData.rightEar.hz8000),
                 getAnomalyStatusText(currentReport.leftStatus), 
                 getAnomalyStatusText(currentReport.rightStatus)
             ];

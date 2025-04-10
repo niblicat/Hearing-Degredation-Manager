@@ -1,8 +1,8 @@
 import type { Session } from "@auth/sveltekit";
 import { redirect, type RequestEvent, type Server, type ServerLoadEvent } from "@sveltejs/kit"
 import { sql, type QueryResult, type QueryResultRow } from "@vercel/postgres";
-import { PageCategory, type HearingDataSingle, type HearingHistory } from "./MyTypes";
-import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, PersonSex } from './interpret';
+import { PageCategory, type HearingDataSingle, type HearingHistory, type ExtendedHearingHistory } from "./MyTypes";
+import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, type EarAnomalyStatus, PersonSex } from './interpret';
 
 export function isNumber(value?: string | number): boolean {
     return ((value != null) &&
@@ -186,61 +186,60 @@ export function getPageCategory(page: string): PageCategory {
 }
 
 // respects proper baselines
-export function calculateSTSClientSide(hearingData: HearingHistory): EarAnomalyStatus[] {
+export function calculateSTSClientSide(hearingData: ExtendedHearingHistory): EarAnomalyStatus[] {
     if (!hearingData || !hearingData.screenings) {
         console.error("Invalid hearing data format");
         return [];
     }
 
-    // Convert raw hearing data to the format required by UserHearingScreeningHistory
-    const screenings = Object.entries(hearingData.screenings)
-        .map(([year, data]) => {
-            try {
-                const leftEarData = data.left;
-                const rightEarData = data.right;
+    let screenings: HearingScreening[];
 
-                // Populate left and right ear hearing data
-                const leftEar: HearingDataOneEar = {
-                    hz500: leftEarData["hz500"] ?? null,
-                    hz1000: leftEarData["hz1000"] ?? null,
-                    hz2000: leftEarData["hz2000"] ?? null,
-                    hz3000: leftEarData["hz3000"] ?? null,
-                    hz4000: leftEarData["hz4000"] ?? null,
-                    hz6000: leftEarData["hz6000"] ?? null,
-                    hz8000: leftEarData["hz8000"] ?? null
-                };
+    // Check if screenings is already an array
+    if (Array.isArray(hearingData.screenings)) {
+        screenings = hearingData.screenings;
+    } 
+    else {
+        // Handle the case where screenings is an object with year keys
+        screenings = Object.entries(hearingData.screenings)
+            .map(([year, data]: [string, any]) => {
+                try {
+                    const leftEarData = data.left;
+                    const rightEarData = data.right;
 
-                const rightEar: HearingDataOneEar = {
-                    hz500: rightEarData["hz500"] ?? null,
-                    hz1000: rightEarData["hz1000"] ?? null,
-                    hz2000: rightEarData["hz2000"] ?? null,
-                    hz3000: rightEarData["hz3000"] ?? null,
-                    hz4000: rightEarData["hz4000"] ?? null,
-                    hz6000: rightEarData["hz6000"] ?? null,
-                    hz8000: rightEarData["hz8000"] ?? null
-                };
+                    // Populate left and right ear hearing data
+                    const leftEar: HearingDataOneEar = {
+                        hz500: leftEarData["hz500"] ?? null,
+                        hz1000: leftEarData["hz1000"] ?? null,
+                        hz2000: leftEarData["hz2000"] ?? null,
+                        hz3000: leftEarData["hz3000"] ?? null,
+                        hz4000: leftEarData["hz4000"] ?? null,
+                        hz6000: leftEarData["hz6000"] ?? null,
+                        hz8000: leftEarData["hz8000"] ?? null
+                    };
 
-                return {
-                    year: Number(year),
-                    leftEar,
-                    rightEar
-                };
-            } catch (err) {
-                console.error(`Error parsing screening data for year ${year}:`, err);
-                return null;
-            }
-        })
-        .filter((screening): screening is HearingScreening => screening !== null);
+                    const rightEar: HearingDataOneEar = {
+                        hz500: rightEarData["hz500"] ?? null,
+                        hz1000: rightEarData["hz1000"] ?? null,
+                        hz2000: rightEarData["hz2000"] ?? null,
+                        hz3000: rightEarData["hz3000"] ?? null,
+                        hz4000: rightEarData["hz4000"] ?? null,
+                        hz6000: rightEarData["hz6000"] ?? null,
+                        hz8000: rightEarData["hz8000"] ?? null
+                    };
 
-    // Helper function to safely parse values
-    function parseValueOrNull(value: any): number | null {
-        if (value === null || value === undefined || value === "CNT") {
-            return null;
-        }
-        const parsed = parseFloat(String(value));
-        return isNaN(parsed) ? null : parsed;
+                    return {
+                        year: Number(year),
+                        leftEar,
+                        rightEar
+                    };
+                } catch (err) {
+                    console.error(`Error parsing screening data for year ${year}:`, err);
+                    return null;
+                }
+            })
+            .filter((screening): screening is HearingScreening => screening !== null);
     }
-
+    
     // Sort screenings by year
     screenings.sort((a, b) => a.year - b.year);
     
@@ -252,11 +251,6 @@ export function calculateSTSClientSide(hearingData: HearingHistory): EarAnomalyS
     const dob = new Date(hearingData.dateOfBirth);
     const dobYear = dob.getFullYear();
     
-    // Determine sex
-    const personSex = hearingData.sex === "Male" ? PersonSex.Male : 
-                    hearingData.sex === "Female" ? PersonSex.Female : 
-                    PersonSex.Other;
-    
     // Use the most recent year for current year in the history
     const currentYear = screenings[screenings.length - 1].year;
     const currentAge = currentYear - dobYear;
@@ -264,7 +258,7 @@ export function calculateSTSClientSide(hearingData: HearingHistory): EarAnomalyS
     // Create one history object with all screenings
     const history = new UserHearingScreeningHistory(
         currentAge,
-        personSex,
+        hearingData.sex,
         currentYear,
         screenings
     );
