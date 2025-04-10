@@ -33,60 +33,51 @@ export enum AnomalyStatus {
     CNT = 7
 }
 
-export class EarAnomalyStatus {
+export type EarAnomalyStatus = {
     leftStatus: AnomalyStatus;
     rightStatus: AnomalyStatus;
     reportYear: number;
     leftBaselineYear: number;
     rightBaselineYear: number;
+};
 
-    constructor(leftStatus: AnomalyStatus, rightStatus: AnomalyStatus, reportYear: number, leftBaselineYear: number, rightBaselineYear: number) {
-        this.leftStatus = leftStatus;
-        this.rightStatus = rightStatus;
-        this.reportYear = reportYear;
-        this.leftBaselineYear = leftBaselineYear;
-        this.rightBaselineYear = rightBaselineYear;
-    }
-}
-
-export class HearingDataOneEar {
+export type HearingDataOneEar = {
     hz500: number | null;
     hz1000: number | null;
     hz2000: number | null;
     hz3000: number | null;
     hz4000: number | null;
     hz6000: number | null;
-    hz8000: number | null
+    hz8000: number | null;
+};
 
-    constructor(hz500: number | null, 
-        hz1000: number | null, 
-        hz2000: number | null, 
-        hz3000: number | null, 
-        hz4000: number | null, 
-        hz6000: number | null, 
-        hz8000: number | null
-    ) {
-        this.hz500 = hz500;
-        this.hz1000 = hz1000;
-        this.hz2000 = hz2000;
-        this.hz3000 = hz3000;
-        this.hz4000 = hz4000;
-        this.hz6000 = hz6000;
-        this.hz8000 = hz8000;
+export type HearingDataOneEarString = {
+    hz500: string;
+    hz1000: string;
+    hz2000: string;
+    hz3000: string;
+    hz4000: string;
+    hz6000: string;
+    hz8000: string;
+};
+
+export function convertHearingDataOneEarToStrings(data: HearingDataOneEar): HearingDataOneEarString {
+    return {
+        hz500: data.hz500?.toString() ?? "CNT",
+        hz1000: data.hz1000?.toString() ?? "CNT",
+        hz2000: data.hz2000?.toString() ?? "CNT",
+        hz3000: data.hz3000?.toString() ?? "CNT",
+        hz4000: data.hz4000?.toString() ?? "CNT",
+        hz6000: data.hz6000?.toString() ?? "CNT",
+        hz8000: data.hz8000?.toString() ?? "CNT"
     }
 }
 
-export class HearingScreening {
+export type HearingScreening = {
     year: number;
     leftEar: HearingDataOneEar;
     rightEar: HearingDataOneEar;
-
-    constructor(year: number, leftEar: HearingDataOneEar, rightEar: HearingDataOneEar) {
-        this.year = year;
-        this.leftEar = leftEar;
-        this.rightEar = rightEar;
-    }
-}
+};
 
 export class UserHearingScreeningHistory {
     age: number;
@@ -196,13 +187,13 @@ export class UserHearingScreeningHistory {
         }
         if (arrayLength == 1) {
             // Only one screening, so it's the baseline with no comparison
-            return [new EarAnomalyStatus(
-                AnomalyStatus.Baseline, 
-                AnomalyStatus.Baseline, 
-                this.screenings[0].year, 
-                this.screenings[0].year, 
-                this.screenings[0].year
-            )];
+            return [{
+                leftStatus: AnomalyStatus.Baseline,
+                rightStatus: AnomalyStatus.Baseline,
+                reportYear: this.screenings[0].year,
+                leftBaselineYear: this.screenings[0].year,
+                rightBaselineYear: this.screenings[0].year,
+            } as EarAnomalyStatus];
         }
 
         let reportArray: EarAnomalyStatus[] = [];
@@ -218,7 +209,13 @@ export class UserHearingScreeningHistory {
         bestRightEarAverage = this.GetAverageHertzForSTSRangeForOneEar(this.screenings[0].rightEar);
 
         // push base status for the first hearing screening
-        reportArray.push(new EarAnomalyStatus(AnomalyStatus.Baseline, AnomalyStatus.Baseline, this.screenings[0].year, this.screenings[0].year, this.screenings[0].year));
+        reportArray.push({
+            leftStatus: AnomalyStatus.Baseline,
+            rightStatus: AnomalyStatus.Baseline,
+            reportYear: this.screenings[0].year,
+            leftBaselineYear: this.screenings[0].year,
+            rightBaselineYear: this.screenings[0].year,
+        } as EarAnomalyStatus);
 
         for (var i = 1; i < arrayLength; i++) {
             let previousScreening: HearingScreening = this.screenings[i - 1];
@@ -247,7 +244,13 @@ export class UserHearingScreeningHistory {
             let leftAnomalyStatus = this.GetStatusForEar(baselineLeftScreening.leftEar, previousScreening.leftEar, afterScreening.leftEar, ageCorrectionLeft);
             let rightAnomalyStatus = this.GetStatusForEar(baselineRightScreening.rightEar, previousScreening.rightEar, afterScreening.rightEar, ageCorrectionRight);
 
-            let currentAnomalyStatuses = new EarAnomalyStatus(leftAnomalyStatus, rightAnomalyStatus, afterScreening.year, bestLeftEarYear, bestRightEarYear);
+            let currentAnomalyStatuses = {
+                leftStatus: leftAnomalyStatus,
+                rightStatus: rightAnomalyStatus,
+                reportYear: afterScreening.year,
+                leftBaselineYear: bestLeftEarYear,
+                rightBaselineYear: bestRightEarYear,
+            } as EarAnomalyStatus;
             reportArray.push(currentAnomalyStatuses);
 
             // update baselines after report has confirmed improvement (otherwise the new baseline will compare to itself for redefinition year) 
@@ -383,6 +386,4 @@ export class UserHearingScreeningHistory {
 
         return average;
     }
-}
-
-
+};

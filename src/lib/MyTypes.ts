@@ -17,7 +17,7 @@ export type EmployeeInfo = {
     lastName: string,
     email: string,
     dob: Date,
-    lastActive: Date,
+    lastActive: Date | null,
     sex: PersonSex
 }
 
@@ -66,8 +66,7 @@ export type HearingData = {
 }
 
 export type HearingHistory = {
-    dob: Date,
-    sex: PersonSex,
+    employee: EmployeeInfo,
     screenings: HearingScreening[]
 }
 

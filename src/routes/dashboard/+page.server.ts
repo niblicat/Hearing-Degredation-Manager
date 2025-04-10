@@ -1,16 +1,18 @@
 import type { Actions, PageServerLoad } from './$types';
-import { getAdminsFromDatabase, getEmployeesFromDatabase, turnAwayNonAdmins } from '$lib/utility';
+import { turnAwayNonAdmins } from '$lib/utility';
 import { addHearingData, checkYearAvailability, modifyHearingData, fetchCalculateSTSData } from '$lib/server/actionshearingdata';
-import { fetchEmployeeInfo, fetchHearingData, fetchHearingDataForYear, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory } from '$lib/server/actionsemployees';
+import { fetchEmployeeInfo, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory, extractAllEmployeeHearingHistories, extractEmployeeHearingScreening } from '$lib/server/actionsemployees';
 import { addEmployee } from '$lib/server/actionsemployeeadd';
 import { deleteAdmins, modifyAdminName, modifyAdminPermissions } from '$lib/server/actionsadmins';
 import { extractAllEmployeeData, extractHearingData, extractBaselineHearingData, extractRecentHearingData } from '$lib/server/actionsmailing';
+import { getAdminsFromDatabase, getEmployeesFromDatabase } from '$lib/server/databasefunctions';
 
 
 export const load: PageServerLoad = async ( event ) => {
     await turnAwayNonAdmins(event);
 
     // TODO: error handling
+    // TODO: change getEmployeesFromDataBase() to extractEmployeeInfos() -> will return EmployeeInfo[] instead of Employee[]
     const employees = await getEmployeesFromDatabase();
     const admins = await getAdminsFromDatabase();
 
@@ -59,6 +61,7 @@ export const actions: Actions = {
     // ================================================
 
     // actionsemployees.ts
+    // ! to be removed later
     fetchYears: async ({ request }) => {
         return fetchYears(request);
     },
@@ -69,12 +72,6 @@ export const actions: Actions = {
     extractEmployeeInfo: async ({ request }) => {
         return extractEmployeeInfo(request);
     },
-    fetchHearingData: async ({ request }) => {
-       return fetchHearingData(request);
-    },
-    fetchHearingDataForYear: async ({ request }) => {
-        return fetchHearingDataForYear(request);
-     },
     modifyEmployeeName: async ({ request }) => {
         return modifyEmployeeName(request);
     },
@@ -94,24 +91,34 @@ export const actions: Actions = {
     calculateSTS: async ({ request }) => { 
         return calculateSTS(request);
     },
+    extractEmployeeHearingScreening: async ({ request }) => {
+        return extractEmployeeHearingScreening(request);
+    },
     extractEmployeeHearingScreenings: async ({ request }) => {
         return extractEmployeeHearingScreenings(request);
     },
     extractEmployeeHearingHistory: async ({ request }) => {
         return extractEmployeeHearingHistory(request);
     },
+    extractAllEmployeeHearingHistories: async ({ request }) => {
+        return extractAllEmployeeHearingHistories(request);
+    },
     // ================================================
 
     // actionsmailing.ts
+    // ! to be removed later
     extractAllEmployeeData: async ({ request }) => {
         return extractAllEmployeeData(request);
     },
+    // ! to be removed later
     extractHearingData: async ({ request }) => {
         return extractHearingData(request);
     },
+    // ! to be removed later
     extractBaselineHearingData: async ({ request }) => {
         return extractBaselineHearingData(request);
     },
+    // ! to be removed later
     extractRecentHearingData: async ({ request }) => {
         return extractRecentHearingData(request);
     }

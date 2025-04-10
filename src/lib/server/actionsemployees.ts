@@ -2,11 +2,14 @@
 // Contains server functions pertaining to employee actions
 
 import { sql } from '@vercel/postgres';
-import { UserHearingScreeningHistory, HearingScreening, HearingDataOneEar, PersonSex } from "$lib/interpret";
+import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, PersonSex } from "$lib/interpret";
 import { getHearingDataFromDatabaseRow } from '$lib/utility';
 import type { EmployeeInfo, HearingDataSingle, HearingHistory } from '$lib/MyTypes';
-import { checkEmployeeExists, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase } from './databasefunctions';
+import { checkEmployeeExists, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase, extractEmployeeInfosFromDatabase } from './databasefunctions';
 
+/**
+ * @deprecated use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
+ */
 export async function fetchYears(request: Request) {
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;
@@ -43,7 +46,6 @@ export async function fetchYears(request: Request) {
 }
 
 /**
- * 
  * @deprecated use extractEmployeeInfo instead
  */
 export async function fetchEmployeeInfo(request: Request) {
@@ -117,116 +119,23 @@ export async function extractEmployeeInfo(request: Request) {
     }
 }
 
-export async function fetchHearingData(request: Request) {
+export async function extractEmployeeInfos(request: Request) {
     const formData = await request.formData();
-    const employeeID = formData.get('employeeID') as string;
-    const year = formData.get('year') as string;
 
     try {
-        // Check if employee exists in database
-        const employeeIDQuery = await sql`SELECT employee_id FROM Employee WHERE employee_id = ${employeeID};`;
-        if (employeeIDQuery.rows.length === 0) {
-            throw new Error("User not found");
-        }
-        
-        // Get the oldest available year for the employee
-        const baselineYearQuery = await sql`
-            SELECT MIN(year) AS baseline_year
-            FROM Has
-            WHERE employee_id = ${employeeID};
-        `;
-        const baselineYear = baselineYearQuery.rows[0]?.baseline_year;
+        const employeeInfos: EmployeeInfo[] = await extractEmployeeInfosFromDatabase();
 
-        // Fetch hearing data for the baseline year
-        const baselineDataQuery = await sql`
-            SELECT d.Hz_500, d.Hz_1000, d.Hz_2000, d.Hz_3000, d.Hz_4000, d.Hz_6000, d.Hz_8000, h.ear
-            FROM Has h
-            JOIN Data d ON h.data_id = d.data_id
-            WHERE h.employee_id = ${employeeID} AND h.year = ${baselineYear};
-        `;
-
-        // Fetch hearing data for the new year
-        const newDataQuery = await sql`
-            SELECT d.Hz_500, d.Hz_1000, d.Hz_2000, d.Hz_3000, d.Hz_4000, d.Hz_6000, d.Hz_8000, h.ear
-            FROM Has h
-            JOIN Data d ON h.data_id = d.data_id
-            WHERE h.employee_id = ${employeeID} AND h.year = ${year};
-        `;
-
-        const baselineData = {
-            rightEar: baselineDataQuery.rows.filter(row => row.ear === 'right')[0] ?? null,
-            leftEar: baselineDataQuery.rows.filter(row => row.ear === 'left')[0] ?? null,
-        };
-
-        const newData = {
-            rightEar: newDataQuery.rows.filter(row => row.ear === 'right')[0] ?? null,
-            leftEar: newDataQuery.rows.filter(row => row.ear === 'left')[0] ?? null,
-        };
-
+        // Return only the necessary data in a plain object format
         return JSON.stringify({
             success: true,
-            hearingData: {
-                baselineYear,
-                newYear: year,
-                baselineData,
-                newData,
-            },
+            employeeInfos
         });
-    }
+    } 
     catch (error: any) {
-        const errorMessage = "Could not fetch hearing data: " 
+        const errorMessage = "Failed to fetch employee info: " 
             + (error.message ?? "no error message provided by server");
         console.error(errorMessage);
-        return JSON.stringify({ success: false, message: errorMessage });
-    }
-}
-
-export async function fetchHearingDataForYear(request: Request) {
-    const formData = await request.formData();
-    const employeeID = formData.get('employeeID') as string;
-    const year = formData.get('year') as string;
-
-    console.log(`EmployeeID: ${employeeID}, Year: ${year}`);
-
-    try {
-        // Fetch hearing data for the new year
-        const hearingDataQuery = await sql`
-            SELECT d.Hz_500, d.Hz_1000, d.Hz_2000, d.Hz_3000, d.Hz_4000, d.Hz_6000, d.Hz_8000, h.ear
-            FROM Has h
-            JOIN Data d ON h.data_id = d.data_id
-            WHERE h.employee_id = ${employeeID} AND h.year = ${year};
-        `;
-
-        const earData = {
-            rightEar: hearingDataQuery.rows.filter(row => row.ear === 'right')[0] ?? null,
-            leftEar: hearingDataQuery.rows.filter(row => row.ear === 'left')[0] ?? null,
-        };
-
-        if (!earData.rightEar && !earData.leftEar) {
-            const errorMessage = `There exists no hearing data for the year ${year}`;
-            console.error(errorMessage);
-            return JSON.stringify({ success: false, message: errorMessage });
-        }
-
-        const parsedLeftEar: HearingDataSingle = await getHearingDataFromDatabaseRow(earData.leftEar);
-        const parsedRightEar: HearingDataSingle = await getHearingDataFromDatabaseRow(earData.rightEar);
-
-        const dataReturn = {
-            success: true,
-            hearingData: {
-                year: year,
-                leftEar: parsedLeftEar,
-                rightEar: parsedRightEar
-            },
-        }
-
-        return JSON.stringify(dataReturn);
-    }
-    catch (error: any) {
-        const errorMessage = "Could not fetch hearing data: " 
-            + (error.message ?? "no error message provided by server");
-        console.error(errorMessage);
-        return JSON.stringify({ success: false, message: errorMessage });
+        return { success: false, message: errorMessage };
     }
 }
 
@@ -399,6 +308,7 @@ export async function modifyEmployeeSex(request: Request) {
  * 
  * @param request The POST request.
  * @deprecated no longer calculating STS on server.
+ * use extractEmployeeHearingScreenings() or extractEmployeeHearingHistory() instead
  * @returns STS Calculated Hearing Report.
  */
 export async function calculateSTS(request: Request) {
@@ -476,21 +386,39 @@ export async function calculateSTS(request: Request) {
                 throw new Error(errorMessage);
             }
         });
-            
+        
         // Convert fetched data into HearingScreening objects
-        const screenings: HearingScreening[] = Object.entries(hearingDataByYear).map(([year, ears]) => 
-            new HearingScreening(
-                Number(year),
-                new HearingDataOneEar(
-                    ears.leftEar[0], ears.leftEar[1], ears.leftEar[2], ears.leftEar[3], 
-                    ears.leftEar[4], ears.leftEar[5], ears.leftEar[6]
-                ),
-                new HearingDataOneEar(
-                    ears.rightEar[0], ears.rightEar[1], ears.rightEar[2], ears.rightEar[3], 
-                    ears.rightEar[4], ears.rightEar[5], ears.rightEar[6]
-                )
-            )
-        );
+        const screenings: HearingScreening[] = Object.entries(hearingDataByYear).map(([year, ears]) => {
+            const leftEarData = ears.leftEar;
+            const rightEarData = ears.rightEar;
+
+            // Populate left and right ear hearing data
+            const leftEar: HearingDataOneEar = {
+                hz500: leftEarData[0] ?? null,
+                hz1000: leftEarData[1] ?? null,
+                hz2000: leftEarData[2] ?? null,
+                hz3000: leftEarData[3] ?? null,
+                hz4000: leftEarData[4] ?? null,
+                hz6000: leftEarData[5] ?? null,
+                hz8000: leftEarData[6] ?? null
+            };
+
+            const rightEar: HearingDataOneEar = {
+                hz500: rightEarData[0] ?? null,
+                hz1000: rightEarData[1] ?? null,
+                hz2000: rightEarData[2] ?? null,
+                hz3000: rightEarData[3] ?? null,
+                hz4000: rightEarData[4] ?? null,
+                hz6000: rightEarData[5] ?? null,
+                hz8000: rightEarData[6] ?? null
+            };
+
+            return {
+                year: Number(year),
+                leftEar,
+                rightEar
+            };
+        });
     
         console.log("SCREENINGS: ", screenings);
         
@@ -521,12 +449,35 @@ export async function calculateSTS(request: Request) {
     }
 }
 
+export async function extractEmployeeHearingScreening(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+    const year = formData.get('year') as string;
+    
+    try {
+        await checkEmployeeExists(employeeID); // will throw error if employee is not found
+        // Get employee hearing screenings from database
+        const screening: HearingScreening = await extractEmployeeHearingScreeningFromDatabase(employeeID, year);
+
+        return JSON.stringify({
+            success: true,
+            screening
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Error in database when extracting employee hearing screenings: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        return JSON.stringify({ success: false, message: errorMessage });
+    }
+}
+
 export async function extractEmployeeHearingScreenings(request: Request) {
     const formData = await request.formData();
     const employeeID = formData.get('employeeID') as string;
     
     try {
-        checkEmployeeExists(employeeID); // will throw error if employee is not found
+        await checkEmployeeExists(employeeID); // will throw error if employee is not found
         // Get employee hearing screenings from database
         const screenings: HearingScreening[] = await extractEmployeeHearingScreeningsFromDatabase(employeeID);
 
@@ -536,7 +487,7 @@ export async function extractEmployeeHearingScreenings(request: Request) {
         });
     } 
     catch (error: any) {
-        const errorMessage = "Error in database when adding employee: " 
+        const errorMessage = "Error in database when extracting employee hearing screenings: " 
             + (error.message ?? "no error message provided by server");
         console.error(errorMessage);
         return JSON.stringify({ success: false, message: errorMessage });
@@ -548,9 +499,9 @@ export async function extractEmployeeHearingHistory(request: Request) {
     const employeeID = formData.get('employeeID') as string;
     
     try {
-        checkEmployeeExists(employeeID); // will throw error if employee is not found
+        const employeeInfo: EmployeeInfo = await extractEmployeeInfoFromDatabase(employeeID);
         // Get employee hearing screenings from database
-        const history: HearingHistory = await extractEmployeeHearingHistoryFromDatabase(employeeID);
+        const history: HearingHistory = await extractEmployeeHearingHistoryFromDatabase(employeeInfo);
 
         return JSON.stringify({
             success: true,
@@ -558,9 +509,53 @@ export async function extractEmployeeHearingHistory(request: Request) {
         });
     } 
     catch (error: any) {
-        const errorMessage = "Error in database when adding employee: " 
+        const errorMessage = "Error in database when extracting employee hearing history: " 
             + (error.message ?? "no error message provided by server");
         console.error(errorMessage);
+        return JSON.stringify({ success: false, message: errorMessage });
+    }
+}
+
+export async function extractAllEmployeeHearingHistories(request: Request) {
+    const formData = await request.formData();
+    const omitInactive: boolean = formData.get('omitInactive') === 'true';
+
+    try {
+        // Goal: Iterate through employees and individually get their hearing history
+        // TODO: While this works, it uses a lot of database queries. Create a DB function that can get multiple emp. histories in one query.
+
+        const employeeInfos: EmployeeInfo[] = await extractEmployeeInfosFromDatabase();
+        
+        const rawHistories: (HearingHistory | null)[] = await Promise.all(
+            employeeInfos.map(async (employeeInfo) => {
+                // Skip inactive employees if omitInactive is true
+                if (employeeInfo.lastActive && omitInactive) return null;  // Skip this iteration
+
+                // Get employee hearing screenings from database
+                let history: HearingHistory | null;
+                try {
+                    history = await extractEmployeeHearingHistoryFromDatabase(employeeInfo);
+                }
+                catch (error: any) {
+                    console.log(`Could not fetch hearing history for ${employeeInfo.id}: ${employeeInfo.firstName}.`)
+                    history = null;
+                }
+                return history;
+            })
+        );
+
+        // Filter out null entries
+        const histories: HearingHistory[] = rawHistories.filter((history) => history !== null);
+
+        return JSON.stringify({
+            success: true,
+            histories
+        });
+    } 
+    catch (error: any) {
+        const errorMessage = "Error in database when extracting employee hearing histories: " 
+            + (error.message ?? "no error message provided by server");
+        console.error(errorMessage, error.stack);
         return JSON.stringify({ success: false, message: errorMessage });
     }
 }

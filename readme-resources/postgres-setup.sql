@@ -30,7 +30,7 @@ CREATE TABLE data (
 
 CREATE TABLE employee (
     employee_id SERIAL PRIMARY KEY,
-    first_name VARCHAR(64),
+    first_name VARCHAR(64) NOT NULL,
     last_name VARCHAR(64),
     email VARCHAR(64) UNIQUE,
     date_of_birth TIMESTAMP,
