@@ -69,19 +69,50 @@
     // Get hearing data from server for a list of employee IDs
     async function fetchHearingData(employeeIDs: string[]): Promise<{
         success: boolean;
-        hearingData: HearingDataResult[];
+        hearingHistories: HearingHistory[];
         error?: string;
     }> {
-        const formData = new FormData();
-        formData.append('employeeIDs', JSON.stringify(employeeIDs));
-        
-        const response = await fetch('/dashboard?/extractHearingData', { 
-            method: 'POST',
-            body: formData,
-        });
-        
-        const serverResponse = await response.json();
-        return JSON.parse(JSON.parse(serverResponse.data)[0]);
+        try {
+            const hearingHistories: HearingHistory[] = [];
+            
+            // Process each employee ID one at a time
+            for (const employeeID of employeeIDs) {
+                const formData = new FormData();
+                formData.append('employeeID', employeeID); // Note: single ID, not an array
+                
+                const response = await fetch('/dashboard?/extractEmployeeHearingHistory', {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                const serverResponse = await response.json();
+                const parsedResponse = JSON.parse(JSON.parse(serverResponse.data)[0]);
+
+                // console.log(serverResponse)
+                // console.log(parsedResponse)
+                
+                if (parsedResponse["success"]) {
+                    hearingHistories.push(parsedResponse.history);
+                } else {
+                    console.warn(`Could not fetch hearing history for employee ${employeeID}`);
+                }
+
+                // console.log("HEARING HISTORIES:\n", (JSON.stringify(hearingHistories)))
+            }
+            
+            return {
+                success: true,
+                hearingHistories
+            };
+            
+        } catch (error) {
+            console.error("Error fetching hearing histories:", error);
+            return {
+                success: false,
+                hearingHistories: [],
+                error: error instanceof Error ? error.message : "Unknown error occurred"
+            };
+        }
     }
 
     // Convert server hearing data to the format expected by calculateSTSClientSide
@@ -152,40 +183,49 @@
     // Process employee data and generate CSV rows
     async function processEmployeeData(
         employeeList: EmployeeForCSV[], 
-        hearingDataResults: HearingDataResult[]
+        hearingHistories: HearingHistory[]
     ): Promise<string[][]> {
         const rows: string[][] = [];
+
+        console.log("Employee list:", employeeList);
+        console.log("Hearing histories:", hearingHistories);
         
         for (const employee of employeeList) {
-            // Filter hearing data for this employee
-            const employeeHearingData = hearingDataResults.filter(
-                data => data.id === employee.employeeID
-            );
+            // Find the hearing history for this employee
+            console.log(`Looking for hearing history for employee ID: ${employee.employeeID}`);
+        
+            const hearingHistory = hearingHistories.find(history => {
+                // Convert both to strings for comparison to avoid type issues
+                const historyID = history?.employee?.id?.toString();
+                const employeeID = employee.employeeID.toString();
+                
+                console.log(`Comparing: ${historyID} === ${employeeID} (${typeof historyID} vs ${typeof employeeID})`);
+                return historyID === employeeID;
+            });
             
-            if (employeeHearingData.length === 0) {
-                console.log(`No hearing data found for employee ${employee.firstName} ${employee.lastName}`);
+            if (!hearingHistory) {
+                console.log(`No matching hearing history found for employee ${employee.firstName} ${employee.lastName} (ID: ${employee.employeeID})`);
+                continue;
+            }
+            
+            if (!hearingHistory.screenings || hearingHistory.screenings.length === 0) {
+                console.log(`No screenings found for employee ${employee.firstName} ${employee.lastName}`);
                 continue;
             }
             
             // Get years for this employee
-            const years = [...new Set(employeeHearingData.map(data => data.year))].sort((a, b) => a - b);
+            const years = hearingHistory.screenings.map(screening => screening.year).sort((a, b) => a - b);
             if (years.length === 0) continue;
             
-
-            // Convert string sex to PersonSex enum
-            const personSex = employee.sex === "Female" ? PersonSex.Female : 
-                            employee.sex === "Male" ? PersonSex.Male : 
-                            PersonSex.Other;
-
-            // Convert to hearing history format
-            const hearingHistory = convertToHearingHistory(
-                employeeHearingData,
-                new Date(employee.dob),
-                personSex
-            );
+            // Create ExtendedHearingHistory with added dateOfBirth and sex properties
+            const extendedHistory: ExtendedHearingHistory = {
+                ...hearingHistory,
+                dateOfBirth: new Date(employee.dob),
+                sex: hearingHistory.employee.sex
+            };
             
             // Calculate STS using client-side function
-            const stsReports = calculateSTSClientSide(hearingHistory);
+            const stsReports = calculateSTSClientSide(extendedHistory);
             if (!stsReports || stsReports.length === 0) continue;
             
             // First year is baseline
@@ -267,7 +307,7 @@
             }
 
             // Process all employees
-            const rows = await processEmployeeData(employeeList, result.hearingData);
+            const rows = await processEmployeeData(employeeList, result.hearingHistories);
 
             if (rows.length === 0) {
                 console.log("No data found for any employee.");
