@@ -1,7 +1,7 @@
 import type { Session } from "@auth/sveltekit";
 import { redirect, type RequestEvent, type Server, type ServerLoadEvent } from "@sveltejs/kit"
 import { sql, type QueryResult, type QueryResultRow } from "@vercel/postgres";
-import { PageCategory, type HearingDataSingle, type HearingHistory, type ExtendedHearingHistory } from "./MyTypes";
+import { PageCategory, type HearingDataSingle, type HearingHistory } from "./MyTypes";
 import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, type EarAnomalyStatus, PersonSex } from './interpret';
 
 export function isNumber(value?: string | number): boolean {
@@ -186,7 +186,7 @@ export function getPageCategory(page: string): PageCategory {
 }
 
 // respects proper baselines
-export function calculateSTSClientSide(hearingData: ExtendedHearingHistory): EarAnomalyStatus[] {
+export function calculateSTSClientSide(hearingData: HearingHistory): EarAnomalyStatus[] {
     if (!hearingData || !hearingData.screenings) {
         console.error("Invalid hearing data format");
         return [];
@@ -248,7 +248,7 @@ export function calculateSTSClientSide(hearingData: ExtendedHearingHistory): Ear
     }
     
     // Calculate age based on date of birth and current year
-    const dob = new Date(hearingData.dateOfBirth);
+    const dob = new Date(hearingData.employee.dob);
     const dobYear = dob.getFullYear();
     
     // Use the most recent year for current year in the history
@@ -258,7 +258,7 @@ export function calculateSTSClientSide(hearingData: ExtendedHearingHistory): Ear
     // Create one history object with all screenings
     const history = new UserHearingScreeningHistory(
         currentAge,
-        hearingData.sex,
+        hearingData.employee.sex,
         currentYear,
         screenings
     );

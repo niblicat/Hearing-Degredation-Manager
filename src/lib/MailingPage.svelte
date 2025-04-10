@@ -1,6 +1,6 @@
 <script lang="ts">
     import { ButtonGroup, Button, Footer, Spinner } from 'flowbite-svelte';
-    import type { Employee, HearingData, HearingDataSingle, HearingHistory, EmployeeInfo, ExtendedHearingHistory } from './MyTypes';
+    import type { Employee, HearingData, HearingDataSingle, HearingHistory, EmployeeInfo } from './MyTypes';
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
     import { AnomalyStatus, type EarAnomalyStatus, PersonSex } from "./interpret";
     import PageTitle from './PageTitle.svelte';
@@ -115,71 +115,6 @@
         }
     }
 
-    // Convert server hearing data to the format expected by calculateSTSClientSide
-    function convertToHearingHistory(employeeData: HearingDataResult[], dateOfBirth: Date,  sex: PersonSex): ExtendedHearingHistory {
-        // Group data by year first to organize the data
-        const yearGroups = employeeData.reduce((groups, data) => {
-            if (!groups[data.year]) {
-                groups[data.year] = {
-                    year: data.year,
-                    leftData: [],
-                    rightData: []
-                };
-            }
-            
-            // Populate the correct ear's data
-            if (data.ear === 'left') {
-                groups[data.year].leftData = data;
-            } else if (data.ear === 'right') {
-                groups[data.year].rightData = data;
-            }
-            
-            return groups;
-        }, {} as Record<number, any>);
-        
-        // Convert directly to an array of HearingScreening objects
-        const screeningsArray = Object.values(yearGroups).map(group => ({
-            year: group.year,
-            leftEar: {
-                hz500: group.leftData.hz500 ?? null,
-                hz1000: group.leftData.hz1000 ?? null,
-                hz2000: group.leftData.hz2000 ?? null,
-                hz3000: group.leftData.hz3000 ?? null,
-                hz4000: group.leftData.hz4000 ?? null,
-                hz6000: group.leftData.hz6000 ?? null,
-                hz8000: group.leftData.hz8000 ?? null
-            },
-            rightEar: {
-                hz500: group.rightData.hz500 ?? null,
-                hz1000: group.rightData.hz1000 ?? null,
-                hz2000: group.rightData.hz2000 ?? null,
-                hz3000: group.rightData.hz3000 ?? null,
-                hz4000: group.rightData.hz4000 ?? null,
-                hz6000: group.rightData.hz6000 ?? null,
-                hz8000: group.rightData.hz8000 ?? null
-            }
-        }));
-
-        // Create an employee info object with the provided data
-        const employeeInfo: EmployeeInfo = {
-            id: -1, // Placeholder ID since it's not provided in the parameters
-            firstName: "", // Placeholder first name
-            lastName: "", // Placeholder last name
-            email: "", // Placeholder email
-            dob: dateOfBirth,
-            lastActive: null,
-            sex: sex
-        };
-        
-        // Return with the additional properties that calculateSTSClientSide expects
-        return {
-            employee: employeeInfo,
-            screenings: screeningsArray,
-            dateOfBirth: dateOfBirth, 
-            sex: sex 
-        };
-    }
-
     // Process employee data and generate CSV rows
     async function processEmployeeData(
         employeeList: EmployeeForCSV[], 
@@ -194,7 +129,7 @@
             // Find the hearing history for this employee
             console.log(`Looking for hearing history for employee ID: ${employee.employeeID}`);
         
-            const hearingHistory = hearingHistories.find(history => {
+                const hearingHistory = hearingHistories.find(history => {
                 // Convert both to strings for comparison to avoid type issues
                 const historyID = history?.employee?.id?.toString();
                 const employeeID = employee.employeeID.toString();
@@ -217,15 +152,8 @@
             const years = hearingHistory.screenings.map(screening => screening.year).sort((a, b) => a - b);
             if (years.length === 0) continue;
             
-            // Create ExtendedHearingHistory with added dateOfBirth and sex properties
-            const extendedHistory: ExtendedHearingHistory = {
-                ...hearingHistory,
-                dateOfBirth: new Date(employee.dob),
-                sex: hearingHistory.employee.sex
-            };
-            
             // Calculate STS using client-side function
-            const stsReports = calculateSTSClientSide(extendedHistory);
+            const stsReports = calculateSTSClientSide(hearingHistory);
             if (!stsReports || stsReports.length === 0) continue;
             
             // First year is baseline

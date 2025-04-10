@@ -2,8 +2,8 @@
 
     import { Button, Search, Modal, Label, Input, Radio, Tooltip, Dropdown } from 'flowbite-svelte';
     import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
-    import { AnomalyStatus, type EarAnomalyStatus } from "./interpret";
-    import type { Employee, EmployeeSearchable, ExtendedHearingHistory } from './MyTypes';
+    import { AnomalyStatus, type EarAnomalyStatus, PersonSex} from "./interpret";
+    import type { Employee, EmployeeSearchable, HearingHistory } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { calculateSTSClientSide } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
@@ -25,7 +25,7 @@
     
     let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string}>>([]);
 
-    let allHearingData = $state<ExtendedHearingHistory | null>(null);
+    let allHearingData = $state<HearingHistory | null>(null);
 
     let allHearingReports = $state<EarAnomalyStatus[]>([]);
     let allYearScreenings = $state<Record<string, any>>({});
@@ -207,9 +207,23 @@
                 // Store all hearing data
                 allHearingData = hearingResult.hearingData;
 
+                // console.log("HEARING DATA: ", allHearingData);
+
                 try {
                     // Check that allHearingData is not null before processing
                     if (allHearingData) {
+
+                        allHearingData.employee = {
+                            id: parseInt(selectedEmployee.data.employeeID),
+                            firstName: selectedEmployee.data.firstName, 
+                            lastName: selectedEmployee.data.lastName,
+                            email: selectedEmail,
+                            dob: new Date(selectedDOB),
+                            lastActive: selectedStatus === "Inactive" ? new Date(selectedEmployee.data.activeStatus) : null,
+                            sex: selectedSex === 'male' ? PersonSex.Male : 
+                                selectedSex === 'female' ? PersonSex.Female : PersonSex.Other
+                        };
+
                         // Pre-calculate STS reports for all years
                         allHearingReports = calculateSTSClientSide(allHearingData);
                         
