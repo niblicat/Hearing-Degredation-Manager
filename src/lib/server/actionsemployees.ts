@@ -3,8 +3,7 @@
 
 import { sql } from '@vercel/postgres';
 import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, PersonSex } from "$lib/interpret";
-import { getHearingDataFromDatabaseRow } from '$lib/utility';
-import type { EmployeeInfo, HearingDataSingle, HearingHistory } from '$lib/MyTypes';
+import type { EmployeeInfo, HearingHistory } from '$lib/MyTypes';
 import { checkEmployeeExists, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase, extractEmployeeInfosFromDatabase } from './databasefunctions';
 
 export async function extractEmployeeInfo(request: Request) {

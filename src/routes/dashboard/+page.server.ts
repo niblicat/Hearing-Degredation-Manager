@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { turnAwayNonAdmins } from '$lib/utility';
-import { addHearingData, checkYearAvailability, modifyHearingData, fetchCalculateSTSData } from '$lib/server/actionshearingdata';
-import { fetchEmployeeInfo, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory, extractAllEmployeeHearingHistories, extractEmployeeHearingScreening } from '$lib/server/actionsemployees';
+import { addHearingData, checkYearAvailability, modifyHearingData } from '$lib/server/actionshearingdata';
+import { modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory, extractAllEmployeeHearingHistories, extractEmployeeHearingScreening } from '$lib/server/actionsemployees';
 import { addEmployee } from '$lib/server/actionsemployeeadd';
 import { deleteAdmins, modifyAdminName, modifyAdminPermissions } from '$lib/server/actionsadmins';
 import { getAdminsFromDatabase, getEmployeesFromDatabase, isEmailAnAdmin } from '$lib/server/databasefunctions';

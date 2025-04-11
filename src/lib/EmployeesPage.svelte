@@ -2,7 +2,7 @@
 
     import { Button, Search, Modal, Label, Input, Radio, Tooltip, Dropdown } from 'flowbite-svelte';
     import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
-    import { AnomalyStatus, type EarAnomalyStatus, PersonSex} from "./interpret";
+    import { AnomalyStatus, type EarAnomalyStatus} from "./interpret";
     import type { Employee, EmployeeSearchable, HearingHistory } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { calculateSTSClientSide } from './utility';
