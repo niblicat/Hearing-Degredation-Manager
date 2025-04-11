@@ -1,8 +1,8 @@
 import type { Session } from "@auth/sveltekit";
 import { redirect, type RequestEvent, type Server, type ServerLoadEvent } from "@sveltejs/kit"
 import { sql, type QueryResult, type QueryResultRow } from "@vercel/postgres";
-import { PageCategory, type HearingDataSingle } from "./MyTypes";
-import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, PersonSex, AnomalyStatus } from './interpret';
+import { PageCategory, type HearingDataSingle, type HearingHistory } from "./MyTypes";
+import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, type EarAnomalyStatus, PersonSex } from './interpret';
 
 export function isNumber(value?: string | number): boolean {
     return ((value != null) &&
@@ -186,155 +186,83 @@ export function getPageCategory(page: string): PageCategory {
 }
 
 // respects proper baselines
-export function calculateSTSClientSide(hearingData: any) {
-    // TODO: type hearing data (probably hearinghistory), which will remove the need to remap the hearingdata screenings
+export function calculateSTSClientSide(hearingData: HearingHistory): EarAnomalyStatus[] {
     if (!hearingData || !hearingData.screenings) {
         console.error("Invalid hearing data format");
         return [];
     }
 
-    // Convert raw hearing data to the format required by UserHearingScreeningHistory
-    const screenings = Object.entries(hearingData.screenings)
-        .map(([year, data]) => {
-            try {
-                const leftEarData = data.left;
-                const rightEarData = data.right;
+    let screenings: HearingScreening[];
 
-                // Populate left and right ear hearing data
-                const leftEar: HearingDataOneEar = {
-                    hz500: leftEarData["hz500"] ?? null,
-                    hz1000: leftEarData["hz1000"] ?? null,
-                    hz2000: leftEarData["hz2000"] ?? null,
-                    hz3000: leftEarData["hz3000"] ?? null,
-                    hz4000: leftEarData["hz4000"] ?? null,
-                    hz6000: leftEarData["hz6000"] ?? null,
-                    hz8000: leftEarData["hz8000"] ?? null
-                };
+    // Check if screenings is already an array
+    if (Array.isArray(hearingData.screenings)) {
+        screenings = hearingData.screenings;
+    } 
+    else {
+        // Handle the case where screenings is an object with year keys
+        screenings = Object.entries(hearingData.screenings)
+            .map(([year, data]: [string, any]) => {
+                try {
+                    const leftEarData = data.left;
+                    const rightEarData = data.right;
 
-                const rightEar: HearingDataOneEar = {
-                    hz500: rightEarData["hz500"] ?? null,
-                    hz1000: rightEarData["hz1000"] ?? null,
-                    hz2000: rightEarData["hz2000"] ?? null,
-                    hz3000: rightEarData["hz3000"] ?? null,
-                    hz4000: rightEarData["hz4000"] ?? null,
-                    hz6000: rightEarData["hz6000"] ?? null,
-                    hz8000: rightEarData["hz8000"] ?? null
-                };
+                    // Populate left and right ear hearing data
+                    const leftEar: HearingDataOneEar = {
+                        hz500: leftEarData["hz500"] ?? null,
+                        hz1000: leftEarData["hz1000"] ?? null,
+                        hz2000: leftEarData["hz2000"] ?? null,
+                        hz3000: leftEarData["hz3000"] ?? null,
+                        hz4000: leftEarData["hz4000"] ?? null,
+                        hz6000: leftEarData["hz6000"] ?? null,
+                        hz8000: leftEarData["hz8000"] ?? null
+                    };
 
-                return {
-                    year: Number(year),
-                    leftEar,
-                    rightEar
-                };
-            } catch (err) {
-                console.error(`Error parsing screening data for year ${year}:`, err);
-                return null;
-            }
-        })
-        .filter(screening => screening !== null);
+                    const rightEar: HearingDataOneEar = {
+                        hz500: rightEarData["hz500"] ?? null,
+                        hz1000: rightEarData["hz1000"] ?? null,
+                        hz2000: rightEarData["hz2000"] ?? null,
+                        hz3000: rightEarData["hz3000"] ?? null,
+                        hz4000: rightEarData["hz4000"] ?? null,
+                        hz6000: rightEarData["hz6000"] ?? null,
+                        hz8000: rightEarData["hz8000"] ?? null
+                    };
 
-    // Helper function to safely parse values
-    function parseValueOrNull(value: any): number | null {
-        if (value === null || value === undefined || value === "CNT") {
-            return null;
-        }
-        const parsed = parseFloat(value);
-        return isNaN(parsed) ? null : parsed;
+                    return {
+                        year: Number(year),
+                        leftEar,
+                        rightEar
+                    };
+                } catch (err) {
+                    console.error(`Error parsing screening data for year ${year}:`, err);
+                    return null;
+                }
+            })
+            .filter((screening): screening is HearingScreening => screening !== null);
     }
-
+    
     // Sort screenings by year
     screenings.sort((a, b) => a.year - b.year);
     
-    // Calculate age based on date of birth and current year
-    const dob = new Date(hearingData.dateOfBirth);
-    const dobYear = dob.getFullYear();
-    
-    // Determine sex
-    const personSex = hearingData.sex === "Male" ? PersonSex.Male : 
-                    hearingData.sex === "Female" ? PersonSex.Female : 
-                    PersonSex.Other;
-    
-    // Process each screening with its proper baseline
-    const reports = [];
-    
-    // Find the oldest year's data (first baseline)
-    let leftBaselineIndex = 0;
-    let rightBaselineIndex = 0;
-    let leftBaselineYear = screenings[0].year;
-    let rightBaselineYear = screenings[0].year;
-    
-    // Process each year relative to its proper baseline
-    for (let i = 0; i < screenings.length; i++) {
-        const currentYear = screenings[i].year;
-        const age = currentYear - dobYear;
-        
-        // If this is a baseline year or the first year, set it as its own baseline
-        if (i === 0) {
-            // This is a baseline year - no previous data to compare against
-            reports.push({
-                reportYear: currentYear,
-                leftStatus: AnomalyStatus.Baseline,
-                rightStatus: AnomalyStatus.Baseline,
-                leftBaselineYear: currentYear,
-                rightBaselineYear: currentYear
-            });
-        } else {
-            // Compare against left baseline
-            const leftBaselineScreening = screenings[leftBaselineIndex];
-            const rightBaselineScreening = screenings[rightBaselineIndex];
-            
-            // Create separate history objects for left and right ears
-            const leftHistoryForComparison = new UserHearingScreeningHistory(
-                age,
-                personSex,
-                currentYear,
-                [leftBaselineScreening, screenings[i]]
-            );
-            
-            const rightHistoryForComparison = new UserHearingScreeningHistory(
-                age,
-                personSex,
-                currentYear,
-                [rightBaselineScreening, screenings[i]]
-            );
-            
-            // Generate reports for this specific comparison
-            const leftYearReport = leftHistoryForComparison.GenerateHearingReport()
-                .find(report => report.reportYear === currentYear);
-                
-            const rightYearReport = rightHistoryForComparison.GenerateHearingReport()
-                .find(report => report.reportYear === currentYear);
-            
-            if (leftYearReport && rightYearReport) {
-                reports.push({
-                    reportYear: currentYear,
-                    leftStatus: leftYearReport.leftStatus,
-                    rightStatus: rightYearReport.rightStatus,
-                    leftBaselineYear: leftBaselineYear,
-                    rightBaselineYear: rightBaselineYear
-                });
-            }
-            
-            // Check if we need to update the baselines
-            const leftHasSignificantImprovement = 
-                leftYearReport && leftYearReport.leftStatus === AnomalyStatus.NewBaseline;
-                
-            const rightHasSignificantImprovement = 
-                rightYearReport && rightYearReport.rightStatus === AnomalyStatus.NewBaseline;
-                
-            if (leftHasSignificantImprovement) {
-                // Set this year as the new baseline for future calculations for left ear
-                leftBaselineIndex = i;
-                leftBaselineYear = currentYear;
-            }
-            
-            if (rightHasSignificantImprovement) {
-                // Set this year as the new baseline for future calculations for right ear
-                rightBaselineIndex = i;
-                rightBaselineYear = currentYear;
-            }
-        }
+    if (screenings.length === 0) {
+        return [];
     }
     
-    return reports;
+    // Calculate age based on date of birth and current year
+    const dob = new Date(hearingData.employee.dob);
+    const dobYear = dob.getFullYear();
+    
+    // Use the most recent year for current year in the history
+    const currentYear = screenings[screenings.length - 1].year;
+    const currentAge = currentYear - dobYear;
+    
+    // Create one history object with all screenings
+    const history = new UserHearingScreeningHistory(
+        currentAge,
+        hearingData.employee.sex,
+        currentYear,
+        screenings
+    );
+    
+    // Generate the hearing report for all years using the existing class
+    return history.GenerateHearingReport();
 }

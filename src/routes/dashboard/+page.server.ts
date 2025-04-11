@@ -87,10 +87,6 @@ export const actions: Actions = {
     modifyEmployeeSex: async ({ request }) => {
         return modifyEmployeeSex(request);
     },
-    // ! to be removed later
-    calculateSTS: async ({ request }) => { 
-        return calculateSTS(request);
-    },
     extractEmployeeHearingScreening: async ({ request }) => {
         return extractEmployeeHearingScreening(request);
     },
@@ -106,21 +102,6 @@ export const actions: Actions = {
     // ================================================
 
     // actionsmailing.ts
-    // ! to be removed later
-    extractAllEmployeeData: async ({ request }) => {
-        return extractAllEmployeeData(request);
-    },
-    // ! to be removed later
-    extractHearingData: async ({ request }) => {
-        return extractHearingData(request);
-    },
-    // ! to be removed later
-    extractBaselineHearingData: async ({ request }) => {
-        return extractBaselineHearingData(request);
-    },
-    // ! to be removed later
-    extractRecentHearingData: async ({ request }) => {
-        return extractRecentHearingData(request);
-    }
+    // no longer use any :)
     // ================================================
 };

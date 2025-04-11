@@ -1,10 +1,9 @@
 <script lang="ts">
 
-    import { Button, Search, Modal, Label, Input, Radio, Tooltip } from 'flowbite-svelte';
+    import { Button, Search, Modal, Label, Input, Radio, Tooltip, Dropdown } from 'flowbite-svelte';
     import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
-    import { Dropdown } from 'flowbite-svelte';
-    import { AnomalyStatus } from "./interpret";
-    import type { Employee, EmployeeSearchable } from './MyTypes';
+    import { AnomalyStatus, type EarAnomalyStatus, PersonSex} from "./interpret";
+    import type { Employee, EmployeeSearchable, HearingHistory } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { calculateSTSClientSide } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
@@ -26,8 +25,9 @@
     
     let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string}>>([]);
 
-    let allHearingData = $state<any>(null);
-    let allHearingReports = $state<Array<any>>([]);
+    let allHearingData = $state<HearingHistory | null>(null);
+
+    let allHearingReports = $state<EarAnomalyStatus[]>([]);
     let allYearScreenings = $state<Record<string, any>>({});
 
     // Selected employee and year
@@ -207,24 +207,41 @@
                 // Store all hearing data
                 allHearingData = hearingResult.hearingData;
 
-                try {
-                    // Pre-calculate STS reports for all years
-                    allHearingReports = calculateSTSClientSide(allHearingData);
-                    
-                    // Store screenings by year for quick access
-                    Object.entries(allHearingData.screenings).forEach(([year, data]) => {
-                        allYearScreenings[year] = data;
-                    });
+                // console.log("HEARING DATA: ", allHearingData);
 
-                    // Create the hearing history display info
-                    hearingHistory = allHearingReports.map((report: any) => ({
-                        year: report.reportYear.toString(),
-                        leftStatus: GetAnomalyStatusText(report.leftStatus),
-                        rightStatus: GetAnomalyStatusText(report.rightStatus)
-                    }));
-                    
-                    // Sort by year (newest first)
-                    hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+                try {
+                    // Check that allHearingData is not null before processing
+                    if (allHearingData) {
+
+                        allHearingData.employee = {
+                            id: parseInt(selectedEmployee.data.employeeID),
+                            firstName: selectedEmployee.data.firstName, 
+                            lastName: selectedEmployee.data.lastName,
+                            email: selectedEmail,
+                            dob: new Date(selectedDOB),
+                            lastActive: selectedStatus === "Inactive" ? new Date(selectedEmployee.data.activeStatus) : null,
+                            sex: selectedSex === 'male' ? PersonSex.Male : 
+                                selectedSex === 'female' ? PersonSex.Female : PersonSex.Other
+                        };
+
+                        // Pre-calculate STS reports for all years
+                        allHearingReports = calculateSTSClientSide(allHearingData);
+                        
+                        // Store screenings by year for quick access
+                        Object.entries(allHearingData.screenings).forEach(([year, data]) => {
+                            allYearScreenings[year] = data;
+                        });
+
+                        // Create the hearing history display info
+                        hearingHistory = allHearingReports.map((report: any) => ({
+                            year: report.reportYear.toString(),
+                            leftStatus: GetAnomalyStatusText(report.leftStatus),
+                            rightStatus: GetAnomalyStatusText(report.rightStatus)
+                        }));
+                        
+                        // Sort by year (newest first)
+                        hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+                    }
                 } catch (calcError) {
                     console.error('Error calculating STS:', calcError);
                     displayError('Error calculating hearing thresholds. Please check the hearing data format.');
@@ -281,7 +298,7 @@
         try {
             // Find the test result that matches the selected year from the pre-calculated reports
             const selectedYearReport = allHearingReports.find(
-                (report: any) => report.reportYear === parseInt(year, 10)
+                (report) => report.reportYear === parseInt(year, 10)
             );
 
             if (selectedYearReport) {
@@ -309,7 +326,7 @@
 
             // Find the baseline years from the selected year report
             const selectedYearReport = allHearingReports.find(
-                (report: any) => report.reportYear === parseInt(year, 10)
+                (report) => report.reportYear === parseInt(year, 10)
             );
 
             if (!selectedYearReport) {
@@ -318,8 +335,8 @@
             }
 
             // Get baseline year data for left and right ears
-            const leftBaselineYear = selectedYearReport.leftBaselineYear?.toString();
-            const rightBaselineYear = selectedYearReport.rightBaselineYear?.toString();
+            const leftBaselineYear = selectedYearReport.leftBaselineYear.toString();
+            const rightBaselineYear = selectedYearReport.rightBaselineYear.toString();
             
             // Get current year data
             const currentYearData = allYearScreenings[year];
