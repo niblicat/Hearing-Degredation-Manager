@@ -4,8 +4,8 @@ import { addHearingData, checkYearAvailability, modifyHearingData, fetchCalculat
 import { fetchEmployeeInfo, fetchYears, modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, calculateSTS, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory, extractAllEmployeeHearingHistories, extractEmployeeHearingScreening } from '$lib/server/actionsemployees';
 import { addEmployee } from '$lib/server/actionsemployeeadd';
 import { deleteAdmins, modifyAdminName, modifyAdminPermissions } from '$lib/server/actionsadmins';
-import { extractAllEmployeeData, extractHearingData, extractBaselineHearingData, extractRecentHearingData } from '$lib/server/actionsmailing';
 import { getAdminsFromDatabase, getEmployeesFromDatabase } from '$lib/server/databasefunctions';
+import { fail } from '@sveltejs/kit';
 
 
 export const load: PageServerLoad = async ( event ) => {
@@ -27,81 +27,102 @@ export const load: PageServerLoad = async ( event ) => {
 // Actions for login and registration
 export const actions: Actions = {
     // actionsadmins.ts
-    modifyAdminPermissions: async ({ request }) => {
+    modifyAdminPermissions: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return modifyAdminPermissions(request);
     },
-    modifyAdminName: async ({ request }) => {
+    modifyAdminName: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return modifyAdminName(request);
     },
-    deleteAdmins: async ({ request }) => {
+    deleteAdmins: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return deleteAdmins(request);
     },
     // ================================================
     
     // actionsemployeeadd.ts
-    addEmployee: async ({ request }) => {
+    addEmployee: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return addEmployee(request);
     },
     // ================================================
 
     // actionshearingdata.ts
-    checkYearAvailability: async ({ request }) => {
+    checkYearAvailability: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return checkYearAvailability(request);
     },
-    addHearingData: async ({ request }) => {
+    addHearingData: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return addHearingData(request);
     },
-    modifyHearingData: async ({ request }) => {
+    modifyHearingData: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return modifyHearingData(request);
     },
     // ! to be removed later
-    fetchCalculateSTSData: async ({ request }) => { 
+    fetchCalculateSTSData: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."}); 
         return fetchCalculateSTSData(request);
     },
     // ================================================
 
     // actionsemployees.ts
     // ! to be removed later
-    fetchYears: async ({ request }) => {
+    fetchYears: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return fetchYears(request);
     },
     // ! to be removed later
-    fetchEmployeeInfo: async ({ request }) => {
+    fetchEmployeeInfo: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return fetchEmployeeInfo(request);
     },
-    extractEmployeeInfo: async ({ request }) => {
+    extractEmployeeInfo: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return extractEmployeeInfo(request);
     },
-    modifyEmployeeName: async ({ request }) => {
+    modifyEmployeeName: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return modifyEmployeeName(request);
     },
-    modifyEmployeeEmail: async ({ request }) => {
+    modifyEmployeeEmail: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return modifyEmployeeEmail(request);
     },
-    modifyEmployeeDOB: async ({ request }) => {
+    modifyEmployeeDOB: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return modifyEmployeeDOB(request);
     },
-    modifyEmployeeStatus: async ({ request }) => {
+    modifyEmployeeStatus: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return modifyEmployeeStatus(request);
     },
-    modifyEmployeeSex: async ({ request }) => {
+    modifyEmployeeSex: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return modifyEmployeeSex(request);
     },
-    extractEmployeeHearingScreening: async ({ request }) => {
+    extractEmployeeHearingScreening: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return extractEmployeeHearingScreening(request);
     },
-    extractEmployeeHearingScreenings: async ({ request }) => {
+    extractEmployeeHearingScreenings: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return extractEmployeeHearingScreenings(request);
     },
-    extractEmployeeHearingHistory: async ({ request }) => {
+    extractEmployeeHearingHistory: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return extractEmployeeHearingHistory(request);
     },
-    extractAllEmployeeHearingHistories: async ({ request }) => {
+    extractAllEmployeeHearingHistories: async ({ request, locals }) => {
+        if (!(await validSession(locals))) return fail(401, {message: "Session was not valid."});
         return extractAllEmployeeHearingHistories(request);
     },
     // ================================================
-
-    // actionsmailing.ts
-    // no longer use any :)
-    // ================================================
 };
+
+async function validSession(locals: App.Locals): Promise<boolean> {
+    const session = await locals.auth();
+    return !!session?.user; // checks if the session exists
+}
