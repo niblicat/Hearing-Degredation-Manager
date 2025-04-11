@@ -68,27 +68,9 @@ export const actions: Actions = {
         if (!sessionIsValid) return fail(401, {message});
         return modifyHearingData(request);
     },
-    // ! to be removed later
-    fetchCalculateSTSData: async ({ request, locals }) => {
-        const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);
-        if (!sessionIsValid) return fail(401, {message}); 
-        return fetchCalculateSTSData(request);
-    },
     // ================================================
 
     // actionsemployees.ts
-    // ! to be removed later
-    fetchYears: async ({ request, locals }) => {
-        const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);
-        if (!sessionIsValid) return fail(401, {message});
-        return fetchYears(request);
-    },
-    // ! to be removed later
-    fetchEmployeeInfo: async ({ request, locals }) => {
-        const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);
-        if (!sessionIsValid) return fail(401, {message});
-        return fetchEmployeeInfo(request);
-    },
     extractEmployeeInfo: async ({ request, locals }) => {
         const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);
         if (!sessionIsValid) return fail(401, {message});

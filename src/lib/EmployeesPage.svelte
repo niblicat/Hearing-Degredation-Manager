@@ -113,127 +113,64 @@
     // Functions to update selected employee and year
     async function selectEmployee(employee: EmployeeSearchable): Promise<void> {
         const formData = new FormData();
-
+        
         selectedEmployee = employee;
         nameMenuOpen = false; 
-
+        
         // Reset all data
         resetEmployeeInfo();
         resetData();
-
+        
         formData.append('employeeID', selectedEmployee.data.employeeID);
-
-        // Fetch employee details from the server and years for other dropdown
-        // ! This function is doing way too much. 
-        // ! use getEmployeeHearingHistory() from postrequests.ts to condense all this into one function call
-        // ! See the Debug.svelte page for an example usage
+        
         try {
-            // Fetch employee information
-            const dataResponse = await fetch('/dashboard?/fetchEmployeeInfo', {
+            // One call to get the entire hearing history and employee info
+            const response = await fetch('/dashboard?/extractEmployeeHearingHistory', {
                 method: 'POST',
                 body: formData,
             });
             
-            const serverDataResponse = await dataResponse.json();
-            const dataResult = JSON.parse(JSON.parse(serverDataResponse.data)[0]);
-
-            if (dataResult["success"]) {
+            const serverResponse = await response.json();
+            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
+            
+            if (result["success"]) {
                 success = true;
-                selectedEmail = dataResult.employee.email;
-                selectedStatus = dataResult.employee.employmentStatus;
-                selectedDOB = dataResult.employee.dob
-                    ? new Date(dataResult.employee.dob).toISOString().split('T')[0]
+                
+                // Get employee info directly from the result
+                const employeeInfo = result.history.employee;
+                selectedEmail = employeeInfo.email;
+                selectedStatus = employeeInfo.lastActive === null ? "Active" : "Inactive";
+                selectedDOB = employeeInfo.dob
+                    ? new Date(employeeInfo.dob).toISOString().split('T')[0]
                     : "No selection made";
-                selectedSex = dataResult.employee.sex;
-            }
-            else { 
-                selectedEmail = "Error fetching data: not a data success";
-                selectedDOB = "Error fetching data: not a data success";
-                selectedStatus = "Error fetching data: not a data success";
-                displayError('Failed to fetch employee information');
-                return;
-            }
-
-            // Fetch available years
-            const yearsResponse = await fetch('/dashboard?/fetchYears', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const serverYearsResponse = await yearsResponse.json();
-            const yearsResult = JSON.parse(JSON.parse(serverYearsResponse.data)[0]);
-
-            if (yearsResult["success"]) {
-                success = true;
-                yearItems = yearsResult.years.map(String);
-
-                // shows a helpful message when there's no data
-                if (yearItems.length === 0) {
-                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
-                    // Initialize empty data structures for a new employee with no data
-                    hearingHistory = [];
-                    allHearingData = null;
-                    allHearingReports = [];
-                    allYearScreenings = {};
-                    return; // Exit early since there's no data to fetch
-                }
-            }
-            else {
-                // Check if this is a "no data" error
-                if (yearsResult.message && yearsResult.message.includes("No years found")) {
-                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
-                    hearingHistory = [];
-                    allHearingData = null;
-                    allHearingReports = [];
-                    allYearScreenings = {};
-                    return; // Exit early
-                } else {
-                    // Only show an error for actual errors, not for expected "no data" cases
-                    displayError('Error fetching years data: ' + (yearsResult.message || 'Unknown error'));
-                    return;
-                }
-            }
-
-            // Fetch all hearing data at once
-            const hearingResponse = await fetch('/dashboard?/fetchCalculateSTSData', { 
-                method: 'POST',
-                body: formData,
-            });
-
-            const hearingServerResponse = await hearingResponse.json();
-            const hearingResult = JSON.parse(JSON.parse(hearingServerResponse.data)[0]);
-
-            if (hearingResult["success"]) {
-                // Store all hearing data
-                allHearingData = hearingResult.hearingData;
-
-                // console.log("HEARING DATA: ", allHearingData);
-
-                try {
-                    // Check that allHearingData is not null before processing
-                    if (allHearingData) {
-
-                        allHearingData.employee = {
-                            id: parseInt(selectedEmployee.data.employeeID),
-                            firstName: selectedEmployee.data.firstName, 
-                            lastName: selectedEmployee.data.lastName,
-                            email: selectedEmail,
-                            dob: new Date(selectedDOB),
-                            lastActive: selectedStatus === "Inactive" ? new Date(selectedEmployee.data.activeStatus) : null,
-                            sex: selectedSex === 'male' ? PersonSex.Male : 
-                                selectedSex === 'female' ? PersonSex.Female : PersonSex.Other
-                        };
-
-                        // Pre-calculate STS reports for all years
+                selectedSex = employeeInfo.sex;
+                
+                // Store hearing history directly
+                allHearingData = result.history;
+                
+                // Process screening data if it exists
+                if (allHearingData && allHearingData.screenings && allHearingData.screenings.length > 0) {
+                    // Get years from screenings
+                    yearItems = allHearingData.screenings.map(screening => screening.year.toString());
+                    
+                    // Sort years (newest first for dropdown)
+                    yearItems.sort((a, b) => parseInt(b) - parseInt(a));
+                    
+                    // Calculate STS reports directly
+                    try {
                         allHearingReports = calculateSTSClientSide(allHearingData);
                         
-                        // Store screenings by year for quick access
-                        Object.entries(allHearingData.screenings).forEach(([year, data]) => {
-                            allYearScreenings[year] = data;
+                        // Create year-indexed lookup for screenings
+                        allYearScreenings = {};
+                        allHearingData.screenings.forEach(screening => {
+                            allYearScreenings[screening.year.toString()] = {
+                                left: screening.leftEar,
+                                right: screening.rightEar
+                            };
                         });
-
+                        
                         // Create the hearing history display info
-                        hearingHistory = allHearingReports.map((report: any) => ({
+                        hearingHistory = allHearingReports.map(report => ({
                             year: report.reportYear.toString(),
                             leftStatus: GetAnomalyStatusText(report.leftStatus),
                             rightStatus: GetAnomalyStatusText(report.rightStatus)
@@ -241,37 +178,38 @@
                         
                         // Sort by year (newest first)
                         hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+                    } catch (calcError) {
+                        console.error('Error calculating STS:', calcError);
+                        displayError('Error calculating hearing thresholds. Please check the hearing data format.');
+                        return;
                     }
-                } catch (calcError) {
-                    console.error('Error calculating STS:', calcError);
-                    displayError('Error calculating hearing thresholds. Please check the hearing data format.');
-                    return;
+                } else {
+                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
+                    hearingHistory = [];
+                    allHearingReports = [];
+                    allYearScreenings = {};
                 }
-            }
-            else {
-                // Check if this is a "no data" error or another type of error
-                if (hearingResult.message && (
-                    hearingResult.message.includes("not found") || 
-                    hearingResult.message.includes("No hearing data") ||
-                    hearingResult.message.includes("no data") ||
-                    hearingResult.message.includes("no screening")
-                )) {
-                    // This is expected for new employees - don't show an error
-                    console.log("No hearing data available for this employee");
-                    // We already showed the info message earlier based on empty years
-                    // Just make sure the data structures are properly initialized
+            } else {
+                if (result.message && result.message.includes("Hearing data not found")) {
+                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
                     hearingHistory = [];
                     allHearingData = null;
                     allHearingReports = [];
                     allYearScreenings = {};
+                    
+                    // Still set basic info
+                    selectedEmail = selectedEmployee.data.email;
+                    selectedStatus = selectedEmployee.data.activeStatus ? "Inactive" : "Active";
+                    selectedDOB = selectedEmployee.data.dob
+                        ? new Date(selectedEmployee.data.dob).toISOString().split('T')[0]
+                        : "No selection made";
+                    selectedSex = selectedEmployee.data.sex;
                 } else {
-                    // This is an actual error
-                    displayError((hearingResult.message || 'Unknown error'));
+                    displayError('Failed to fetch employee hearing history: ' + (result.message || 'Unknown error'));
                 }
                 return;
             }
-        } 
-        catch (error) {
+        } catch (error) {
             console.error('Error fetching data:', error);
             yearItems = [];
             displayError('Error fetching data from server. Please try again later.');
