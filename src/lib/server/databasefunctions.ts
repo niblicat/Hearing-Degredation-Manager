@@ -285,6 +285,16 @@ export async function extractEmployeeHearingHistoryFromDatabase(employeeInfo: Em
 
 // ADMINS
 
+export async function isEmailAnAdmin(email: string): Promise<boolean> {
+    const query = await sql`SELECT isop::boolean FROM Administrator WHERE userstring=${email};`
+
+    if (query.rows.length === 0) throw new DatabaseError("User does not exist on Administrator table.");
+
+    const isOpRaw: boolean = query.rows[0].isop;
+
+    return isOpRaw;
+}
+
 export async function getAdminsFromDatabase(): Promise<Admin[]> {
     const adminTable = await sql`SELECT * FROM Administrator;`;
 
