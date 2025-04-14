@@ -5,6 +5,7 @@
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import { calculateSTSClientSide } from './utility';
+	import { getAllEmployeeHearingHistories } from './client/postrequests';
 
     interface Props {
         employees: Array<Employee>;
@@ -16,19 +17,6 @@
     let errorMessage = $state("");
     let loadingTemplate = $state(false);
     let loadingCSV = $state(false);
-
-    interface HearingDataResult {
-        id: string;
-        year: number;
-        ear: string;
-        hz500: number | null;
-        hz1000: number | null;
-        hz2000: number | null;
-        hz3000: number | null;
-        hz4000: number | null;
-        hz6000: number | null;
-        hz8000: number | null;
-    }
 
     interface EmployeeForCSV {
         employeeID: string;
@@ -44,7 +32,7 @@
         success = false;
     }
 
-    // Function to create an array of employees
+    // Function to create an array of employees who are currently active
     function createEmployeeList(): EmployeeForCSV[] {
         return employees
             .filter(employee => employee.activeStatus === null)
@@ -64,55 +52,6 @@
         }) ?? "Unknown";
     };
 
-    // Get hearing data from server for a list of employee IDs
-    async function fetchHearingData(employeeIDs: string[]): Promise<{
-        success: boolean;
-        hearingHistories: HearingHistory[];
-        error?: string;
-    }> {
-        try {
-            const hearingHistories: HearingHistory[] = [];
-            
-            // Process each employee ID one at a time
-            for (const employeeID of employeeIDs) {
-                const formData = new FormData();
-                formData.append('employeeID', employeeID); // Note: single ID, not an array
-                
-                const response = await fetch('/dashboard?/extractEmployeeHearingHistory', {
-                    method: 'POST',
-                    body: formData,
-                });
-                
-                const serverResponse = await response.json();
-                const parsedResponse = JSON.parse(JSON.parse(serverResponse.data)[0]);
-
-                // console.log(serverResponse)
-                // console.log(parsedResponse)
-                
-                if (parsedResponse["success"]) {
-                    hearingHistories.push(parsedResponse.history);
-                } else {
-                    console.warn(`Could not fetch hearing history for employee ${employeeID}`);
-                }
-
-                // console.log("HEARING HISTORIES:\n", (JSON.stringify(hearingHistories)))
-            }
-            
-            return {
-                success: true,
-                hearingHistories
-            };
-            
-        } catch (error) {
-            console.error("Error fetching hearing histories:", error);
-            return {
-                success: false,
-                hearingHistories: [],
-                error: error instanceof Error ? error.message : "Unknown error occurred"
-            };
-        }
-    }
-
     // Process employee data and generate CSV rows
     async function processEmployeeData(
         employeeList: EmployeeForCSV[], 
@@ -127,7 +66,7 @@
             // Find the hearing history for this employee
             console.log(`Looking for hearing history for employee ID: ${employee.employeeID}`);
         
-                const hearingHistory = hearingHistories.find(history => {
+            const hearingHistory = hearingHistories.find(history => {
                 // Convert both to strings for comparison to avoid type issues
                 const historyID = history?.employee?.id?.toString();
                 const employeeID = employee.employeeID.toString();
@@ -221,19 +160,14 @@
             "Left Status", "Right Status"
         ];
 
-        // Get employee IDs for the server request
-        const employee_IDs = employeeList.map(employee => employee.employeeID);
+        let hearingHistories: HearingHistory[];
         
         try {
-            // Fetch hearing data from server (single server call)
-            const result = await fetchHearingData(employee_IDs);
-
-            if (!result.success) {
-                throw new Error(result.error ?? "Failed to generate report");
-            }
+            // send a post request to obtain all employee hearing histories
+            hearingHistories = await getAllEmployeeHearingHistories(false);
 
             // Process all employees
-            const rows = await processEmployeeData(employeeList, result.hearingHistories);
+            const rows = await processEmployeeData(employeeList, hearingHistories);
 
             if (rows.length === 0) {
                 console.log("No data found for any employee.");

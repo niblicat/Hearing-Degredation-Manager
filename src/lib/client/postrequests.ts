@@ -39,7 +39,7 @@ export async function getEmployeeHearingHistory(employeeID: string): Promise<Hea
     return result["history"];
 }
 
-export async function getAllEmployeeHearingHistories(omitInactive: boolean): Promise<HearingHistory[]> {
+export async function getAllEmployeeHearingHistories(omitInactive: boolean = true): Promise<HearingHistory[]> {
     // create form data and populate it with the necessary fields
     const formData = new FormData();
     formData.append('omitInactive', omitInactive.toString()); // extractEmployeeHearingHistory expects omitInactive
