@@ -3,13 +3,14 @@
     import { Button, Search, Modal, Label, Input, Radio, Tooltip, Dropdown } from 'flowbite-svelte';
     import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
     import { AnomalyStatus, type EarAnomalyStatus} from "./interpret";
-    import type { Employee, EmployeeSearchable, HearingHistory } from './MyTypes';
+    import type { Employee, EmployeeInfo, EmployeeSearchable, HearingHistory } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { calculateSTSClientSide } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import EmployeeData from './EmployeeData.svelte';
+	import { getEmployeeHearingHistory } from './client/postrequests';
 
     interface Props {
         employees: Array<Employee>;
@@ -122,99 +123,72 @@
         resetData();
         
         formData.append('employeeID', selectedEmployee.data.employeeID);
-        
+
+        let fetchedHistory: HearingHistory;
+
         try {
-            // One call to get the entire hearing history and employee info
-            const response = await fetch('/dashboard?/extractEmployeeHearingHistory', {
-                method: 'POST',
-                body: formData,
-            });
-            
-            const serverResponse = await response.json();
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-            
-            if (result["success"]) {
-                success = true;
-                
-                // Get employee info directly from the result
-                const employeeInfo = result.history.employee;
-                selectedEmail = employeeInfo.email;
-                selectedStatus = employeeInfo.lastActive === null ? "Active" : "Inactive";
-                selectedDOB = employeeInfo.dob
-                    ? new Date(employeeInfo.dob).toISOString().split('T')[0]
-                    : "No selection made";
-                selectedSex = employeeInfo.sex;
-                
-                // Store hearing history directly
-                allHearingData = result.history;
-                
-                // Process screening data if it exists
-                if (allHearingData && allHearingData.screenings && allHearingData.screenings.length > 0) {
-                    // Get years from screenings
-                    yearItems = allHearingData.screenings.map(screening => screening.year.toString());
-                    
-                    // Sort years (newest first for dropdown)
-                    yearItems.sort((a, b) => parseInt(b) - parseInt(a));
-                    
-                    // Calculate STS reports directly
-                    try {
-                        allHearingReports = calculateSTSClientSide(allHearingData);
-                        
-                        // Create year-indexed lookup for screenings
-                        allYearScreenings = {};
-                        allHearingData.screenings.forEach(screening => {
-                            allYearScreenings[screening.year.toString()] = {
-                                left: screening.leftEar,
-                                right: screening.rightEar
-                            };
-                        });
-                        
-                        // Create the hearing history display info
-                        hearingHistory = allHearingReports.map(report => ({
-                            year: report.reportYear.toString(),
-                            leftStatus: GetAnomalyStatusText(report.leftStatus),
-                            rightStatus: GetAnomalyStatusText(report.rightStatus),
-                            leftBaseline: report.leftBaselineYear.toString(),
-                            rightBaseline: report.rightBaselineYear.toString()
-                        }));
-                        
-                        // Sort by year (newest first)
-                        hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
-                    } catch (calcError) {
-                        console.error('Error calculating STS:', calcError);
-                        displayError('Error calculating hearing thresholds. Please check the hearing data format.');
-                        return;
-                    }
-                } else {
-                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
-                    hearingHistory = [];
-                    allHearingReports = [];
-                    allYearScreenings = {};
-                }
-            } else {
-                if (result.message && result.message.includes("Hearing data not found")) {
-                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
-                    hearingHistory = [];
-                    allHearingData = null;
-                    allHearingReports = [];
-                    allYearScreenings = {};
-                    
-                    // Still set basic info
-                    selectedEmail = selectedEmployee.data.email;
-                    selectedStatus = selectedEmployee.data.activeStatus ? "Inactive" : "Active";
-                    selectedDOB = selectedEmployee.data.dob
-                        ? new Date(selectedEmployee.data.dob).toISOString().split('T')[0]
-                        : "No selection made";
-                    selectedSex = selectedEmployee.data.sex;
-                } else {
-                    displayError('Failed to fetch employee hearing history: ' + (result.message || 'Unknown error'));
-                }
-                return;
+            // fetch the history by sending a POST request
+            // will throw an error if employee isn't found or there's a database error
+            fetchedHistory = await getEmployeeHearingHistory(selectedEmployee.data.employeeID);
+
+            // update employee info
+            const employeeInfo: EmployeeInfo = fetchedHistory.employee;
+            selectedEmail = employeeInfo.email;
+            selectedStatus = employeeInfo.lastActive === null ? "Active" : "Inactive";
+            selectedDOB = employeeInfo.dob
+                ? new Date(employeeInfo.dob).toISOString().split('T')[0]
+                : "No selection made";
+            selectedSex = employeeInfo.sex.toString();
+
+            // Store hearing history directly
+            allHearingData = fetchedHistory;
+
+            if (allHearingData.screenings.length === 0) {
+                // no hearing data found, but employee exists
+                displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
+                hearingHistory = [];
+                allHearingReports = [];
+                allYearScreenings = {};
+                allHearingData = null;
             }
-        } catch (error) {
-            console.error('Error fetching data:', error);
+            else {
+                // hearing data exists!
+                // Get years from screenings
+                yearItems = allHearingData.screenings.map(screening => screening.year.toString());
+                
+                // Sort years (newest first for dropdown)
+                yearItems.sort((a, b) => parseInt(b) - parseInt(a));
+                
+                // Calculate STS reports directly
+                allHearingReports = calculateSTSClientSide(allHearingData);
+                
+                // Create year-indexed lookup for screenings
+                allYearScreenings = {};
+                allHearingData.screenings.forEach(screening => {
+                    allYearScreenings[screening.year.toString()] = {
+                        left: screening.leftEar,
+                        right: screening.rightEar
+                    };
+                });
+                
+                // Create the hearing history display info
+                hearingHistory = allHearingReports.map(report => ({
+                    year: report.reportYear.toString(),
+                    leftStatus: GetAnomalyStatusText(report.leftStatus),
+                    rightStatus: GetAnomalyStatusText(report.rightStatus),
+                    leftBaseline: report.leftBaselineYear.toString(),
+                    rightBaseline: report.rightBaselineYear.toString()
+                }));
+                
+                // Sort by year (newest first)
+                hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+            }
+        }
+        catch (error: any) {
+            const errorMessage = `Error fetching data: ${error.message ?? "No message provided"}`;
+            console.error(errorMessage);
             yearItems = [];
-            displayError('Error fetching data from server. Please try again later.');
+            displayError(errorMessage);
         }
     }
 

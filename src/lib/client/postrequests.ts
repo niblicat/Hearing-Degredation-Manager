@@ -7,7 +7,7 @@ import type { HearingHistory } from "../MyTypes";
 
 // GETTERS
 
-export async function getEmployeeHearingHistory(employeeID: string): Promise<HearingHistory | undefined> {
+export async function getEmployeeHearingHistory(employeeID: string): Promise<HearingHistory> {
     if (employeeID.length == 0) {
         throw new Error("Input is empty.");
     }

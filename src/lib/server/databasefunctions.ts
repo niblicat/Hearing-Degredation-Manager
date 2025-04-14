@@ -198,8 +198,11 @@ export async function extractEmployeeHearingScreeningsFromDatabase(employeeID: s
         ORDER BY h.year ASC;
     `;
 
+    // may not necessarily be an error
+    // let handlers determine if it's a problem by checking the array length
     if (dataQuery.rows.length === 0) {
-        throw new DatabaseError("Hearing data not found.");
+        console.log(`No hearing data found for employee with ID ${employeeID}. This may be fine if the employee has no submitted audiograms.`);
+        return [];
     }
 
     const hearingDataByYear: Record<number, { leftEar: (number | null)[], rightEar: (number | null)[] }> = {};
