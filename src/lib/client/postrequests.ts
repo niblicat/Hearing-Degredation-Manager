@@ -2,7 +2,7 @@
 // This will hold all the clientside server callers to avoid repetition.
 // Make sure each function returns a type. Use try and catch when calling these to avoid unhandled errors.
 
-import type { HearingScreening } from "$lib/interpret";
+import { PersonSex, type HearingScreening } from "$lib/interpret";
 import type { HearingHistory } from "../MyTypes";
 
 // GETTERS
@@ -28,15 +28,12 @@ export async function getEmployeeHearingHistory(employeeID: string): Promise<Hea
 
     // intepret the response as JSON
     const serverResponse = await response.json();
-    
-    const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-    // extractEmployeeHearingHistory() on the server will return both a success: boolean = true and history: HearingHistory if it works
-    // otherwise, it will return success: boolean = false and message: string
-    
-    if (!result["success"]) throw Error(result["message"] ?? "Failed to extract employee hearing history (missing message).");
 
-    return result["history"];
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to extract employee hearing history (missing message).");
+
+    // parse the data in the response and return it
+    const result: HearingHistory = JSON.parse(JSON.parse(serverResponse["data"]));
+    return result;
 }
 
 export async function getAllEmployeeHearingHistories(omitInactive: boolean = true): Promise<HearingHistory[]> {
@@ -51,15 +48,12 @@ export async function getAllEmployeeHearingHistories(omitInactive: boolean = tru
 
     // intepret the response as JSON
     const serverResponse = await response.json();
-    
-    const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-    // extractAllEmployeeHearingHistories() on the server will return both a success: boolean = true and histories: HearingHistory[] if it works
-    // otherwise, it will return success: boolean = false and message: string
-    
-    if (!result["success"]) throw Error(result["message"] ?? "Failed to extract all employee hearing histories (missing message).");
 
-    return result["histories"];
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to extract employee hearing histories (missing message).");
+
+    // parse the data in the response and return it
+    const result: HearingHistory[] = JSON.parse(JSON.parse(serverResponse["data"]));
+    return result;
 }
 
 export async function getEmployeeHearingScreening(employeeID: string, year: string): Promise<HearingScreening> {
@@ -76,33 +70,110 @@ export async function getEmployeeHearingScreening(employeeID: string, year: stri
     // intepret the response as JSON
     const serverResponse = await response.json();
 
-    const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-    // extractEmployeeHearingScreening() on the server will return both a success: boolean = true and screening: HearingScreening if it works
-    // otherwise, it will return success: boolean = false and message: string
-    
-    if (!result["success"]) throw Error(result["message"] ?? "Failed to extract the hearing screening (missing message).");
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to extract employee hearing screening (missing message).");
 
-    return result["screening"];
+    // parse the data in the response and return it
+    const result: HearingScreening = JSON.parse(JSON.parse(serverResponse["data"]));
+    return result;
 }
 
 // SETTERS
 
+export async function updateEmployeeName(employeeID: string, newFirstName: string, newLastName: string): Promise<void> {
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('newFirstName', newFirstName);
+    formData.append('newLastName', newLastName);
+
+    const response = await fetch('/dashboard?/modifyEmployeeName', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to modify employee name (missing message).");
+}
+
+export async function updateEmployeeEmail(employeeID: string, newEmail: string): Promise<void> {
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('newEmail', newEmail); 
+
+    const response = await fetch('/dashboard?/modifyEmployeeEmail', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to modify employee email (missing message).");
+}
+
+export async function updateEmployeeDOB(employeeID: string, newDOB: string): Promise<void> {
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('newDOB', newDOB); 
+
+    const response = await fetch('/dashboard?/modifyEmployeeDOB', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to modify employee date of birth (missing message).");
+}
+
+export async function updateEmployeeSex(employeeID: string, newSex: PersonSex): Promise<void> {
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('newSex', PersonSex[newSex].toLowerCase());
+
+    const response = await fetch('/dashboard?/modifyEmployeeSex', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to modify employee sex (missing message).");
+}
+
+export async function updateEmploymentStatus(employeeID: string, lastActiveDate: string = ""): Promise<void> {
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('newActiveStatus', lastActiveDate); // Ensures the form key matches what backend expects
+
+    const response = await fetch('/dashboard?/modifyEmployeeStatus', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to modify employee status (missing message).");
+}
+
 export async function updateAdminPermissions(adminID: string, isOperator: boolean): Promise<void> {
     const formData = new FormData();
     formData.append('adminID', adminID);
-    formData.append('isOp', (isOperator).toString());
+    formData.append('isOp', isOperator.toString());
 
     const response = await fetch('/dashboard?/modifyAdminPermissions', {
         method: 'POST',
         body: formData,
     });
 
+    // intepret the response as JSON
     const serverResponse = await response.json();
 
-    const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-
-    if (!result["success"]) throw Error(result["message"] ?? "Failed to modify admin permissions (missing message).");
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to modify admin permissions (missing message).");
 }
 
 export async function updateAdminName(adminID: string, newName: string): Promise<void> {
@@ -115,11 +186,10 @@ export async function updateAdminName(adminID: string, newName: string): Promise
         body: formData,
     });
 
+    // intepret the response as JSON
     const serverResponse = await response.json();
 
-    const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-
-    if (!result["success"]) throw Error(result["message"] ?? "Failed to modify admin permissions (missing message).");
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to modify admin name (missing message).");
 }
 
 export async function removeAdmins(adminIDs: string[]): Promise<void> {
@@ -132,9 +202,8 @@ export async function removeAdmins(adminIDs: string[]): Promise<void> {
         body: formData,
     });
 
+    // intepret the response as JSON
     const serverResponse = await response.json();
 
-    const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-
-    if (!result["success"]) throw Error(result["message"] ?? "Failed to remove admins (missing message).");
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to remove admins (missing message).");
 }

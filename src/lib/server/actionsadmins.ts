@@ -1,6 +1,8 @@
 // actionsadmins.ts
 // Contains server functions pertaining to admin actions
 
+import { DatabaseError } from '$lib/MyTypes';
+import { error } from '@sveltejs/kit';
 import { sql } from '@vercel/postgres';
 
 export async function modifyAdminPermissions(request: Request) {
@@ -11,20 +13,15 @@ export async function modifyAdminPermissions(request: Request) {
     try {
         const result = await sql`UPDATE Administrator SET isop = ${isOp} WHERE id=${adminID};`
         
-        if (result.rowCount === 0) {
-            return JSON.stringify({ success: false, message: 'No rows were updated. Admin ID might be incorrect.' });
-        }
+        if (result.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
 
-    } catch (error: any) {
+    } catch (e: any) {
         const errorMessage = "Error in database when modifying admin permissions: " 
-            + (error.message ?? "no error message provided by server");
+            + (e.message ?? "no error message provided by server");
         console.error(errorMessage);
-        return JSON.stringify({ success: false, message: errorMessage });
+        error(404, { message: errorMessage });
     }
-    
-    return JSON.stringify({
-        success: true,
-    });
+
 }
 
 export async function modifyAdminName(request: Request) {
@@ -35,20 +32,14 @@ export async function modifyAdminName(request: Request) {
     try {
         const result = await sql`UPDATE Administrator SET name = ${newName} WHERE id=${adminID};`
         
-        if (result.rowCount === 0) {
-            return JSON.stringify({ success: false, message: 'No rows were updated. Admin ID might be incorrect.' });
-        }
+        if (result.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
 
-    } catch (error: any) {
+    } catch (e: any) {
         const errorMessage = "Error in database when modifying admin name: " 
-            + (error.message ?? "no error message provided by server");
+            + (e.message ?? "no error message provided by server");
         console.error(errorMessage);
-        return JSON.stringify({ success: false, message: errorMessage });
+        error(404, { message: errorMessage });
     }
-
-    return JSON.stringify({
-        success: true,
-    });
 }
 
 export async function deleteAdmins(request: Request) {
@@ -64,18 +55,12 @@ export async function deleteAdmins(request: Request) {
         `;
 
         // Check if any rows were deleted
-        if (result.rowCount === 0) {
-            return JSON.stringify({ success: false, message: 'No admins were deleted. Admin IDs might be incorrect.' });
-        }
+        if (result.rowCount === 0)  throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
 
-    } catch (error: any) {
+    } catch (e: any) {
         const errorMessage = "Error in database when deleting admins: " 
-            + (error.message ?? "no error message provided by server");
+            + (e.message ?? "no error message provided by server");
         console.error('Failed to delete admins:', errorMessage);
-        return JSON.stringify({ success: false, message: errorMessage });
+        error(404, { message: errorMessage });
     }
-
-    return JSON.stringify({
-        success: true,
-    });
 }

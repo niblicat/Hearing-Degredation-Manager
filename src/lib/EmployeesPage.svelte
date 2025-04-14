@@ -2,7 +2,7 @@
 
     import { Button, Search, Modal, Label, Input, Radio, Tooltip, Dropdown } from 'flowbite-svelte';
     import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
-    import { AnomalyStatus, type EarAnomalyStatus} from "./interpret";
+    import { AnomalyStatus, getPersonSexFromString, type EarAnomalyStatus} from "./interpret";
     import type { Employee, EmployeeInfo, EmployeeSearchable, HearingHistory } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { calculateSTSClientSide } from './utility';
@@ -10,7 +10,7 @@
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import EmployeeData from './EmployeeData.svelte';
-	import { getEmployeeHearingHistory } from './client/postrequests';
+	import { getEmployeeHearingHistory, updateEmployeeDOB, updateEmployeeEmail, updateEmployeeName, updateEmployeeSex, updateEmploymentStatus } from './client/postrequests';
 
     interface Props {
         employees: Array<Employee>;
@@ -357,22 +357,26 @@
     function showAddDataModal() {
         addDataModal = true;
     }
+
     function showEditNameModal() {
         // Initialize with current values
         newFirstName = selectedEmployee.data.firstName;
         newLastName = selectedEmployee.data.lastName;
         nameModal = true;
     }
+
     function isValidEmail(email: string): boolean {
         if (!email) return false;
         // Check for @ and . in the email address
         return email.includes('@') && email.includes('.') && email.indexOf('@') < email.lastIndexOf('.');
     }
+
     function showEditEmailModal() {
         // Initialize with current email
         newEmail = selectedEmployee.data.email;
         emailModal = true;
     }
+
     function showEditDOBModal() {
         // Check if there's a valid date of birth to initialize with
         if (selectedEmployee.data.dob && selectedEmployee.data.dob !== "Undefined") {
@@ -392,6 +396,7 @@
         
         DOBmodal = true;
     }
+
     function showEditSexModal() {
         // Initialize with current sex value
         if (selectedEmployee.data.sex && selectedEmployee.data.sex !== "Undefined") {
@@ -404,6 +409,7 @@
         
         sexModal = true;
     }
+
     function showEditStatusModal() {
         // Initialize based on current status
         if (selectedStatus === "Inactive") {
@@ -416,13 +422,11 @@
                 // Parse the date string to ensure proper format
                 try {
                     const inactiveDate = new Date(selectedEmployee.data.activeStatus);
-                    if (!isNaN(inactiveDate.getTime())) {
-                        // If it's a valid date, format it as YYYY-MM-DD
-                        newActiveStatus = inactiveDate.toISOString().split('T')[0];
-                    } else {
-                        // If parsing as date fails, try to use the string directly if it's already in YYYY-MM-DD format
-                        newActiveStatus = selectedEmployee.data.activeStatus;
-                    }
+                    const validTime = !isNaN(inactiveDate.getTime());
+
+                    // If it's a valid date, format it as YYYY-MM-DD
+                    // Else, parsing as date fails, try to use the string directly if it's already in YYYY-MM-DD format
+                    newActiveStatus = validTime ? inactiveDate.toISOString().split('T')[0] : selectedEmployee.data.activeStatus;
                 } catch (error) {
                     console.error("Error parsing inactive date:", error);
                     newActiveStatus = ""; // Reset if there's an error
@@ -439,31 +443,14 @@
     }
 
     async function modifyEmployeeName(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newFirstName', newFirstName);
-        formData.append('newLastName', newLastName);
-
-        const response = await fetch('/dashboard?/modifyEmployeeName', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employee name
+            await updateEmployeeName(selectedEmployee.data.employeeID, newFirstName, newLastName);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.name = `${newFirstName} ${newLastName}`;
-                selectedEmployee.data.firstName = newFirstName;
-                selectedEmployee.data.lastName = newLastName;
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.name = `${newFirstName} ${newLastName}`;
+            selectedEmployee.data.firstName = newFirstName;
+            selectedEmployee.data.lastName = newLastName;
         }
         catch (error: any) {
             let errorMessage = error.message;
@@ -472,61 +459,30 @@
     }
 
     async function modifyEmployeeEmail(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newEmail', newEmail);
-
-        const response = await fetch('/dashboard?/modifyEmployeeEmail', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employee email
+            await updateEmployeeEmail(selectedEmployee.data.employeeID, newEmail);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.data.email = newEmail;
-                selectedEmail = selectedEmployee.data.email;
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.data.email = newEmail;
+            selectedEmail = selectedEmployee.data.email;
         }
         catch (error: any) {
             let errorMessage = error.message;
             displayError(errorMessage);
         }
     }
+
     async function modifyEmployeeDOB(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newDOB', newDOB);
-
-        const response = await fetch('/dashboard?/modifyEmployeeDOB', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employee date of birth
+            await updateEmployeeDOB(selectedEmployee.data.employeeID, newDOB);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.data.dob = newDOB;
-                selectedDOB = selectedEmployee.data.dob
-                    ? new Date(selectedEmployee.data.dob).toISOString().split('T')[0]
-                    : "No selection made";
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.data.dob = newDOB;
+            selectedDOB = selectedEmployee.data.dob
+                ? new Date(selectedEmployee.data.dob).toISOString().split('T')[0]
+                : "No selection made";
         }
         catch (error: any) {
             let errorMessage = error.message;
@@ -535,28 +491,12 @@
     }
 
     async function modifyEmployeeSex(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newSex', newSex); 
-
-        const response = await fetch('/dashboard?/modifyEmployeeSex', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employee sex
+            await updateEmployeeSex(selectedEmployee.data.employeeID, getPersonSexFromString(newSex));
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.data.sex = newSex;
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.data.sex = newSex;
         }
         catch (error: any) {
             let errorMessage = error.message;
@@ -565,33 +505,14 @@
     }
 
     async function modifyEmploymentStatus(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newActiveStatus', newActiveStatus === "Active" ? "" : newActiveStatus); // Ensures the form key matches what backend expects
-
-        const response = await fetch('/dashboard?/modifyEmployeeStatus', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employment status
+            await updateEmploymentStatus(selectedEmployee.data.employeeID, newActiveStatus === "Active" ? "" : newActiveStatus);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.data.activeStatus = newActiveStatus;
-                if (newActiveStatus === "") {  
-                    selectedStatus = "Active";
-                } else {  
-                    selectedStatus = "Inactive";
-                }
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.data.activeStatus = newActiveStatus;
+            selectedStatus = (newActiveStatus === "Active") ? "Active" : "Inactive";
+            console.log(newActiveStatus);
         }
         catch (error: any) {
             let errorMessage = error.message;

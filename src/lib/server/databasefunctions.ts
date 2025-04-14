@@ -311,3 +311,4 @@ export async function getAdminsFromDatabase(): Promise<Admin[]> {
 
     return admins;
 }
+
