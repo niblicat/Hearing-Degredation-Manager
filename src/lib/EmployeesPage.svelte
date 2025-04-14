@@ -381,6 +381,86 @@
     function showAddDataModal() {
         addDataModal = true;
     }
+    function showEditNameModal() {
+        // Initialize with current values
+        newFirstName = selectedEmployee.data.firstName;
+        newLastName = selectedEmployee.data.lastName;
+        nameModal = true;
+    }
+    function isValidEmail(email: string): boolean {
+        if (!email) return false;
+        // Check for @ and . in the email address
+        return email.includes('@') && email.includes('.') && email.indexOf('@') < email.lastIndexOf('.');
+    }
+    function showEditEmailModal() {
+        // Initialize with current email
+        newEmail = selectedEmployee.data.email;
+        emailModal = true;
+    }
+    function showEditDOBModal() {
+        // Check if there's a valid date of birth to initialize with
+        if (selectedEmployee.data.dob && selectedEmployee.data.dob !== "Undefined") {
+            // Format the date properly for the date input (YYYY-MM-DD)
+            const dobDate = new Date(selectedEmployee.data.dob);
+            if (!isNaN(dobDate.getTime())) {
+                // If it's a valid date, format it as YYYY-MM-DD
+                newDOB = dobDate.toISOString().split('T')[0];
+            } else {
+                // If parsing fails, try to use the string directly if it's in YYYY-MM-DD format
+                newDOB = selectedEmployee.data.dob;
+            }
+        } else {
+            // Reset the field if no valid DOB exists
+            newDOB = "";
+        }
+        
+        DOBmodal = true;
+    }
+    function showEditSexModal() {
+        // Initialize with current sex value
+        if (selectedEmployee.data.sex && selectedEmployee.data.sex !== "Undefined") {
+            // Convert to lowercase to match the radio button values
+            newSex = selectedEmployee.data.sex.toLowerCase();
+        } else {
+            // Default to empty if not set
+            newSex = "";
+        }
+        
+        sexModal = true;
+    }
+    function showEditStatusModal() {
+        // Initialize based on current status
+        if (selectedStatus === "Inactive") {
+            isInactive = true;
+            
+            // Format the existing date properly for the date input (YYYY-MM-DD)
+            if (selectedEmployee.data.activeStatus && 
+                selectedEmployee.data.activeStatus !== "Undefined") {
+                
+                // Parse the date string to ensure proper format
+                try {
+                    const inactiveDate = new Date(selectedEmployee.data.activeStatus);
+                    if (!isNaN(inactiveDate.getTime())) {
+                        // If it's a valid date, format it as YYYY-MM-DD
+                        newActiveStatus = inactiveDate.toISOString().split('T')[0];
+                    } else {
+                        // If parsing as date fails, try to use the string directly if it's already in YYYY-MM-DD format
+                        newActiveStatus = selectedEmployee.data.activeStatus;
+                    }
+                } catch (error) {
+                    console.error("Error parsing inactive date:", error);
+                    newActiveStatus = ""; // Reset if there's an error
+                }
+            } else {
+                newActiveStatus = ""; // Reset if no date available
+            }
+        } else {
+            isInactive = false;
+            newActiveStatus = "Active";  // Set to "Active" for active employees
+        }
+        
+        activeStatusModal = true;
+    }
 
     async function modifyEmployeeName(): Promise<void> {
         const formData = new FormData();
@@ -629,11 +709,11 @@
             {leftBaselineHearingData}
             {leftNewHearingData}
             {hearingHistory}
-            editname={() => nameModal = true}
-            editemail={() => emailModal = true}
-            editdob={() => DOBmodal = true}
-            editsex={() => sexModal = true}
-            editstatus={() => activeStatusModal = true}
+            editname={() => showEditNameModal()}
+            editemail={() => showEditEmailModal()}
+            editdob={() => showEditDOBModal()}
+            editsex={() => showEditSexModal()}
+            editstatus={() => showEditStatusModal()}
         />
     </div>
 </div>
@@ -645,29 +725,85 @@
         <span>Please provide an updated name for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
         <br>
         <br>
-        <Label for="first" class="mb-2">First name</Label>
-        <Input type="text" id="firstName" placeholder={selectedEmployee.data.firstName} bind:value={newFirstName} required />
-        <Label for="last" class="mb-2">Last name</Label>
-        <Input type="text" id="lastName" placeholder={selectedEmployee.data.lastName} bind:value={newLastName} required />
-    
+        <Label for="first" class="mb-2">First name <span class="text-red-500">*</span></Label>
+        <Input 
+            type="text" 
+            id="firstName" 
+            placeholder={selectedEmployee.data.firstName} 
+            bind:value={newFirstName} 
+            color={newFirstName ? "green" : "red"}
+            required 
+        />
+        
+        <Label for="last" class="mb-2">Last name <span class="text-red-500">*</span></Label>
+        <Input 
+            type="text" 
+            id="lastName" 
+            placeholder={selectedEmployee.data.lastName} 
+            bind:value={newLastName} 
+            color={newLastName ? "green" : "red"}
+            required 
+        />
     </p>
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeName()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+    <Button 
+        class="cursor-pointer" 
+        color="primary" 
+        on:click={() => {
+            if (newFirstName && newLastName) {
+                modifyEmployeeName();
+            } else {
+                displayError("First name and last name are required.");
+            }
+        }}
+        disabled={!newFirstName || !newLastName}
+    >
+        Confirm
+    </Button>
+    <Button class="cursor-pointer" color="red" on:click={() => {
+        nameModal = false;
+    }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 
 <Modal title="Change Employee Email" bind:open={emailModal} autoclose>
-    <p>
+    <div class="mb-4">
         <span>Please provide an updated email for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName} ({selectedEmployee.data.email})</span>
-        <br>
-        <br>
-        <Label for="newEmail" class="mb-2">New Email</Label>
-        <Input type="text" id="email" placeholder={selectedEmployee.data.email} bind:value={newEmail} required />
-    </p>
+    </div>
+    
+    <div class="mb-4">
+        <Label for="newEmail" class="mb-2">New Email <span class="text-red-500">*</span></Label>
+        <Input 
+            type="email" 
+            id="email" 
+            placeholder={selectedEmployee.data.email} 
+            bind:value={newEmail} 
+            color={isValidEmail(newEmail) ? "green" : "red"}
+            required 
+        />
+        {#if newEmail && !isValidEmail(newEmail)}
+            <p class="text-red-500 text-sm mt-1">Please enter a valid email address (must include @ and .)</p>
+        {/if}
+    </div>
+    
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeEmail()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+        <Button 
+            class="cursor-pointer" 
+            color="primary" 
+            on:click={() => {
+                if (isValidEmail(newEmail)) {
+                    modifyEmployeeEmail();
+                } else {
+                    displayError("A valid email address is required.");
+                }
+            }}
+            disabled={!isValidEmail(newEmail)}
+        >
+            Confirm
+        </Button>
+        <Button class="cursor-pointer" color="red" on:click={() => {
+            emailModal = false;
+        }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 
@@ -676,48 +812,132 @@
         <span>Please provide an updated DOB for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
         <br>
         <br>
-        <Label for="newEmail" class="mb-2">New Date</Label>
-        <Input type="date" id="dob" placeholder={selectedEmployee.data.dob} bind:value={newDOB} required />
+        <Label for="newDOB" class="mb-2">New Date <span class="text-red-500">*</span></Label>
+        <Input 
+            type="date" 
+            id="dob" 
+            bind:value={newDOB} 
+            color={newDOB ? "green" : "red"}
+            required 
+        />
     </p>
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeDOB()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+    <Button 
+        class="cursor-pointer" 
+        color="primary" 
+        on:click={() => {
+            if (newDOB) {
+                modifyEmployeeDOB();
+            } else {
+                displayError("Date of birth is required.");
+            }
+        }}
+        disabled={!newDOB}
+    >
+        Confirm
+    </Button>
+    <Button class="cursor-pointer" color="red" on:click={() => {
+        DOBmodal = false;
+    }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 
 <Modal title="Change Employee Sex" bind:open={sexModal} autoclose>
-    <p>
+    <div class="mb-4">
         <span>Please provide the updated sex for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
-        <br>
-        <br>
-        <Label for="newSex" class="mb-2">New Sex</Label>
-        <Radio name="sex" bind:group={newSex} value="male">Male</Radio>
-        <Radio name="sex" bind:group={newSex} value="female">Female</Radio>
-        <Radio name="sex" bind:group={newSex} value="other">Other</Radio>
-    </p>
+    </div>
+    
+    <div class="mb-4">
+        <Label for="newSex" class="mb-2">Sex <span class="text-red-500">*</span></Label>
+        <div class="space-y-2">
+            <Radio name="sex" bind:group={newSex} value="male">Male</Radio>
+            <Radio name="sex" bind:group={newSex} value="female">Female</Radio>
+            <Radio name="sex" bind:group={newSex} value="other">Other</Radio>
+        </div>
+        {#if !newSex}
+            <p class="text-red-500 text-sm mt-1">Please select an option</p>
+        {/if}
+    </div>
+    
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeSex()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+        <Button 
+            class="cursor-pointer" 
+            color="primary" 
+            on:click={() => {
+                if (newSex) {
+                    modifyEmployeeSex();
+                } else {
+                    displayError("Sex selection is required.");
+                }
+            }}
+            disabled={!newSex}
+        >
+            Confirm
+        </Button>
+        <Button class="cursor-pointer" color="red" on:click={() => {
+            sexModal = false;
+        }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 
 <Modal title="Change Employee Active Status" bind:open={activeStatusModal} autoclose>
-    <p>
+    <div class="mb-4">
         <span>Please provide an updated employment status for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
-        <br>
-        <br>
-        <Label for="newActiveStatus" class="mb-2">New Employment Status</Label>
-        <Radio name="employmentStatus" bind:checked={isInactive} on:change={() => isInactive = false}>Active</Radio>
-        <Radio name="employmentStatus" bind:checked={isInactive} on:change={() => isInactive = true}>Inactive</Radio>
+    </div>
+    
+    
+    <div class="mb-4">
+        <Label for="newActiveStatus" class="mb-2">Employment Status <span class="text-red-500">*</span></Label>
+        <div class="space-y-2">
+            <Radio name="employmentStatus" checked={!isInactive} on:change={() => {
+                isInactive = false;
+                newActiveStatus = "Active";
+            }}>Active</Radio>
+            <Radio name="employmentStatus" checked={isInactive} on:change={() => {
+                isInactive = true;
+                // Keep the existing date if available
+                if (!newActiveStatus || newActiveStatus === "Active") {
+                    newActiveStatus = "";
+                }
+            }}>Inactive</Radio>
+        </div>
+    </div>
 
-        {#if isInactive}
-            <Label for="lastActive" class="block mb-2">Last Active Date</Label>
-            <Input id="lastActive" type="date" bind:value={newActiveStatus} />
-        {/if}
-    </p>
+    {#if isInactive}
+        <div class="mb-4">
+            <Label for="lastActive" class="block mb-2 mt-4">Last Active Date <span class="text-red-500">*</span></Label>
+            <Input 
+                id="lastActive" 
+                type="date" 
+                bind:value={newActiveStatus} 
+                color={isInactive && !newActiveStatus ? "red" : "green"}
+                required 
+            />
+            {#if isInactive && !newActiveStatus}
+                <p class="text-red-500 text-sm mt-1">Last active date is required for inactive employees</p>
+            {/if}
+        </div>
+    {/if}
+    
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmploymentStatus()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+        <Button 
+            class="cursor-pointer" 
+            color="primary" 
+            on:click={() => {
+                // For inactive employees, a date is required
+                if (isInactive && !newActiveStatus) {
+                    displayError("Last active date is required for inactive employees.");
+                    return;
+                }
+                modifyEmploymentStatus();
+            }}
+            disabled={isInactive && !newActiveStatus}
+        >
+            Confirm
+        </Button>
+        <Button class="cursor-pointer" color="red" on:click={() => {
+            activeStatusModal = false;
+        }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 
