@@ -312,3 +312,26 @@ export async function getAdminsFromDatabase(): Promise<Admin[]> {
     return admins;
 }
 
+export async function modifyAdminPermissionsFromDatabase(adminID: string, isOP: boolean) {
+    const result = await sql`UPDATE Administrator SET isop = ${isOP} WHERE id=${adminID};`
+    
+    if (result.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
+}
+
+export async function modifyAdminNameFromDatabase(adminID: string, newName: string) {
+    const result = await sql`UPDATE Administrator SET name = ${newName} WHERE id=${adminID};`
+    
+    if (result.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
+}
+
+export async function deleteAdminsFromDatabase(adminIDs: string[]) {
+    const formattedAdminIDs = `{"${adminIDs.join('","')}"}`;
+
+    const result = await sql`
+        DELETE FROM Administrator
+        WHERE id = ANY(${formattedAdminIDs});
+    `;
+
+    // Check if any rows were deleted
+    if (result.rowCount === 0)  throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
+}
