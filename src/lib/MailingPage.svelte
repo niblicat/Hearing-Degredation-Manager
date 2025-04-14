@@ -251,6 +251,7 @@
     <Table hoverable={true} class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 z-20">
         <TableHead>
             <TableHeadCell>Name</TableHeadCell>
+            <TableHeadCell>Employment Status</TableHeadCell>
             <TableHeadCell>Email</TableHeadCell>
             <TableHeadCell>Date of Birth</TableHeadCell>
             <TableHeadCell>ID</TableHeadCell>
@@ -260,6 +261,9 @@
                 <TableBodyRow>
                     <TableBodyCell>
                         {employee.firstName} {employee.lastName}
+                    </TableBodyCell>
+                    <TableBodyCell>
+                        {employee.activeStatus !== null ? "Current" : "Former"}
                     </TableBodyCell>
                     <TableBodyCell>
                         {employee.email}

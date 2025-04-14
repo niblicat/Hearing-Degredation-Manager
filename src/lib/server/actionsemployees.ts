@@ -446,7 +446,7 @@ export async function extractAllEmployeeHearingHistories(request: Request) {
                     history = await extractEmployeeHearingHistoryFromDatabase(employeeInfo);
                 }
                 catch (error: any) {
-                    console.log(`Could not fetch hearing history for ${employeeInfo.id}: ${employeeInfo.firstName}.`)
+                    console.log(`Could not fetch hearing history for ${employeeInfo.id}: ${employeeInfo.firstName}. This is fine if the employee does not have any audiograms recorded.`)
                     history = null;
                 }
                 return history;
