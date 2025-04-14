@@ -111,7 +111,8 @@ export class UserHearingScreeningHistory {
         }
         // Only check for CNT after handling the STS case
         if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
-        // else if (baselineAverageChange <= -7) return AnomalyStatus.NewBaseline; // baseline redefinition  //!! Needs to be adjusted per Dr. Ott
+        //!! BASELINE REDEFINITION Needs to be adjusted per Dr. Ott 
+        else if (this.ShouldUpdateBaseline(this.GetAverageHertzForSTSRangeForOneEar(baselineEarData), this.GetAverageHertzForSTSRangeForOneEar(afterEarData))) return AnomalyStatus.NewBaseline;
         else if (yearPriorAverageChange >= 10) return AnomalyStatus.Worse;
         else if (yearPriorAverageChange <= -10) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same; // anything from -10 to 10 is defined as same (per Dr. Ott)
@@ -253,6 +254,7 @@ export class UserHearingScreeningHistory {
             } as EarAnomalyStatus;
             reportArray.push(currentAnomalyStatuses);
 
+            //!! Needs to be adjusted per Dr. Ott
             // update baselines after report has confirmed improvement (otherwise the new baseline will compare to itself for redefinition year) 
             if (this.ShouldUpdateBaseline(bestLeftEarAverage, newLeftEarAverage)) {
                 bestLeftEarIndex = i;
@@ -268,7 +270,7 @@ export class UserHearingScreeningHistory {
         return reportArray;
     }
 
-    /**
+    /** //!! NEEDS TO BE UPDATED PER DR. OTT
      * UpdateBaselineForOneEar
      * OSHA does not specify a definition of significant
         improvement. However, an example in Appendix F of the Hearing Conservation
