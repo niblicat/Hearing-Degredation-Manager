@@ -8,7 +8,8 @@
         rightNewHearingData: Array<number>,
         leftBaselineHearingData: Array<number>,
         leftNewHearingData: Array<number>,
-        selectedYear: string
+        selectedYear: string,
+        onEarSelectionChange: (ear: string) => void // prop for callback so left/right/both button changes both chart and hearing history 
     }
 
     let {
@@ -17,6 +18,7 @@
         leftBaselineHearingData = [],
         leftNewHearingData = [],
         selectedYear = "No year selected",
+        onEarSelectionChange = () => {}
     }: Props = $props();
 
     // Chart Selection
@@ -30,6 +32,9 @@
             isRightEar = ear === 'right';
             showBoth = false;
         }
+        
+        // Call the callback to notify parent component
+        onEarSelectionChange(ear);
     };
 </script>
 

@@ -23,7 +23,7 @@
     let leftBaselineHearingData =  $state<Array<number>>([]);
     let leftNewHearingData =  $state<Array<number>>([]);
     
-    let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string}>>([]);
+    let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string, leftBaseline: string, rightBaseline: string}>>([]);
 
     let allHearingData = $state<HearingHistory | null>(null);
 
@@ -173,7 +173,9 @@
                         hearingHistory = allHearingReports.map(report => ({
                             year: report.reportYear.toString(),
                             leftStatus: GetAnomalyStatusText(report.leftStatus),
-                            rightStatus: GetAnomalyStatusText(report.rightStatus)
+                            rightStatus: GetAnomalyStatusText(report.rightStatus),
+                            leftBaseline: report.leftBaselineYear.toString(),
+                            rightBaseline: report.rightBaselineYear.toString()
                         }));
                         
                         // Sort by year (newest first)

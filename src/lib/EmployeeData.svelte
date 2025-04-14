@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Button, Card } from 'flowbite-svelte';
+    import { Button, Card, ButtonGroup } from 'flowbite-svelte';
     import { EditOutline } from 'flowbite-svelte-icons';
     import type { Employee } from './MyTypes';
     import EmployeeChart from './EmployeeChart.svelte';
@@ -13,7 +13,7 @@
         selectedStatus: string,
         STSstatusLeft: string,
         STSstatusRight: string,
-        hearingHistory: Array<{year: string, leftStatus: string, rightStatus: string}>
+        hearingHistory: Array<{year: string, leftStatus: string, rightStatus: string, leftBaseline: string,rightBaseline: string}>
         rightBaselineHearingData: Array<number>,
         rightNewHearingData: Array<number>,
         leftBaselineHearingData: Array<number>,
@@ -23,7 +23,7 @@
         editdob: (arg0: Employee) => void,
         editsex: (arg0: Employee) => void,
         editstatus: (arg0: Employee) => void,
-    }
+        }
 
     let {
         selectedYear = "No year selected",
@@ -64,6 +64,20 @@
     function showActiveStatusChangeModal() {
         editstatus(selectedEmployee.data);
     }
+
+    // Shared ear selection state between chart and history
+    let isRightEar = $state(false);
+    let showBoth = $state(true);
+
+    // Handler for ear selection changes from the chart
+    const handleEarSelectionChange = (ear: string) => {
+        if (ear === 'both') {
+            showBoth = true;
+        } else {
+            isRightEar = ear === 'right';
+            showBoth = false;
+        }
+    };
 </script>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -171,6 +185,7 @@
                     {leftBaselineHearingData}
                     {leftNewHearingData}
                     {selectedYear}
+                    onEarSelectionChange={handleEarSelectionChange}
                 />
             </Card>
         </div>
@@ -181,13 +196,22 @@
                 <div class="bg-primary-700 text-white py-2 px-3 text-center">
                     <div class="text-lg font-bold">Hearing History</div>
                 </div>
-                
                 <table class="w-full border-collapse">
                     <tbody>
                         <tr class="border-b hover:bg-gray-100">
                             <td class="p-3 font-semibold">Year:</td>
-                            <td class="p-3 font-semibold">Left Ear Status:</td>
-                            <td class="p-3 font-semibold">Right Ear Status:</td>
+                            {#if showBoth}
+                                <td class="p-3 font-semibold">Left Ear Status:</td>
+                                <td class="p-3 font-semibold">Right Ear Status:</td>
+                                <td class="p-3 font-semibold">Left Ear Baseline:</td>
+                                <td class="p-3 font-semibold">Right Ear Baseline:</td>
+                            {:else if isRightEar}
+                                <td class="p-3 font-semibold">Right Ear Status:</td>
+                                <td class="p-3 font-semibold">Right Ear Baseline:</td>
+                            {:else}
+                                <td class="p-3 font-semibold">Left Ear Status:</td>
+                                <td class="p-3 font-semibold">Left Ear Baseline:</td>
+                            {/if}
                         </tr>
                         
                         {#if hearingHistory.length === 0}
@@ -198,8 +222,18 @@
                             {#each hearingHistory as record}
                                 <tr class="border-b hover:bg-gray-100" class:font-bold={record.year === selectedYear}>
                                     <td class="p-3">{record.year}</td>
-                                    <td class="p-3">{record.leftStatus}</td>
-                                    <td class="p-3">{record.rightStatus}</td>
+                                    {#if showBoth}
+                                        <td class="p-3">{record.leftStatus}</td>
+                                        <td class="p-3">{record.rightStatus}</td>
+                                        <td class="p-3">{record.leftBaseline}</td>
+                                        <td class="p-3">{record.rightBaseline}</td>
+                                    {:else if isRightEar}
+                                        <td class="p-3">{record.rightStatus}</td>
+                                        <td class="p-3">{record.rightBaseline}</td>
+                                    {:else}
+                                        <td class="p-3">{record.leftStatus}</td>
+                                        <td class="p-3">{record.leftBaseline}</td>
+                                    {/if}
                                 </tr>
                             {/each}
                         {/if}
