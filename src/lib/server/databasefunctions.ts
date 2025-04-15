@@ -198,8 +198,11 @@ export async function extractEmployeeHearingScreeningsFromDatabase(employeeID: s
         ORDER BY h.year ASC;
     `;
 
+    // may not necessarily be an error
+    // let handlers determine if it's a problem by checking the array length
     if (dataQuery.rows.length === 0) {
-        throw new DatabaseError("Hearing data not found.");
+        console.log(`No hearing data found for employee with ID ${employeeID}. This may be fine if the employee has no submitted audiograms.`);
+        return [];
     }
 
     const hearingDataByYear: Record<number, { leftEar: (number | null)[], rightEar: (number | null)[] }> = {};
@@ -307,4 +310,28 @@ export async function getAdminsFromDatabase(): Promise<Admin[]> {
     }));
 
     return admins;
+}
+
+export async function modifyAdminPermissionsFromDatabase(adminID: string, isOP: boolean) {
+    const result = await sql`UPDATE Administrator SET isop = ${isOP} WHERE id=${adminID};`
+    
+    if (result.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
+}
+
+export async function modifyAdminNameFromDatabase(adminID: string, newName: string) {
+    const result = await sql`UPDATE Administrator SET name = ${newName} WHERE id=${adminID};`
+    
+    if (result.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
+}
+
+export async function deleteAdminsFromDatabase(adminIDs: string[]) {
+    const formattedAdminIDs = `{"${adminIDs.join('","')}"}`;
+
+    const result = await sql`
+        DELETE FROM Administrator
+        WHERE id = ANY(${formattedAdminIDs});
+    `;
+
+    // Check if any rows were deleted
+    if (result.rowCount === 0)  throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
 }

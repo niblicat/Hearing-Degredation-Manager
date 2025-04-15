@@ -5,6 +5,14 @@ import { error } from "@sveltejs/kit";
 import { AGE_CORRECTION_TABLE_MALE, AGE_CORRECTION_TABLE_FEMALE } from './agetable'
 import type {HertzCorrectionForAge} from './agetable'
 
+export function getPersonSexFromString(val: string) {
+    const lowered: string = val.toLowerCase();
+    switch (lowered) {
+        case "male": return PersonSex.Male;
+        case "female": return PersonSex.Female;
+        default: return PersonSex.Other;
+    }
+}
 
 export enum PersonSex {
     Female,
