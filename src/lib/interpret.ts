@@ -157,19 +157,19 @@ export class UserHearingScreeningHistory {
         let currentAgeRowValue = GetRowValue(this.age);
 
         // Look up the corrections using the clamped age values
-        let baselineCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == baselineAgeRowValue);
+        //let baselineCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == baselineAgeRowValue);
         let currentCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == currentAgeRowValue);
         
-        if (!baselineCorrection) throw new Error(`Age correction table does not have an adjustment for age ${baselineAgeRowValue}.`);
+        //if (!baselineCorrection) throw new Error(`Age correction table does not have an adjustment for age ${baselineAgeRowValue}.`);
         if (!currentCorrection) throw new Error(`Age correction table does not have an adjustment for age ${currentAgeRowValue}.`);
 
         let difference: HertzCorrectionForAge = { 
             age: 0,
-            hz1000: (currentCorrection.hz1000 - baselineCorrection.hz1000),
-            hz2000: (currentCorrection.hz2000 - baselineCorrection.hz2000),
-            hz3000: (currentCorrection.hz3000 - baselineCorrection.hz3000),
-            hz4000: (currentCorrection.hz4000 - baselineCorrection.hz4000),
-            hz6000: (currentCorrection.hz6000 - baselineCorrection.hz6000)
+            hz1000: (currentCorrection.hz1000),
+            hz2000: (currentCorrection.hz2000),
+            hz3000: (currentCorrection.hz3000),
+            hz4000: (currentCorrection.hz4000),
+            hz6000: (currentCorrection.hz6000)
         }
         
         return difference;

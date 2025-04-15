@@ -78,6 +78,37 @@
             showBoth = false;
         }
     };
+
+    function calculateAge(dob: string): number {
+        if (!dob) return 0;
+        const dobDate = new Date(dob);
+        if (isNaN(dobDate.getTime())) return 0;
+        
+        // Get the selected year (or use current year if not available)
+        const yearToCalculate = selectedYear && !isNaN(parseInt(selectedYear)) 
+            ? parseInt(selectedYear) 
+            : new Date().getFullYear();
+        
+        // Calculate age for the selected year
+        const age = yearToCalculate - dobDate.getFullYear();
+        
+        // Account for whether birthday has occurred this year
+        const birthMonth = dobDate.getMonth();
+        const birthDay = dobDate.getDate();
+        const today = new Date();
+        
+        // If we're calculating for the current year, check if birthday has occurred
+        if (yearToCalculate === today.getFullYear()) {
+            const currentMonth = today.getMonth();
+            const currentDay = today.getDate();
+            
+            // If birth month is later in the year or same month but birth day is later
+            if (birthMonth > currentMonth || (birthMonth === currentMonth && birthDay > currentDay)) {
+                return age - 1; // Birthday hasn't occurred yet this year
+            }
+        }
+        return age;
+    }
 </script>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -195,6 +226,7 @@
             <Card padding="sm" class="w-full max-w-xl">
                 <div class="bg-primary-700 text-white py-2 px-3 text-center">
                     <div class="text-lg font-bold">Hearing History</div>
+                    <div class="text-sm">Calculations were performed using age-corrected values for age {calculateAge(selectedEmployee.data.dob)}</div>
                 </div>
                 <table class="w-full border-collapse">
                     <tbody>

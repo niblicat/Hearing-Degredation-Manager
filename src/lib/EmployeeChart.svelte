@@ -1,6 +1,7 @@
 <script lang="ts">
     import { ButtonGroup, Button } from 'flowbite-svelte';
     import ScatterPlot from './ScatterPlot.svelte';
+    import { InfoCircleSolid } from "flowbite-svelte-icons";
 
     // Props
     interface Props {

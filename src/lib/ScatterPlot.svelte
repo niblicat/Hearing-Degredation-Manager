@@ -1,6 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { Chart, registerables } from 'chart.js';
+    import { InfoCircleSolid } from "flowbite-svelte-icons";
+    import { Tooltip } from 'flowbite-svelte';
 
     
     interface Props {
@@ -254,3 +256,5 @@
 </script>
 
 <canvas id="scatterPlot" width="700" height="700"></canvas>
+<InfoCircleSolid />
+<Tooltip placement="bottom">Data points shown are the original dB values recorded; They are NOT corrected for age.</Tooltip>
