@@ -120,7 +120,7 @@ export class UserHearingScreeningHistory {
         // Only check for CNT after handling the STS case
         if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
         //!! BASELINE REDEFINITION Needs to be adjusted per Dr. Ott 
-        else if (this.ShouldUpdateBaseline(this.GetAverageHertzForSTSRangeForOneEar(baselineEarData), this.GetAverageHertzForSTSRangeForOneEar(afterEarData))) return AnomalyStatus.NewBaseline;
+        //else if (this.ShouldUpdateBaseline(this.GetAverageHertzForSTSRangeForOneEar(baselineEarData), this.GetAverageHertzForSTSRangeForOneEar(afterEarData))) return AnomalyStatus.NewBaseline;
         else if (yearPriorAverageChange >= 10) return AnomalyStatus.Worse;
         else if (yearPriorAverageChange <= -10) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same; // anything from -10 to 10 is defined as same (per Dr. Ott)
@@ -264,16 +264,16 @@ export class UserHearingScreeningHistory {
 
             //!! Needs to be adjusted per Dr. Ott
             // update baselines after report has confirmed improvement (otherwise the new baseline will compare to itself for redefinition year) 
-            if (this.ShouldUpdateBaseline(bestLeftEarAverage, newLeftEarAverage)) {
-                bestLeftEarIndex = i;
-                bestLeftEarAverage = newLeftEarAverage;
-                bestLeftEarYear = this.screenings[i].year;
-            }
-            if (this.ShouldUpdateBaseline(bestRightEarAverage, newRightEarAverage)) {
-                bestRightEarIndex = i;
-                bestRightEarAverage = newRightEarAverage;
-                bestRightEarYear = this.screenings[i].year;
-            }
+            // if (this.ShouldUpdateBaseline(bestLeftEarAverage, newLeftEarAverage)) {
+            //     bestLeftEarIndex = i;
+            //     bestLeftEarAverage = newLeftEarAverage;
+            //     bestLeftEarYear = this.screenings[i].year;
+            // }
+            // if (this.ShouldUpdateBaseline(bestRightEarAverage, newRightEarAverage)) {
+            //     bestRightEarIndex = i;
+            //     bestRightEarAverage = newRightEarAverage;
+            //     bestRightEarYear = this.screenings[i].year;
+            // }
         }
         return reportArray;
     }
