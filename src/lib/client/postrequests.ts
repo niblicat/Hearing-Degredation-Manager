@@ -207,3 +207,38 @@ export async function removeAdmins(adminIDs: string[]): Promise<void> {
 
     if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to remove admins (missing message).");
 }
+
+export async function createEmployee(firstName: string, lastName: string, email: string, dateOfBirth: string, sex: PersonSex, lastActive: string = ""): Promise<void> {
+    const validDate = /^\d{4}-\d{2}-\d{2}$/;
+    if (!lastActive.match(validDate) && lastActive !== "") {
+        // only throw error if lastActive is not empty and invalid
+        throw new Error("The date of last activity is invalid!");
+    }
+
+    if (!dateOfBirth.match(validDate)) {
+        throw new Error("The date of birth is invalid");
+    }
+
+    // create form data and populate it with the necessary fields
+    const formData = new FormData();
+    formData.append('firstName', firstName);
+    formData.append('lastName', lastName);
+    formData.append('email', email);
+    formData.append('dateOfBirth', dateOfBirth);
+    formData.append('sex', PersonSex[sex].toLowerCase());
+    formData.append('isInactive', (lastActive === "").toString());
+
+    if (lastActive != "") {
+        formData.append('lastActive', lastActive);
+    }
+
+    const response = await fetch('/dashboard?/addEmployee', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to add employee (missing message).");
+}

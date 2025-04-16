@@ -5,6 +5,8 @@
     import SuccessMessage from './SuccessMessage.svelte';
 	import { isDate } from './utility';
 	import PageTitle from './PageTitle.svelte';
+	import { createEmployee } from './client/postrequests';
+	import { getPersonSexFromString, PersonSex } from './interpret';
 
     let firstName = $state("");
     let lastName = $state("");
@@ -52,67 +54,20 @@
         // scroll to the top
         top.scrollIntoView({ behavior: 'smooth' });
 
-        if (!firstName) {
-            displayError("No first name was provided!");
-            return;
-        }
-        if (!lastName) {
-            displayError("No last name was provided!");
-            return;
-        }
-        if (!email) {
-            displayError("No email was provided!");
-            return;
-        }
-        if (!sex) {
-            displayError("No sex was provided!");
-            return;
-        }
-        if (!dateOfBirth.match(validDate)) {
-            displayError("The date of birth is invalid");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('firstName', firstName);
-        formData.append('lastName', lastName);
-        formData.append('email', email);
-        formData.append('dateOfBirth', dateOfBirth);
-        formData.append('sex', sex);
-        formData.append('isInactive', isInactive.toString());
-
-        if (isInactiveBool) {
-            formData.append('lastActive', lastActive);
-
-            if (!lastActive.match(validDate)) {
-                displayError("The date of last activity is invalid!");
-                return;
-            }
-        }
-
-        // Debug: Log form data
-        console.log('Form data to be sent:', Object.fromEntries(formData.entries()));
-
-        const response = await fetch('/dashboard?/addEmployee', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
+            if (!firstName) throw new Error("No first name was provided!");
+            if (!lastName)throw new Error("No last name was provided!");
+            if (!email) throw new Error("No email was provided!");
+            if (!sex) throw new Error("No sex was provided!");
 
-            if (result["success"]) {
-                success = true;
-                successMessage = "Successfully added employee!";
-                await invalidateAll();
-            }
-            else {
-                displayError(result["message"]  ?? "Failed to add new employee");
-            }
+            const typedSex = getPersonSexFromString(sex);
 
-            console.log('Server Response:', serverResponse);
-        } 
+            await createEmployee(firstName, lastName, email, dateOfBirth, typedSex, lastActive);
+
+            success = true;
+            successMessage = "Successfully added employee!";
+            await invalidateAll();
+        }
         catch (error: any) {
             let errorMessage = error.message;
             displayError(errorMessage ?? "An error occurred when modifying admin permissions");
