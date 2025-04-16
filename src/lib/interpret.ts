@@ -30,15 +30,14 @@ function findAverage(...args: number[]) {
 }
 
 // used to identify hearing anomalies for each ear
+// Dr. Ott only wants possible sts, no sts, baseline, cnt, and new baseline. 
 export enum AnomalyStatus {
     None = 0,
     Baseline = 1,
-    Same = 2,
-    Better = 3,
-    NewBaseline = 4,
-    Worse = 5,
-    PossibleSTS = 6,
-    CNT = 7
+    NoSTS = 2,
+    NewBaseline = 3,
+    PossibleSTS = 4,
+    CNT = 5
 }
 
 export type EarAnomalyStatus = {
@@ -121,9 +120,7 @@ export class UserHearingScreeningHistory {
         if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
         //!! BASELINE REDEFINITION Needs to be adjusted per Dr. Ott 
         //else if (this.ShouldUpdateBaseline(this.GetAverageHertzForSTSRangeForOneEar(baselineEarData), this.GetAverageHertzForSTSRangeForOneEar(afterEarData))) return AnomalyStatus.NewBaseline;
-        else if (yearPriorAverageChange >= 10) return AnomalyStatus.Worse;
-        else if (yearPriorAverageChange <= -10) return AnomalyStatus.Better; 
-        else return AnomalyStatus.Same; // anything from -10 to 10 is defined as same (per Dr. Ott)
+        else return AnomalyStatus.NoSTS; // anything that is not CNT, new baseline, or possible STS, is just no STS (per Dr. Ott)
     }
 
     private confirmCNT(hdata: HearingDataOneEar): boolean {
