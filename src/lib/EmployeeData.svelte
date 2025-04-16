@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Button, Card } from 'flowbite-svelte';
+    import { Button, Card, ButtonGroup } from 'flowbite-svelte';
     import { EditOutline } from 'flowbite-svelte-icons';
     import type { Employee } from './MyTypes';
     import EmployeeChart from './EmployeeChart.svelte';
@@ -13,7 +13,7 @@
         selectedStatus: string,
         STSstatusLeft: string,
         STSstatusRight: string,
-        hearingHistory: Array<{year: string, leftStatus: string, rightStatus: string}>
+        hearingHistory: Array<{year: string, leftStatus: string, rightStatus: string, leftBaseline: string,rightBaseline: string}>
         rightBaselineHearingData: Array<number>,
         rightNewHearingData: Array<number>,
         leftBaselineHearingData: Array<number>,
@@ -23,7 +23,7 @@
         editdob: (arg0: Employee) => void,
         editsex: (arg0: Employee) => void,
         editstatus: (arg0: Employee) => void,
-    }
+        }
 
     let {
         selectedYear = "No year selected",
@@ -63,6 +63,51 @@
     
     function showActiveStatusChangeModal() {
         editstatus(selectedEmployee.data);
+    }
+
+    // Shared ear selection state between chart and history
+    let isRightEar = $state(false);
+    let showBoth = $state(true);
+
+    // Handler for ear selection changes from the chart
+    const handleEarSelectionChange = (ear: string) => {
+        if (ear === 'both') {
+            showBoth = true;
+        } else {
+            isRightEar = ear === 'right';
+            showBoth = false;
+        }
+    };
+
+    function calculateAge(dob: string): number {
+        if (!dob) return 0;
+        const dobDate = new Date(dob);
+        if (isNaN(dobDate.getTime())) return 0;
+        
+        // Get the selected year (or use current year if not available)
+        const yearToCalculate = selectedYear && !isNaN(parseInt(selectedYear)) 
+            ? parseInt(selectedYear) 
+            : new Date().getFullYear();
+        
+        // Calculate age for the selected year
+        const age = yearToCalculate - dobDate.getFullYear();
+        
+        // Account for whether birthday has occurred this year
+        const birthMonth = dobDate.getMonth();
+        const birthDay = dobDate.getDate();
+        const today = new Date();
+        
+        // If we're calculating for the current year, check if birthday has occurred
+        if (yearToCalculate === today.getFullYear()) {
+            const currentMonth = today.getMonth();
+            const currentDay = today.getDate();
+            
+            // If birth month is later in the year or same month but birth day is later
+            if (birthMonth > currentMonth || (birthMonth === currentMonth && birthDay > currentDay)) {
+                return age - 1; // Birthday hasn't occurred yet this year
+            }
+        }
+        return age;
     }
 </script>
 
@@ -171,6 +216,7 @@
                     {leftBaselineHearingData}
                     {leftNewHearingData}
                     {selectedYear}
+                    onEarSelectionChange={handleEarSelectionChange}
                 />
             </Card>
         </div>
@@ -180,14 +226,24 @@
             <Card padding="sm" class="w-full max-w-xl">
                 <div class="bg-primary-700 text-white py-2 px-3 text-center">
                     <div class="text-lg font-bold">Hearing History</div>
+                    <div class="text-sm">Calculations were performed using age-corrected values for age {calculateAge(selectedEmployee.data.dob)}</div>
                 </div>
-                
                 <table class="w-full border-collapse">
                     <tbody>
                         <tr class="border-b hover:bg-gray-100">
                             <td class="p-3 font-semibold">Year:</td>
-                            <td class="p-3 font-semibold">Left Ear Status:</td>
-                            <td class="p-3 font-semibold">Right Ear Status:</td>
+                            {#if showBoth}
+                                <td class="p-3 font-semibold">Left Ear Status:</td>
+                                <td class="p-3 font-semibold">Right Ear Status:</td>
+                                <td class="p-3 font-semibold">Left Ear Baseline:</td>
+                                <td class="p-3 font-semibold">Right Ear Baseline:</td>
+                            {:else if isRightEar}
+                                <td class="p-3 font-semibold">Right Ear Status:</td>
+                                <td class="p-3 font-semibold">Right Ear Baseline:</td>
+                            {:else}
+                                <td class="p-3 font-semibold">Left Ear Status:</td>
+                                <td class="p-3 font-semibold">Left Ear Baseline:</td>
+                            {/if}
                         </tr>
                         
                         {#if hearingHistory.length === 0}
@@ -198,8 +254,18 @@
                             {#each hearingHistory as record}
                                 <tr class="border-b hover:bg-gray-100" class:font-bold={record.year === selectedYear}>
                                     <td class="p-3">{record.year}</td>
-                                    <td class="p-3">{record.leftStatus}</td>
-                                    <td class="p-3">{record.rightStatus}</td>
+                                    {#if showBoth}
+                                        <td class="p-3">{record.leftStatus}</td>
+                                        <td class="p-3">{record.rightStatus}</td>
+                                        <td class="p-3">{record.leftBaseline}</td>
+                                        <td class="p-3">{record.rightBaseline}</td>
+                                    {:else if isRightEar}
+                                        <td class="p-3">{record.rightStatus}</td>
+                                        <td class="p-3">{record.rightBaseline}</td>
+                                    {:else}
+                                        <td class="p-3">{record.leftStatus}</td>
+                                        <td class="p-3">{record.leftBaseline}</td>
+                                    {/if}
                                 </tr>
                             {/each}
                         {/if}

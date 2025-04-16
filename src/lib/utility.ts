@@ -188,8 +188,7 @@ export function getPageCategory(page: string): PageCategory {
 // respects proper baselines
 export function calculateSTSClientSide(hearingData: HearingHistory): EarAnomalyStatus[] {
     if (!hearingData || !hearingData.screenings) {
-        console.error("Invalid hearing data format");
-        return [];
+        throw Error("Hearing data could not be interpreted-is null.");
     }
 
     let screenings: HearingScreening[];

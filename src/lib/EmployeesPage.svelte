@@ -2,14 +2,15 @@
 
     import { Button, Search, Modal, Label, Input, Radio, Tooltip, Dropdown } from 'flowbite-svelte';
     import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
-    import { AnomalyStatus, type EarAnomalyStatus, PersonSex} from "./interpret";
-    import type { Employee, EmployeeSearchable, HearingHistory } from './MyTypes';
+    import { AnomalyStatus, getPersonSexFromString, type EarAnomalyStatus} from "./interpret";
+    import type { Employee, EmployeeInfo, EmployeeSearchable, HearingHistory } from './MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
     import { calculateSTSClientSide } from './utility';
     import InsertDataPage from './InsertDataPage.svelte';
     import PageTitle from './PageTitle.svelte';
     import ErrorMessage from './ErrorMessage.svelte';
     import EmployeeData from './EmployeeData.svelte';
+	import { getEmployeeHearingHistory, updateEmployeeDOB, updateEmployeeEmail, updateEmployeeName, updateEmployeeSex, updateEmploymentStatus } from './client/postrequests';
 
     interface Props {
         employees: Array<Employee>;
@@ -23,7 +24,7 @@
     let leftBaselineHearingData =  $state<Array<number>>([]);
     let leftNewHearingData =  $state<Array<number>>([]);
     
-    let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string}>>([]);
+    let hearingHistory = $state<Array<{year: string, leftStatus: string, rightStatus: string, leftBaseline: string, rightBaseline: string}>>([]);
 
     let allHearingData = $state<HearingHistory | null>(null);
 
@@ -113,168 +114,81 @@
     // Functions to update selected employee and year
     async function selectEmployee(employee: EmployeeSearchable): Promise<void> {
         const formData = new FormData();
-
+        
         selectedEmployee = employee;
         nameMenuOpen = false; 
-
+        
         // Reset all data
         resetEmployeeInfo();
         resetData();
-
+        
         formData.append('employeeID', selectedEmployee.data.employeeID);
 
-        // Fetch employee details from the server and years for other dropdown
-        // ! This function is doing way too much. 
-        // ! use getEmployeeHearingHistory() from postrequests.ts to condense all this into one function call
-        // ! See the Debug.svelte page for an example usage
+        let fetchedHistory: HearingHistory;
+
         try {
-            // Fetch employee information
-            const dataResponse = await fetch('/dashboard?/fetchEmployeeInfo', {
-                method: 'POST',
-                body: formData,
-            });
-            
-            const serverDataResponse = await dataResponse.json();
-            const dataResult = JSON.parse(JSON.parse(serverDataResponse.data)[0]);
+            // fetch the history by sending a POST request
+            // will throw an error if employee isn't found or there's a database error
+            fetchedHistory = await getEmployeeHearingHistory(selectedEmployee.data.employeeID);
 
-            if (dataResult["success"]) {
-                success = true;
-                selectedEmail = dataResult.employee.email;
-                selectedStatus = dataResult.employee.employmentStatus;
-                selectedDOB = dataResult.employee.dob
-                    ? new Date(dataResult.employee.dob).toISOString().split('T')[0]
-                    : "No selection made";
-                selectedSex = dataResult.employee.sex;
-            }
-            else { 
-                selectedEmail = "Error fetching data: not a data success";
-                selectedDOB = "Error fetching data: not a data success";
-                selectedStatus = "Error fetching data: not a data success";
-                displayError('Failed to fetch employee information');
-                return;
-            }
+            // update employee info
+            const employeeInfo: EmployeeInfo = fetchedHistory.employee;
+            selectedEmail = employeeInfo.email;
+            selectedStatus = employeeInfo.lastActive === null ? "Active" : "Inactive";
+            selectedDOB = employeeInfo.dob
+                ? new Date(employeeInfo.dob).toISOString().split('T')[0]
+                : "No selection made";
+            selectedSex = employeeInfo.sex.toString();
 
-            // Fetch available years
-            const yearsResponse = await fetch('/dashboard?/fetchYears', {
-                method: 'POST',
-                body: formData,
-            });
+            // Store hearing history directly
+            allHearingData = fetchedHistory;
 
-            const serverYearsResponse = await yearsResponse.json();
-            const yearsResult = JSON.parse(JSON.parse(serverYearsResponse.data)[0]);
-
-            if (yearsResult["success"]) {
-                success = true;
-                yearItems = yearsResult.years.map(String);
-
-                // shows a helpful message when there's no data
-                if (yearItems.length === 0) {
-                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
-                    // Initialize empty data structures for a new employee with no data
-                    hearingHistory = [];
-                    allHearingData = null;
-                    allHearingReports = [];
-                    allYearScreenings = {};
-                    return; // Exit early since there's no data to fetch
-                }
+            if (allHearingData.screenings.length === 0) {
+                // no hearing data found, but employee exists
+                displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
+                hearingHistory = [];
+                allHearingReports = [];
+                allYearScreenings = {};
+                allHearingData = null;
             }
             else {
-                // Check if this is a "no data" error
-                if (yearsResult.message && yearsResult.message.includes("No years found")) {
-                    displayInfo(`No hearing test data available for ${employee.name}. You can add new data using the "Add New Data" button.`);
-                    hearingHistory = [];
-                    allHearingData = null;
-                    allHearingReports = [];
-                    allYearScreenings = {};
-                    return; // Exit early
-                } else {
-                    // Only show an error for actual errors, not for expected "no data" cases
-                    displayError('Error fetching years data: ' + (yearsResult.message || 'Unknown error'));
-                    return;
-                }
+                // hearing data exists!
+                // Get years from screenings
+                yearItems = allHearingData.screenings.map(screening => screening.year.toString());
+                
+                // Sort years (newest first for dropdown)
+                yearItems.sort((a, b) => parseInt(b) - parseInt(a));
+                
+                // Calculate STS reports directly
+                allHearingReports = calculateSTSClientSide(allHearingData);
+                
+                // Create year-indexed lookup for screenings
+                allYearScreenings = {};
+                allHearingData.screenings.forEach(screening => {
+                    allYearScreenings[screening.year.toString()] = {
+                        left: screening.leftEar,
+                        right: screening.rightEar
+                    };
+                });
+                
+                // Create the hearing history display info
+                hearingHistory = allHearingReports.map(report => ({
+                    year: report.reportYear.toString(),
+                    leftStatus: GetAnomalyStatusText(report.leftStatus),
+                    rightStatus: GetAnomalyStatusText(report.rightStatus),
+                    leftBaseline: report.leftBaselineYear.toString(),
+                    rightBaseline: report.rightBaselineYear.toString()
+                }));
+                
+                // Sort by year (newest first)
+                hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
             }
-
-            // Fetch all hearing data at once
-            const hearingResponse = await fetch('/dashboard?/fetchCalculateSTSData', { 
-                method: 'POST',
-                body: formData,
-            });
-
-            const hearingServerResponse = await hearingResponse.json();
-            const hearingResult = JSON.parse(JSON.parse(hearingServerResponse.data)[0]);
-
-            if (hearingResult["success"]) {
-                // Store all hearing data
-                allHearingData = hearingResult.hearingData;
-
-                // console.log("HEARING DATA: ", allHearingData);
-
-                try {
-                    // Check that allHearingData is not null before processing
-                    if (allHearingData) {
-
-                        allHearingData.employee = {
-                            id: parseInt(selectedEmployee.data.employeeID),
-                            firstName: selectedEmployee.data.firstName, 
-                            lastName: selectedEmployee.data.lastName,
-                            email: selectedEmail,
-                            dob: new Date(selectedDOB),
-                            lastActive: selectedStatus === "Inactive" ? new Date(selectedEmployee.data.activeStatus) : null,
-                            sex: selectedSex === 'male' ? PersonSex.Male : 
-                                selectedSex === 'female' ? PersonSex.Female : PersonSex.Other
-                        };
-
-                        // Pre-calculate STS reports for all years
-                        allHearingReports = calculateSTSClientSide(allHearingData);
-                        
-                        // Store screenings by year for quick access
-                        Object.entries(allHearingData.screenings).forEach(([year, data]) => {
-                            allYearScreenings[year] = data;
-                        });
-
-                        // Create the hearing history display info
-                        hearingHistory = allHearingReports.map((report: any) => ({
-                            year: report.reportYear.toString(),
-                            leftStatus: GetAnomalyStatusText(report.leftStatus),
-                            rightStatus: GetAnomalyStatusText(report.rightStatus)
-                        }));
-                        
-                        // Sort by year (newest first)
-                        hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
-                    }
-                } catch (calcError) {
-                    console.error('Error calculating STS:', calcError);
-                    displayError('Error calculating hearing thresholds. Please check the hearing data format.');
-                    return;
-                }
-            }
-            else {
-                // Check if this is a "no data" error or another type of error
-                if (hearingResult.message && (
-                    hearingResult.message.includes("not found") || 
-                    hearingResult.message.includes("No hearing data") ||
-                    hearingResult.message.includes("no data") ||
-                    hearingResult.message.includes("no screening")
-                )) {
-                    // This is expected for new employees - don't show an error
-                    console.log("No hearing data available for this employee");
-                    // We already showed the info message earlier based on empty years
-                    // Just make sure the data structures are properly initialized
-                    hearingHistory = [];
-                    allHearingData = null;
-                    allHearingReports = [];
-                    allYearScreenings = {};
-                } else {
-                    // This is an actual error
-                    displayError((hearingResult.message || 'Unknown error'));
-                }
-                return;
-            }
-        } 
-        catch (error) {
-            console.error('Error fetching data:', error);
+        }
+        catch (error: any) {
+            const errorMessage = `Error fetching data: ${error.message ?? "No message provided"}`;
+            console.error(errorMessage);
             yearItems = [];
-            displayError('Error fetching data from server. Please try again later.');
+            displayError(errorMessage);
         }
     }
 
@@ -444,32 +358,99 @@
         addDataModal = true;
     }
 
+    function showEditNameModal() {
+        // Initialize with current values
+        newFirstName = selectedEmployee.data.firstName;
+        newLastName = selectedEmployee.data.lastName;
+        nameModal = true;
+    }
+
+    function isValidEmail(email: string): boolean {
+        if (!email) return false;
+        // Check for @ and . in the email address
+        return email.includes('@') && email.includes('.') && email.indexOf('@') < email.lastIndexOf('.');
+    }
+
+    function showEditEmailModal() {
+        // Initialize with current email
+        newEmail = selectedEmployee.data.email;
+        emailModal = true;
+    }
+
+    function showEditDOBModal() {
+        // Check if there's a valid date of birth to initialize with
+        if (selectedEmployee.data.dob && selectedEmployee.data.dob !== "Undefined") {
+            // Format the date properly for the date input (YYYY-MM-DD)
+            const dobDate = new Date(selectedEmployee.data.dob);
+            if (!isNaN(dobDate.getTime())) {
+                // If it's a valid date, format it as YYYY-MM-DD
+                newDOB = dobDate.toISOString().split('T')[0];
+            } else {
+                // If parsing fails, try to use the string directly if it's in YYYY-MM-DD format
+                newDOB = selectedEmployee.data.dob;
+            }
+        } else {
+            // Reset the field if no valid DOB exists
+            newDOB = "";
+        }
+        
+        DOBmodal = true;
+    }
+
+    function showEditSexModal() {
+        // Initialize with current sex value
+        if (selectedEmployee.data.sex && selectedEmployee.data.sex !== "Undefined") {
+            // Convert to lowercase to match the radio button values
+            newSex = selectedEmployee.data.sex.toLowerCase();
+        } else {
+            // Default to empty if not set
+            newSex = "";
+        }
+        
+        sexModal = true;
+    }
+
+    function showEditStatusModal() {
+        // Initialize based on current status
+        if (selectedStatus === "Inactive") {
+            isInactive = true;
+            
+            // Format the existing date properly for the date input (YYYY-MM-DD)
+            if (selectedEmployee.data.activeStatus && 
+                selectedEmployee.data.activeStatus !== "Undefined") {
+                
+                // Parse the date string to ensure proper format
+                try {
+                    const inactiveDate = new Date(selectedEmployee.data.activeStatus);
+                    const validTime = !isNaN(inactiveDate.getTime());
+
+                    // If it's a valid date, format it as YYYY-MM-DD
+                    // Else, parsing as date fails, try to use the string directly if it's already in YYYY-MM-DD format
+                    newActiveStatus = validTime ? inactiveDate.toISOString().split('T')[0] : selectedEmployee.data.activeStatus;
+                } catch (error) {
+                    console.error("Error parsing inactive date:", error);
+                    newActiveStatus = ""; // Reset if there's an error
+                }
+            } else {
+                newActiveStatus = ""; // Reset if no date available
+            }
+        } else {
+            isInactive = false;
+            newActiveStatus = "Active";  // Set to "Active" for active employees
+        }
+        
+        activeStatusModal = true;
+    }
+
     async function modifyEmployeeName(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newFirstName', newFirstName);
-        formData.append('newLastName', newLastName);
-
-        const response = await fetch('/dashboard?/modifyEmployeeName', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employee name
+            await updateEmployeeName(selectedEmployee.data.employeeID, newFirstName, newLastName);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.name = `${newFirstName} ${newLastName}`;
-                selectedEmployee.data.firstName = newFirstName;
-                selectedEmployee.data.lastName = newLastName;
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.name = `${newFirstName} ${newLastName}`;
+            selectedEmployee.data.firstName = newFirstName;
+            selectedEmployee.data.lastName = newLastName;
         }
         catch (error: any) {
             let errorMessage = error.message;
@@ -478,61 +459,30 @@
     }
 
     async function modifyEmployeeEmail(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newEmail', newEmail);
-
-        const response = await fetch('/dashboard?/modifyEmployeeEmail', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employee email
+            await updateEmployeeEmail(selectedEmployee.data.employeeID, newEmail);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.data.email = newEmail;
-                selectedEmail = selectedEmployee.data.email;
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.data.email = newEmail;
+            selectedEmail = selectedEmployee.data.email;
         }
         catch (error: any) {
             let errorMessage = error.message;
             displayError(errorMessage);
         }
     }
+
     async function modifyEmployeeDOB(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newDOB', newDOB);
-
-        const response = await fetch('/dashboard?/modifyEmployeeDOB', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employee date of birth
+            await updateEmployeeDOB(selectedEmployee.data.employeeID, newDOB);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.data.dob = newDOB;
-                selectedDOB = selectedEmployee.data.dob
-                    ? new Date(selectedEmployee.data.dob).toISOString().split('T')[0]
-                    : "No selection made";
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.data.dob = newDOB;
+            selectedDOB = selectedEmployee.data.dob
+                ? new Date(selectedEmployee.data.dob).toISOString().split('T')[0]
+                : "No selection made";
         }
         catch (error: any) {
             let errorMessage = error.message;
@@ -541,28 +491,12 @@
     }
 
     async function modifyEmployeeSex(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newSex', newSex); 
-
-        const response = await fetch('/dashboard?/modifyEmployeeSex', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employee sex
+            await updateEmployeeSex(selectedEmployee.data.employeeID, getPersonSexFromString(newSex));
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.data.sex = newSex;
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.data.sex = newSex;
         }
         catch (error: any) {
             let errorMessage = error.message;
@@ -571,33 +505,14 @@
     }
 
     async function modifyEmploymentStatus(): Promise<void> {
-        const formData = new FormData();
-        formData.append('employeeID', selectedEmployee.data.employeeID);
-        formData.append('newActiveStatus', newActiveStatus === "Active" ? "" : newActiveStatus); // Ensures the form key matches what backend expects
-
-        const response = await fetch('/dashboard?/modifyEmployeeStatus', {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            const serverResponse = await response.json();
-            console.log(response);
+            // send a post request to update the employment status
+            await updateEmploymentStatus(selectedEmployee.data.employeeID, newActiveStatus === "Active" ? "" : newActiveStatus);
 
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-    
-            if (result["success"]) {
-                success = true;
-                selectedEmployee.data.activeStatus = newActiveStatus;
-                if (newActiveStatus === "") {  
-                    selectedStatus = "Active";
-                } else {  
-                    selectedStatus = "Inactive";
-                }
-            }
-            else {
-                displayError(result["message"]);
-            }
+            success = true;
+            selectedEmployee.data.activeStatus = newActiveStatus;
+            selectedStatus = (newActiveStatus === "Active") ? "Active" : "Inactive";
+            console.log(newActiveStatus);
         }
         catch (error: any) {
             let errorMessage = error.message;
@@ -691,11 +606,11 @@
             {leftBaselineHearingData}
             {leftNewHearingData}
             {hearingHistory}
-            editname={() => nameModal = true}
-            editemail={() => emailModal = true}
-            editdob={() => DOBmodal = true}
-            editsex={() => sexModal = true}
-            editstatus={() => activeStatusModal = true}
+            editname={() => showEditNameModal()}
+            editemail={() => showEditEmailModal()}
+            editdob={() => showEditDOBModal()}
+            editsex={() => showEditSexModal()}
+            editstatus={() => showEditStatusModal()}
         />
     </div>
 </div>
@@ -707,29 +622,85 @@
         <span>Please provide an updated name for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
         <br>
         <br>
-        <Label for="first" class="mb-2">First name</Label>
-        <Input type="text" id="firstName" placeholder={selectedEmployee.data.firstName} bind:value={newFirstName} required />
-        <Label for="last" class="mb-2">Last name</Label>
-        <Input type="text" id="lastName" placeholder={selectedEmployee.data.lastName} bind:value={newLastName} required />
-    
+        <Label for="first" class="mb-2">First name <span class="text-red-500">*</span></Label>
+        <Input 
+            type="text" 
+            id="firstName" 
+            placeholder={selectedEmployee.data.firstName} 
+            bind:value={newFirstName} 
+            color={newFirstName ? "green" : "red"}
+            required 
+        />
+        
+        <Label for="last" class="mb-2">Last name <span class="text-red-500">*</span></Label>
+        <Input 
+            type="text" 
+            id="lastName" 
+            placeholder={selectedEmployee.data.lastName} 
+            bind:value={newLastName} 
+            color={newLastName ? "green" : "red"}
+            required 
+        />
     </p>
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeName()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+    <Button 
+        class="cursor-pointer" 
+        color="primary" 
+        on:click={() => {
+            if (newFirstName && newLastName) {
+                modifyEmployeeName();
+            } else {
+                displayError("First name and last name are required.");
+            }
+        }}
+        disabled={!newFirstName || !newLastName}
+    >
+        Confirm
+    </Button>
+    <Button class="cursor-pointer" color="red" on:click={() => {
+        nameModal = false;
+    }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 
 <Modal title="Change Employee Email" bind:open={emailModal} autoclose>
-    <p>
+    <div class="mb-4">
         <span>Please provide an updated email for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName} ({selectedEmployee.data.email})</span>
-        <br>
-        <br>
-        <Label for="newEmail" class="mb-2">New Email</Label>
-        <Input type="text" id="email" placeholder={selectedEmployee.data.email} bind:value={newEmail} required />
-    </p>
+    </div>
+    
+    <div class="mb-4">
+        <Label for="newEmail" class="mb-2">New Email <span class="text-red-500">*</span></Label>
+        <Input 
+            type="email" 
+            id="email" 
+            placeholder={selectedEmployee.data.email} 
+            bind:value={newEmail} 
+            color={isValidEmail(newEmail) ? "green" : "red"}
+            required 
+        />
+        {#if newEmail && !isValidEmail(newEmail)}
+            <p class="text-red-500 text-sm mt-1">Please enter a valid email address (must include @ and .)</p>
+        {/if}
+    </div>
+    
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeEmail()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+        <Button 
+            class="cursor-pointer" 
+            color="primary" 
+            on:click={() => {
+                if (isValidEmail(newEmail)) {
+                    modifyEmployeeEmail();
+                } else {
+                    displayError("A valid email address is required.");
+                }
+            }}
+            disabled={!isValidEmail(newEmail)}
+        >
+            Confirm
+        </Button>
+        <Button class="cursor-pointer" color="red" on:click={() => {
+            emailModal = false;
+        }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 
@@ -738,48 +709,132 @@
         <span>Please provide an updated DOB for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
         <br>
         <br>
-        <Label for="newEmail" class="mb-2">New Date</Label>
-        <Input type="date" id="dob" placeholder={selectedEmployee.data.dob} bind:value={newDOB} required />
+        <Label for="newDOB" class="mb-2">New Date <span class="text-red-500">*</span></Label>
+        <Input 
+            type="date" 
+            id="dob" 
+            bind:value={newDOB} 
+            color={newDOB ? "green" : "red"}
+            required 
+        />
     </p>
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeDOB()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+    <Button 
+        class="cursor-pointer" 
+        color="primary" 
+        on:click={() => {
+            if (newDOB) {
+                modifyEmployeeDOB();
+            } else {
+                displayError("Date of birth is required.");
+            }
+        }}
+        disabled={!newDOB}
+    >
+        Confirm
+    </Button>
+    <Button class="cursor-pointer" color="red" on:click={() => {
+        DOBmodal = false;
+    }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 
 <Modal title="Change Employee Sex" bind:open={sexModal} autoclose>
-    <p>
+    <div class="mb-4">
         <span>Please provide the updated sex for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
-        <br>
-        <br>
-        <Label for="newSex" class="mb-2">New Sex</Label>
-        <Radio name="sex" bind:group={newSex} value="male">Male</Radio>
-        <Radio name="sex" bind:group={newSex} value="female">Female</Radio>
-        <Radio name="sex" bind:group={newSex} value="other">Other</Radio>
-    </p>
+    </div>
+    
+    <div class="mb-4">
+        <Label for="newSex" class="mb-2">Sex <span class="text-red-500">*</span></Label>
+        <div class="space-y-2">
+            <Radio name="sex" bind:group={newSex} value="male">Male</Radio>
+            <Radio name="sex" bind:group={newSex} value="female">Female</Radio>
+            <Radio name="sex" bind:group={newSex} value="other">Other</Radio>
+        </div>
+        {#if !newSex}
+            <p class="text-red-500 text-sm mt-1">Please select an option</p>
+        {/if}
+    </div>
+    
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmployeeSex()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+        <Button 
+            class="cursor-pointer" 
+            color="primary" 
+            on:click={() => {
+                if (newSex) {
+                    modifyEmployeeSex();
+                } else {
+                    displayError("Sex selection is required.");
+                }
+            }}
+            disabled={!newSex}
+        >
+            Confirm
+        </Button>
+        <Button class="cursor-pointer" color="red" on:click={() => {
+            sexModal = false;
+        }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 
 <Modal title="Change Employee Active Status" bind:open={activeStatusModal} autoclose>
-    <p>
+    <div class="mb-4">
         <span>Please provide an updated employment status for {selectedEmployee.data.firstName} {selectedEmployee.data.lastName}</span>
-        <br>
-        <br>
-        <Label for="newActiveStatus" class="mb-2">New Employment Status</Label>
-        <Radio name="employmentStatus" bind:checked={isInactive} on:change={() => isInactive = false}>Active</Radio>
-        <Radio name="employmentStatus" bind:checked={isInactive} on:change={() => isInactive = true}>Inactive</Radio>
+    </div>
+    
+    
+    <div class="mb-4">
+        <Label for="newActiveStatus" class="mb-2">Employment Status <span class="text-red-500">*</span></Label>
+        <div class="space-y-2">
+            <Radio name="employmentStatus" checked={!isInactive} on:change={() => {
+                isInactive = false;
+                newActiveStatus = "Active";
+            }}>Active</Radio>
+            <Radio name="employmentStatus" checked={isInactive} on:change={() => {
+                isInactive = true;
+                // Keep the existing date if available
+                if (!newActiveStatus || newActiveStatus === "Active") {
+                    newActiveStatus = "";
+                }
+            }}>Inactive</Radio>
+        </div>
+    </div>
 
-        {#if isInactive}
-            <Label for="lastActive" class="block mb-2">Last Active Date</Label>
-            <Input id="lastActive" type="date" bind:value={newActiveStatus} />
-        {/if}
-    </p>
+    {#if isInactive}
+        <div class="mb-4">
+            <Label for="lastActive" class="block mb-2 mt-4">Last Active Date <span class="text-red-500">*</span></Label>
+            <Input 
+                id="lastActive" 
+                type="date" 
+                bind:value={newActiveStatus} 
+                color={isInactive && !newActiveStatus ? "red" : "green"}
+                required 
+            />
+            {#if isInactive && !newActiveStatus}
+                <p class="text-red-500 text-sm mt-1">Last active date is required for inactive employees</p>
+            {/if}
+        </div>
+    {/if}
+    
     <svelte:fragment slot="footer">
-    <Button class="cursor-pointer" color="primary" on:click={() => modifyEmploymentStatus()}>Confirm</Button>
-    <Button class="cursor-pointer" color="red">Cancel</Button>
+        <Button 
+            class="cursor-pointer" 
+            color="primary" 
+            on:click={() => {
+                // For inactive employees, a date is required
+                if (isInactive && !newActiveStatus) {
+                    displayError("Last active date is required for inactive employees.");
+                    return;
+                }
+                modifyEmploymentStatus();
+            }}
+            disabled={isInactive && !newActiveStatus}
+        >
+            Confirm
+        </Button>
+        <Button class="cursor-pointer" color="red" on:click={() => {
+            activeStatusModal = false;
+        }}>Cancel</Button>
     </svelte:fragment>
 </Modal>
 

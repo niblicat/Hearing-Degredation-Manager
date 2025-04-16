@@ -32,8 +32,8 @@ CREATE TABLE employee (
     employee_id SERIAL PRIMARY KEY,
     first_name VARCHAR(64) NOT NULL,
     last_name VARCHAR(64),
-    email VARCHAR(64) UNIQUE,
-    date_of_birth TIMESTAMP,
+    email VARCHAR(64) NOT NULL UNIQUE,
+    date_of_birth TIMESTAMP NOT NULL,
     last_active TIMESTAMP,
     sex TEXT NOT NULL,
     CONSTRAINT employee_sex_check CHECK (sex IN ('male', 'female', 'other'))

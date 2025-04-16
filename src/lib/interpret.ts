@@ -5,6 +5,14 @@ import { error } from "@sveltejs/kit";
 import { AGE_CORRECTION_TABLE_MALE, AGE_CORRECTION_TABLE_FEMALE } from './agetable'
 import type {HertzCorrectionForAge} from './agetable'
 
+export function getPersonSexFromString(val: string) {
+    const lowered: string = val.toLowerCase();
+    switch (lowered) {
+        case "male": return PersonSex.Male;
+        case "female": return PersonSex.Female;
+        default: return PersonSex.Other;
+    }
+}
 
 export enum PersonSex {
     Female,
@@ -111,7 +119,8 @@ export class UserHearingScreeningHistory {
         }
         // Only check for CNT after handling the STS case
         if (this.confirmCNT(baselineEarData) || this.confirmCNT(afterEarData)) return AnomalyStatus.CNT; // if any 2000,3000,4000 value is a CNT, whole status is CNT
-        // else if (baselineAverageChange <= -7) return AnomalyStatus.NewBaseline; // baseline redefinition  //!! Needs to be adjusted per Dr. Ott
+        //!! BASELINE REDEFINITION Needs to be adjusted per Dr. Ott 
+        else if (this.ShouldUpdateBaseline(this.GetAverageHertzForSTSRangeForOneEar(baselineEarData), this.GetAverageHertzForSTSRangeForOneEar(afterEarData))) return AnomalyStatus.NewBaseline;
         else if (yearPriorAverageChange >= 10) return AnomalyStatus.Worse;
         else if (yearPriorAverageChange <= -10) return AnomalyStatus.Better; 
         else return AnomalyStatus.Same; // anything from -10 to 10 is defined as same (per Dr. Ott)
@@ -156,19 +165,19 @@ export class UserHearingScreeningHistory {
         let currentAgeRowValue = GetRowValue(this.age);
 
         // Look up the corrections using the clamped age values
-        let baselineCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == baselineAgeRowValue);
+        //let baselineCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == baselineAgeRowValue);
         let currentCorrection: HertzCorrectionForAge | undefined = correctionTable.find((i) => i.age == currentAgeRowValue);
         
-        if (!baselineCorrection) throw new Error(`Age correction table does not have an adjustment for age ${baselineAgeRowValue}.`);
+        //if (!baselineCorrection) throw new Error(`Age correction table does not have an adjustment for age ${baselineAgeRowValue}.`);
         if (!currentCorrection) throw new Error(`Age correction table does not have an adjustment for age ${currentAgeRowValue}.`);
 
         let difference: HertzCorrectionForAge = { 
             age: 0,
-            hz1000: (currentCorrection.hz1000 - baselineCorrection.hz1000),
-            hz2000: (currentCorrection.hz2000 - baselineCorrection.hz2000),
-            hz3000: (currentCorrection.hz3000 - baselineCorrection.hz3000),
-            hz4000: (currentCorrection.hz4000 - baselineCorrection.hz4000),
-            hz6000: (currentCorrection.hz6000 - baselineCorrection.hz6000)
+            hz1000: (currentCorrection.hz1000),
+            hz2000: (currentCorrection.hz2000),
+            hz3000: (currentCorrection.hz3000),
+            hz4000: (currentCorrection.hz4000),
+            hz6000: (currentCorrection.hz6000)
         }
         
         return difference;
@@ -253,6 +262,7 @@ export class UserHearingScreeningHistory {
             } as EarAnomalyStatus;
             reportArray.push(currentAnomalyStatuses);
 
+            //!! Needs to be adjusted per Dr. Ott
             // update baselines after report has confirmed improvement (otherwise the new baseline will compare to itself for redefinition year) 
             if (this.ShouldUpdateBaseline(bestLeftEarAverage, newLeftEarAverage)) {
                 bestLeftEarIndex = i;
@@ -268,7 +278,7 @@ export class UserHearingScreeningHistory {
         return reportArray;
     }
 
-    /**
+    /** //!! NEEDS TO BE UPDATED PER DR. OTT
      * UpdateBaselineForOneEar
      * OSHA does not specify a definition of significant
         improvement. However, an example in Appendix F of the Hearing Conservation

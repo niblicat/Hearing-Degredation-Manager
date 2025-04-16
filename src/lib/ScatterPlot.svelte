@@ -1,6 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { Chart, registerables } from 'chart.js';
+    import { InfoCircleSolid } from "flowbite-svelte-icons";
+    import { Tooltip } from 'flowbite-svelte';
 
     
     interface Props {
@@ -23,6 +25,12 @@
     // Custom tick values
     const customTicksX = [500, 1000, 2000, 3000, 4000, 6000, 8000];
     const customTicksY = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0, -10];
+
+    // Add padding for x-axis to ensure points are fully visible
+    const xAxisPadding = {
+        min: 300,  // Padding before 500 Hz
+        max: 8500  // Padding after 8000 Hz
+    };
 
     function getPointStyle(label: string) {
         if (label.includes("Right Baseline")) return "rect";
@@ -122,10 +130,19 @@
                                 size: 16
                             }
                         },
-                        min: Math.min(...customTicksX),  // Ensure the x-axis starts from the minimum value of custom ticks
-                        max: Math.max(...customTicksX),  // Ensure the x-axis ends at the maximum value of custom ticks
+                        min: xAxisPadding.min,  // Use padding to ensure points at 500 Hz are fully visible
+                        max: xAxisPadding.max,  // Use padding to ensure points at 8000 Hz are fully visible
                         ticks: {
-                            callback: (value) => (customTicksX.includes(value as number) ? value : null),
+                            // Explicitly provide the values we want displayed
+                            callback: function(value) {
+                                // Only show tick labels for our specific frequencies
+                                if (customTicksX.includes(value as number)) {
+                                    return value;
+                                }
+                                return null;
+                            },
+                            // Explicitly set ticks to our custom values
+                            stepSize: 1,
                             autoSkip: false,  // Ensure no ticks are skipped
                         }
                     },
@@ -239,3 +256,5 @@
 </script>
 
 <canvas id="scatterPlot" width="700" height="700"></canvas>
+<InfoCircleSolid />
+<Tooltip placement="bottom">Data points shown are the original dB values recorded; They are NOT corrected for age.</Tooltip>
