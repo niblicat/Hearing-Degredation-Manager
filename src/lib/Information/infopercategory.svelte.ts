@@ -1,6 +1,6 @@
-import information from '$lib/information.json';
-import { PageCategory } from './MyTypes';
-import { getPageCategory } from './utility';
+import information from '$lib/Information/information.json';
+import { PageCategory } from '$lib/MyTypes';
+import { getPageCategory } from '$lib/utility';
 
 export type InformationPerCategory = {
     category: PageCategory,

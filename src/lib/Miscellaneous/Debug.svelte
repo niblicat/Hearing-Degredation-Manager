@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from "$app/navigation";
-	import ErrorMessage from "$lib/ErrorMessage.svelte";
+	import ErrorMessage from "$lib/Miscellaneous/ErrorMessage.svelte";
 	import { type HearingDataOneEar, type HearingScreening } from "$lib/interpret";
 	import type { HearingHistory } from "$lib/MyTypes";
     import { Button, ButtonGroup, Input, Label, Li, List } from "flowbite-svelte";

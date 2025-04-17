@@ -2,15 +2,15 @@
 
     import { Button, Search, Modal, Label, Input, Radio, Tooltip, Dropdown } from 'flowbite-svelte';
     import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
-    import { AnomalyStatus, getPersonSexFromString, type EarAnomalyStatus} from "./interpret";
-    import type { Employee, EmployeeInfo, EmployeeSearchable, HearingHistory } from './MyTypes';
+    import { AnomalyStatus, getPersonSexFromString, type EarAnomalyStatus} from "$lib/interpret";
+    import type { Employee, EmployeeInfo, EmployeeSearchable, HearingHistory } from '$lib/MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
-    import { calculateSTSClientSide } from './utility';
-    import InsertDataPage from './InsertDataPage.svelte';
-    import PageTitle from './PageTitle.svelte';
-    import ErrorMessage from './ErrorMessage.svelte';
-    import EmployeeData from './EmployeeData.svelte';
-	import { getEmployeeHearingHistory, updateEmployeeDOB, updateEmployeeEmail, updateEmployeeName, updateEmployeeSex, updateEmploymentStatus } from './client/postrequests';
+    import { calculateSTSClientSide } from '$lib/utility';
+    import InsertDataPage from '$lib/Employee/InsertDataPage.svelte';
+    import PageTitle from '$lib/Miscellaneous/PageTitle.svelte';
+    import ErrorMessage from '$lib/Miscellaneous/ErrorMessage.svelte';
+    import EmployeeData from '$lib/Employee/EmployeeData.svelte';
+	import { getEmployeeHearingHistory, updateEmployeeDOB, updateEmployeeEmail, updateEmployeeName, updateEmployeeSex, updateEmploymentStatus } from '$lib/client/postrequests';
 
     interface Props {
         employees: Array<Employee>;

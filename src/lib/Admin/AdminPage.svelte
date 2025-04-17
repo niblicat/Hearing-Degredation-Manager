@@ -4,11 +4,11 @@
     import { Input, Label } from 'flowbite-svelte';
     import { invalidateAll } from '$app/navigation';
 
-    import type { Admin, AdminSelectable } from './MyTypes.ts';
+    import type { Admin, AdminSelectable } from '../MyTypes.js';
     import { EditOutline, InfoCircleOutline } from 'flowbite-svelte-icons';
-    import ErrorMessage from './ErrorMessage.svelte';
-    import PageTitle from './PageTitle.svelte';
-	import { updateAdminName, updateAdminPermissions, removeAdmins } from './client/postrequests.js';
+    import ErrorMessage from '../Miscellaneous/ErrorMessage.svelte';
+    import PageTitle from '../Miscellaneous/PageTitle.svelte';
+	import { updateAdminName, updateAdminPermissions, removeAdmins } from '../client/postrequests.js';
 
     interface Props {
         admins: Array<Admin>;

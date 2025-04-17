@@ -1,7 +1,7 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { Avatar, Dropdown, DropdownItem, DropdownHeader, DropdownDivider } from 'flowbite-svelte';
-    import type { UserSimple } from './MyTypes';
+    import type { UserSimple } from '../MyTypes';
     
     interface Props {
         user: UserSimple;

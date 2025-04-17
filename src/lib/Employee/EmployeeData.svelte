@@ -1,8 +1,8 @@
 <script lang="ts">
     import { Button, Card, ButtonGroup } from 'flowbite-svelte';
     import { EditOutline } from 'flowbite-svelte-icons';
-    import type { Employee } from './MyTypes';
-    import EmployeeChart from './EmployeeChart.svelte';
+    import EmployeeChart from '$lib/Employee/EmployeeChart.svelte';
+	import type { Employee } from '$lib/MyTypes';
 
     // Props
     interface Props {
