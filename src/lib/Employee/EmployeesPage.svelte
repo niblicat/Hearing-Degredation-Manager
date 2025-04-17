@@ -38,7 +38,7 @@
     let selectedStatus = $state("No data selected");
     let STSstatusRight = $state("No data selected");
     let STSstatusLeft = $state("No data selected");
-    let selectedSex = $state("No data selected"); // ! is this supposed to be unused? shows undefined on load
+    let selectedSex = $state("No data selected");
 
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
@@ -182,6 +182,11 @@
                 
                 // Sort by year (newest first)
                 hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+
+                // select latest year
+                if (hearingHistory.length !== 0) {
+                    selectYear(hearingHistory[0].year)
+                }
             }
         }
         catch (error: any) {
@@ -270,7 +275,7 @@
                     allYearScreenings[leftBaselineYear].left.hz4000,
                     allYearScreenings[leftBaselineYear].left.hz6000,
                     allYearScreenings[leftBaselineYear].left.hz8000,
-                ].filter(value => value !== null);
+                ]
             }
 
             if (rightBaselineYear && allYearScreenings[rightBaselineYear]?.right) {
@@ -282,7 +287,7 @@
                     allYearScreenings[rightBaselineYear].right.hz4000,
                     allYearScreenings[rightBaselineYear].right.hz6000,
                     allYearScreenings[rightBaselineYear].right.hz8000,
-                ].filter(value => value !== null);
+                ]
             }
 
             // Current year data
@@ -295,7 +300,7 @@
                     currentYearData.left.hz4000,
                     currentYearData.left.hz6000,
                     currentYearData.left.hz8000,
-                ].filter(value => value !== null);
+                ]
             }
 
             if (currentYearData.right) {
@@ -307,7 +312,7 @@
                     currentYearData.right.hz4000,
                     currentYearData.right.hz6000,
                     currentYearData.right.hz8000,
-                ].filter(value => value !== null);
+                ]
             }
         }
         catch (error) {

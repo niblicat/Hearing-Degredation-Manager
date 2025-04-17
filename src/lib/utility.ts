@@ -165,7 +165,7 @@ export function validateFrequenciesLocally(frequenciesLeft: HearingDataOneEarStr
     const validateFrequencies = (freqs: HearingDataOneEarString) =>
         Object.values(freqs).every(value => 
             value === "CNT" || 
-            (!isNaN(parseInt(value as string, 10)) && parseInt(value as string, 10) >= -10 && parseInt(value as string, 10) <= 90)
+            (!isNaN(parseInt(value as string, 10)) && parseInt(value as string, 10) >= -10 && parseInt(value as string, 10) <= 120)
         );
     return validateFrequencies(frequenciesLeft) && validateFrequencies(frequenciesRight);
 }

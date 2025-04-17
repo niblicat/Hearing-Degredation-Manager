@@ -196,7 +196,7 @@
                 throw new Error("There were no changes to push!");
             }
             if (!validateFrequenciesLocally(leftFrequencies, rightFrequencies)) {
-                throw new Error("The values you submitted are out of range or invalid. Choose values between -10 and 90 or 'CNT'.")
+                throw new Error("The values you submitted are out of range or invalid. Choose values between -10 and 120 or 'CNT'.")
             }
 
             const appendedEmployeeID = employee ? employee.employeeID : selectedEmployee.data.employeeID;
@@ -240,7 +240,7 @@
             return "red";
         }
         const freqInt = parseInt(freq);
-        if (freqInt < -10 || freqInt > 90) {
+        if (freqInt < -10 || freqInt > 120) {
             return "red";
         }
         if (freq != oldFreq) {
@@ -303,7 +303,7 @@
             <caption class="p-5 text-lg font-semibold text-left text-gray-900 bg-white dark:text-white dark:bg-gray-800">
                 {allowModify ? "Modify" : "Add"} A Hearing Screening
                 <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
-                    Values between -10 and 90 are accepted. If a value could not be recorded, type CNT. 
+                    Values between -10 and 120 are accepted. If a value could not be recorded, type CNT. 
                 </p>
             </caption>
             <TableHead>

@@ -18,13 +18,13 @@ CREATE TABLE data (
     hz_6000 SMALLINT,
     hz_8000 SMALLINT,
     CONSTRAINT chk_data_range CHECK (
-        (hz_500 BETWEEN -10 AND 90) AND
-        (hz_1000 BETWEEN -10 AND 90) AND
-        (hz_2000 BETWEEN -10 AND 90) AND
-        (hz_3000 BETWEEN -10 AND 90) AND
-        (hz_4000 BETWEEN -10 AND 90) AND
-        (hz_6000 BETWEEN -10 AND 90) AND
-        (hz_8000 BETWEEN -10 AND 90)
+        (hz_500 BETWEEN -10 AND 120) AND
+        (hz_1000 BETWEEN -10 AND 120) AND
+        (hz_2000 BETWEEN -10 AND 120) AND
+        (hz_3000 BETWEEN -10 AND 120) AND
+        (hz_4000 BETWEEN -10 AND 120) AND
+        (hz_6000 BETWEEN -10 AND 120) AND
+        (hz_8000 BETWEEN -10 AND 120)
     )
 );
 
