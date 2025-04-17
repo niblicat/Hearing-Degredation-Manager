@@ -66,9 +66,20 @@
 
     let showDataFields = $state((employee && year) ? true : false);
 
-    let nameMenuOpen = $state(false);
+    let nameMenuOpen: boolean = $state(false);
 
-    let inputValueYear = $state("");
+    let inputValueYear: string = $state("");
+
+    // remove any letters from inputValueYear
+    $effect(() => {
+        if (!(/^\d*$/).test(inputValueYear)) {
+            inputValueYear = inputValueYear.replace(/\D/g, '');
+        }
+    });
+
+    // indicates if the transaction has been completed
+    let completed: boolean = $state(false);
+
     const blankFrequencies: HearingDataOneEarString = {
         hz500: "",
         hz1000: "",
@@ -214,7 +225,7 @@
             await addHearingScreening(appendedEmployeeID, newScreening, allowModify);
             displaySuccess("Successfully pushed changes to database.");
             await invalidateAll();
-            showDataFields = false;
+            completed = true;
         }
         catch (error: any) {
             const errorMessage: string = 'Error when pushing hearing data: ' +
@@ -289,6 +300,12 @@
 {#if showDataFields}
     <div class="flex-column justify-center mx-4">
         <Table>
+            <caption class="p-5 text-lg font-semibold text-left text-gray-900 bg-white dark:text-white dark:bg-gray-800">
+                {allowModify ? "Modify" : "Add"} A Hearing Screening
+                <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                    Values between -10 and 90 are accepted. If a value could not be recorded, type CNT. 
+                </p>
+            </caption>
             <TableHead>
                 <TableHeadCell></TableHeadCell>
                 <TableHeadCell>500 Hz</TableHeadCell>
@@ -302,23 +319,23 @@
             <TableBody tableBodyClass="divide-y">
             <TableBodyRow>
                 <TableBodyCell>Left Ear</TableBodyCell>
-                <TableBodyCell><Input bind:value={leftFrequencies.hz500} color={assignColorBasedOnValue(leftFrequencies.hz500, lastPulledLeftFrequencies.hz500)} placeholder={lastPulledLeftFrequencies.hz500} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={leftFrequencies.hz1000} color={assignColorBasedOnValue(leftFrequencies.hz1000, lastPulledLeftFrequencies.hz1000)} placeholder={lastPulledLeftFrequencies.hz1000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={leftFrequencies.hz2000} color={assignColorBasedOnValue(leftFrequencies.hz2000, lastPulledLeftFrequencies.hz2000)} placeholder={lastPulledLeftFrequencies.hz2000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={leftFrequencies.hz3000} color={assignColorBasedOnValue(leftFrequencies.hz3000, lastPulledLeftFrequencies.hz3000)} placeholder={lastPulledLeftFrequencies.hz3000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={leftFrequencies.hz4000} color={assignColorBasedOnValue(leftFrequencies.hz4000, lastPulledLeftFrequencies.hz4000)} placeholder={lastPulledLeftFrequencies.hz4000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={leftFrequencies.hz6000} color={assignColorBasedOnValue(leftFrequencies.hz6000, lastPulledLeftFrequencies.hz6000)} placeholder={lastPulledLeftFrequencies.hz6000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={leftFrequencies.hz8000} color={assignColorBasedOnValue(leftFrequencies.hz8000, lastPulledLeftFrequencies.hz8000)} placeholder={lastPulledLeftFrequencies.hz8000} required /></TableBodyCell>
+                <TableBodyCell><Input bind:value={leftFrequencies.hz500} color={assignColorBasedOnValue(leftFrequencies.hz500, lastPulledLeftFrequencies.hz500)} placeholder={lastPulledLeftFrequencies.hz500} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={leftFrequencies.hz1000} color={assignColorBasedOnValue(leftFrequencies.hz1000, lastPulledLeftFrequencies.hz1000)} placeholder={lastPulledLeftFrequencies.hz1000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={leftFrequencies.hz2000} color={assignColorBasedOnValue(leftFrequencies.hz2000, lastPulledLeftFrequencies.hz2000)} placeholder={lastPulledLeftFrequencies.hz2000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={leftFrequencies.hz3000} color={assignColorBasedOnValue(leftFrequencies.hz3000, lastPulledLeftFrequencies.hz3000)} placeholder={lastPulledLeftFrequencies.hz3000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={leftFrequencies.hz4000} color={assignColorBasedOnValue(leftFrequencies.hz4000, lastPulledLeftFrequencies.hz4000)} placeholder={lastPulledLeftFrequencies.hz4000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={leftFrequencies.hz6000} color={assignColorBasedOnValue(leftFrequencies.hz6000, lastPulledLeftFrequencies.hz6000)} placeholder={lastPulledLeftFrequencies.hz6000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={leftFrequencies.hz8000} color={assignColorBasedOnValue(leftFrequencies.hz8000, lastPulledLeftFrequencies.hz8000)} placeholder={lastPulledLeftFrequencies.hz8000} required disabled={completed} /></TableBodyCell>
             </TableBodyRow>
             <TableBodyRow>
                 <TableBodyCell>Right Ear</TableBodyCell>
-                <TableBodyCell><Input bind:value={rightFrequencies.hz500} color={assignColorBasedOnValue(rightFrequencies.hz500, lastPulledRightFrequencies.hz500)} placeholder={lastPulledRightFrequencies.hz500} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={rightFrequencies.hz1000} color={assignColorBasedOnValue(rightFrequencies.hz1000, lastPulledRightFrequencies.hz1000)} placeholder={lastPulledRightFrequencies.hz1000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={rightFrequencies.hz2000} color={assignColorBasedOnValue(rightFrequencies.hz2000, lastPulledRightFrequencies.hz2000)} placeholder={lastPulledRightFrequencies.hz2000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={rightFrequencies.hz3000} color={assignColorBasedOnValue(rightFrequencies.hz3000, lastPulledRightFrequencies.hz3000)} placeholder={lastPulledRightFrequencies.hz3000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={rightFrequencies.hz4000} color={assignColorBasedOnValue(rightFrequencies.hz4000, lastPulledRightFrequencies.hz4000)} placeholder={lastPulledRightFrequencies.hz4000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={rightFrequencies.hz6000} color={assignColorBasedOnValue(rightFrequencies.hz6000, lastPulledRightFrequencies.hz6000)} placeholder={lastPulledRightFrequencies.hz6000} required /></TableBodyCell>
-                <TableBodyCell><Input bind:value={rightFrequencies.hz8000} color={assignColorBasedOnValue(rightFrequencies.hz8000, lastPulledRightFrequencies.hz8000)} placeholder={lastPulledRightFrequencies.hz8000} required /></TableBodyCell>
+                <TableBodyCell><Input bind:value={rightFrequencies.hz500} color={assignColorBasedOnValue(rightFrequencies.hz500, lastPulledRightFrequencies.hz500)} placeholder={lastPulledRightFrequencies.hz500} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={rightFrequencies.hz1000} color={assignColorBasedOnValue(rightFrequencies.hz1000, lastPulledRightFrequencies.hz1000)} placeholder={lastPulledRightFrequencies.hz1000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={rightFrequencies.hz2000} color={assignColorBasedOnValue(rightFrequencies.hz2000, lastPulledRightFrequencies.hz2000)} placeholder={lastPulledRightFrequencies.hz2000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={rightFrequencies.hz3000} color={assignColorBasedOnValue(rightFrequencies.hz3000, lastPulledRightFrequencies.hz3000)} placeholder={lastPulledRightFrequencies.hz3000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={rightFrequencies.hz4000} color={assignColorBasedOnValue(rightFrequencies.hz4000, lastPulledRightFrequencies.hz4000)} placeholder={lastPulledRightFrequencies.hz4000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={rightFrequencies.hz6000} color={assignColorBasedOnValue(rightFrequencies.hz6000, lastPulledRightFrequencies.hz6000)} placeholder={lastPulledRightFrequencies.hz6000} required disabled={completed} /></TableBodyCell>
+                <TableBodyCell><Input bind:value={rightFrequencies.hz8000} color={assignColorBasedOnValue(rightFrequencies.hz8000, lastPulledRightFrequencies.hz8000)} placeholder={lastPulledRightFrequencies.hz8000} required disabled={completed} /></TableBodyCell>
             </TableBodyRow>
             </TableBody>
         </Table>
