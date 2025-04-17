@@ -11,9 +11,9 @@ import { type HearingDataOneEar, type HearingScreening, PersonSex, UserHearingSc
  * @deprecated use getEmployeeInfosFromDataBase instead
 **/
 export async function getEmployeesFromDatabase(): Promise<Employee[]> {
-    const employeeTable = await sql`SELECT * FROM Employee;`;
+    const query = await sql`SELECT * FROM Employee;`;
 
-    const employees: Employee[] = employeeTable.rows.map(row => ({
+    const employees: Employee[] = query.rows.map(row => ({
         activeStatus: row.last_active,
         employeeID: row.employee_id,
         firstName: row.first_name,
@@ -27,22 +27,22 @@ export async function getEmployeesFromDatabase(): Promise<Employee[]> {
 }
 
 export async function insertEmployeeIntoDatabase(firstName: string, lastName: string, email: string, dateOfBirth: string, sex: string, lastActive: string | null) {
-    const result = await sql`
+    const query = await sql`
         INSERT INTO Employee (first_name, last_name, email, date_of_birth, sex, last_active)
         VALUES (${firstName}, ${lastName}, ${email}, ${dateOfBirth}, ${sex}, ${lastActive});
     `;
 
-    if (result.rowCount === 0) {
+    if (query.rowCount === 0) {
         throw new DatabaseError("Unable to insert rows into database.");
     }
 }
 
 export async function checkEmployeeExists(employeeID: string) {
-    const employeeCheck = await sql`
+    const query = await sql`
         SELECT employee_id FROM Employee WHERE employee_id = ${employeeID};
     `;
 
-    if (employeeCheck.rows.length === 0) {
+    if (query.rows.length === 0) {
         throw new DatabaseError("Employee not found");
     }
 }
@@ -189,8 +189,20 @@ export async function extractEmployeeHearingScreeningFromDatabase(employeeID: st
     return screening;
 }
 
+export async function checkEmployeeHearingScreeningFromDatabase(employeeID: string, year: string): Promise<boolean> {
+    // this query will return 0 or 2 rows (left and right ears)
+    const query = await sql`
+        SELECT d.Hz_500, d.Hz_1000, d.Hz_2000, d.Hz_3000, d.Hz_4000, d.Hz_6000, d.Hz_8000, h.ear
+        FROM Has h
+        JOIN Data d ON h.data_id = d.data_id
+        WHERE h.employee_id = ${employeeID} AND h.year = ${year};
+    `;
+
+    return query.rows.length !== 0;
+}
+
 export async function extractEmployeeHearingScreeningsFromDatabase(employeeID: string): Promise<HearingScreening[]> {
-    const dataQuery = await sql`
+    const query = await sql`
         SELECT d.Hz_500, d.Hz_1000, d.Hz_2000, d.Hz_3000, d.Hz_4000, d.Hz_6000, d.Hz_8000, h.ear, h.year
         FROM Has h
         JOIN Data d ON h.data_id = d.data_id
@@ -200,14 +212,14 @@ export async function extractEmployeeHearingScreeningsFromDatabase(employeeID: s
 
     // may not necessarily be an error
     // let handlers determine if it's a problem by checking the array length
-    if (dataQuery.rows.length === 0) {
+    if (query.rows.length === 0) {
         console.log(`No hearing data found for employee with ID ${employeeID}. This may be fine if the employee has no submitted audiograms.`);
         return [];
     }
 
     const hearingDataByYear: Record<number, { leftEar: (number | null)[], rightEar: (number | null)[] }> = {};
 
-    dataQuery.rows.forEach(row => {
+    query.rows.forEach(row => {
         // Loop through each row of the query result to group data by year and
         // store frequency thresholds for each ear separately
         const yearKey = Number(row.year);
@@ -286,6 +298,150 @@ export async function extractEmployeeHearingHistoryFromDatabase(employeeInfo: Em
     return history;
 }
 
+export async function addHearingScreeningToDatabase(employeeInfo: EmployeeInfo, screening: HearingScreening): Promise<void> {
+    // **Validation 1: Ensure the year is within employment period**
+    const currentYear = new Date().getFullYear();
+
+    if (employeeInfo.lastActive === null) {
+        // Employee is still active
+        if (screening.year > currentYear || screening.year < 1957) {
+            throw new Error("Cannot add hearing data for invalid year range.");
+        }
+    }
+    else {
+        // Employee is inactive
+        const lastActiveYear = new Date(employeeInfo.lastActive).getFullYear();
+        if (screening.year > lastActiveYear || screening.year < 1957) {
+            throw new Error(`Cannot add hearing data after employment ended in ${lastActiveYear}.`);
+        }
+    }
+
+    // **Validation 2: Ensure only one set of hearing data per year**
+    const existingDataQuery = await sql`
+        SELECT 1 FROM Has 
+        WHERE employee_id = ${employeeInfo.id} AND year = ${screening.year}
+        LIMIT 1;
+    `;
+
+    if (existingDataQuery.rows.length > 0)
+        throw new DatabaseError(`Hearing data for the year ${screening.year} already exists for this employee.`);
+
+    // Insert left ear data into Data table
+    const leftEarDataQuery = await sql`
+        INSERT INTO Data (Hz_500, Hz_1000, Hz_2000, Hz_3000, Hz_4000, Hz_6000, Hz_8000)
+        VALUES (${screening.leftEar.hz500}, ${screening.leftEar.hz1000}, 
+                ${screening.leftEar.hz2000}, ${screening.leftEar.hz3000}, 
+                ${screening.leftEar.hz4000}, ${screening.leftEar.hz6000}, 
+                ${screening.leftEar.hz8000})
+        RETURNING data_id;
+    `;
+
+    const leftEarDataID = leftEarDataQuery.rows[0].data_id;
+
+    // Insert right ear data into Data table
+    const rightEarDataQuery = await sql`
+        INSERT INTO Data (Hz_500, Hz_1000, Hz_2000, Hz_3000, Hz_4000, Hz_6000, Hz_8000)
+        VALUES (${screening.rightEar.hz500}, ${screening.rightEar.hz1000}, 
+                ${screening.rightEar.hz2000}, ${screening.rightEar.hz3000}, 
+                ${screening.rightEar.hz4000}, ${screening.rightEar.hz6000}, 
+                ${screening.rightEar.hz8000})
+        RETURNING data_id;
+    `;
+
+    const rightEarDataID = rightEarDataQuery.rows[0].data_id;
+
+    // Insert into Has table for right ear
+    await sql`
+        INSERT INTO Has (employee_id, data_id, year, ear)
+        VALUES (${employeeInfo.id}, ${rightEarDataID}, ${screening.year}, 'right');
+    `;
+
+    // Insert into Has table for left ear
+    await sql`
+        INSERT INTO Has (employee_id, data_id, year, ear)
+        VALUES (${employeeInfo.id}, ${leftEarDataID}, ${screening.year}, 'left');
+    `;
+}
+
+export async function addHearingScreeningModifiedToDatabase(employeeInfo: EmployeeInfo, screening: HearingScreening): Promise<void> {
+    // check if there is existing data for the left and right ears
+    const existingLeftData = await sql`
+        SELECT d.data_id FROM Data d
+        JOIN Has h ON d.data_id = h.data_id
+        WHERE h.employee_id = ${employeeInfo.id} AND h.year = ${screening.year} AND h.ear = 'left';
+    `;
+
+    const existingRightData = await sql`
+        SELECT d.data_id FROM Data d
+        JOIN Has h ON d.data_id = h.data_id
+        WHERE h.employee_id = ${employeeInfo.id} AND h.year = ${screening.year} AND h.ear = 'right';
+    `;
+
+    // either insert or update left ear data
+    if (existingLeftData.rows.length > 0) {
+        // Update left ear data
+        const leftDataId = existingLeftData.rows[0].data_id;
+        await sql`
+            UPDATE Data
+            SET Hz_500 = ${screening.leftEar.hz500}, Hz_1000 = ${screening.leftEar.hz1000}, 
+                Hz_2000 = ${screening.leftEar.hz2000}, Hz_3000 = ${screening.leftEar.hz3000}, 
+                Hz_4000 = ${screening.leftEar.hz4000}, Hz_6000 = ${screening.leftEar.hz6000}, 
+                Hz_8000 = ${screening.leftEar.hz8000}
+            WHERE data_id = ${leftDataId};
+        `;
+    }
+    else {
+        // Insert new left ear data
+        const leftEarDataResult = await sql`
+            INSERT INTO Data (Hz_500, Hz_1000, Hz_2000, Hz_3000, Hz_4000, Hz_6000, Hz_8000)
+            VALUES (${screening.leftEar.hz500}, ${screening.leftEar.hz1000},
+                    ${screening.leftEar.hz2000}, ${screening.leftEar.hz3000},
+                    ${screening.leftEar.hz4000}, ${screening.leftEar.hz6000},
+                    ${screening.leftEar.hz8000})
+            RETURNING data_id;
+        `;
+        const leftEarDataId = leftEarDataResult.rows[0].data_id;
+
+        // Insert into Has table
+        await sql`
+            INSERT INTO Has (employee_id, data_id, year, ear)
+            VALUES (${employeeInfo.id}, ${leftEarDataId}, ${screening.year}, 'left');
+        `;
+    }
+
+    // either insert or update right ear data
+    if (existingRightData.rows.length > 0) {
+        // Update right ear data
+        const rightDataId = existingRightData.rows[0].data_id;
+        await sql`
+            UPDATE Data
+            SET Hz_500 = ${screening.rightEar.hz500}, Hz_1000 = ${screening.rightEar.hz1000}, 
+                Hz_2000 = ${screening.rightEar.hz2000}, Hz_3000 = ${screening.rightEar.hz3000}, 
+                Hz_4000 = ${screening.rightEar.hz4000}, Hz_6000 = ${screening.rightEar.hz6000}, 
+                Hz_8000 = ${screening.rightEar.hz8000}
+            WHERE data_id = ${rightDataId};
+        `;
+    }
+    else {
+        // Insert new right ear data
+        const rightEarDataResult = await sql`
+            INSERT INTO Data (Hz_500, Hz_1000, Hz_2000, Hz_3000, Hz_4000, Hz_6000, Hz_8000)
+            VALUES (${screening.rightEar.hz500}, ${screening.rightEar.hz1000},
+                    ${screening.rightEar.hz2000}, ${screening.rightEar.hz3000},
+                    ${screening.rightEar.hz4000}, ${screening.rightEar.hz6000},
+                    ${screening.rightEar.hz8000})
+            RETURNING data_id;
+        `;
+        const rightEarDataId = rightEarDataResult.rows[0].data_id;
+
+        // Insert into Has table
+        await sql`
+            INSERT INTO Has (employee_id, data_id, year, ear)
+            VALUES (${employeeInfo.id}, ${rightEarDataId}, ${screening.year}, 'right');
+        `;
+    }
+}
+
 // ADMINS
 
 export async function isEmailAnAdmin(email: string): Promise<boolean> {
@@ -313,25 +469,25 @@ export async function getAdminsFromDatabase(): Promise<Admin[]> {
 }
 
 export async function modifyAdminPermissionsFromDatabase(adminID: string, isOP: boolean) {
-    const result = await sql`UPDATE Administrator SET isop = ${isOP} WHERE id=${adminID};`
+    const query = await sql`UPDATE Administrator SET isop = ${isOP} WHERE id=${adminID};`
     
-    if (result.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
+    if (query.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
 }
 
 export async function modifyAdminNameFromDatabase(adminID: string, newName: string) {
-    const result = await sql`UPDATE Administrator SET name = ${newName} WHERE id=${adminID};`
+    const query = await sql`UPDATE Administrator SET name = ${newName} WHERE id=${adminID};`
     
-    if (result.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
+    if (query.rowCount === 0) throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
 }
 
 export async function deleteAdminsFromDatabase(adminIDs: string[]) {
     const formattedAdminIDs = `{"${adminIDs.join('","')}"}`;
 
-    const result = await sql`
+    const query = await sql`
         DELETE FROM Administrator
         WHERE id = ANY(${formattedAdminIDs});
     `;
 
     // Check if any rows were deleted
-    if (result.rowCount === 0)  throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
+    if (query.rowCount === 0)  throw new DatabaseError("No rows were updated. Admin ID might be incorrect.");
 }

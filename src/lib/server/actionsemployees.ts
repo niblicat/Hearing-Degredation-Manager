@@ -5,7 +5,7 @@ import { sql } from '@vercel/postgres';
 import { error } from '@sveltejs/kit';
 import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, PersonSex } from "$lib/interpret";
 import { DatabaseError, type EmployeeInfo, type HearingHistory } from '$lib/MyTypes';
-import { checkEmployeeExists, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase, extractEmployeeInfosFromDatabase } from './databasefunctions';
+import { checkEmployeeExists, checkEmployeeHearingScreeningFromDatabase, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase, extractEmployeeInfosFromDatabase } from './databasefunctions';
 
 export async function extractEmployeeInfo(request: Request) {
     const formData = await request.formData();
@@ -155,11 +155,11 @@ export async function modifyEmployeeSex(request: Request) {
         // Check if employee exists in database
         const employeeIDQuery = await sql`SELECT employee_id FROM Employee WHERE employee_id = ${employeeID};`;
         if (employeeIDQuery.rows.length === 0) throw new DatabaseError("Employee with given ID does not exist in database.");
-            await sql`
-                UPDATE Employee 
-                SET sex = ${newSex}
-                WHERE employee_id = ${employeeID};
-            `;
+        await sql`
+            UPDATE Employee 
+            SET sex = ${newSex}
+            WHERE employee_id = ${employeeID};
+        `;
     } 
     catch (e: any) {
         const errorMessage = "Failed to update employee's sex: " 
@@ -182,7 +182,28 @@ export async function extractEmployeeHearingScreening(request: Request) {
         return JSON.stringify(screening);
     } 
     catch (e: any) {
-        const errorMessage = "Error in database when extracting employee hearing screenings: " 
+        const errorMessage = "Error in database when extracting employee hearing screening: " 
+            + (e.message ?? "no error message provided by server");
+        console.error(errorMessage);
+        error(404, { message: errorMessage });
+    }
+}
+
+// Returns a boolean of if a hearing screening exists for the provided form data.
+export async function checkEmployeeHearingScreening(request: Request) {
+    const formData = await request.formData();
+    const employeeID = formData.get('employeeID') as string;
+    const year = formData.get('year') as string;
+    
+    try {
+        await checkEmployeeExists(employeeID); // will throw error if employee is not found
+        // Get employee hearing screenings from database
+        const exists: boolean = await checkEmployeeHearingScreeningFromDatabase(employeeID, year);
+
+        return JSON.stringify(exists);
+    } 
+    catch (e: any) {
+        const errorMessage = "Error in database when extracting employee hearing screening: " 
             + (e.message ?? "no error message provided by server");
         console.error(errorMessage);
         error(404, { message: errorMessage });

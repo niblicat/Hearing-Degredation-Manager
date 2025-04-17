@@ -77,6 +77,27 @@ export async function getEmployeeHearingScreening(employeeID: string, year: stri
     return result;
 }
 
+export async function checkEmployeeHearingScreening(employeeID: string, year: string): Promise<boolean> {
+    // create form data and populate it with the necessary fields
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('year', year);
+
+    const response = await fetch('/dashboard?/checkEmployeeHearingScreening', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to extract employee hearing screening (missing message).");
+
+    // parse the data in the response and return it
+    const result: boolean = JSON.parse(JSON.parse(serverResponse["data"]));
+    return result;
+}
+
 // SETTERS
 
 export async function updateEmployeeName(employeeID: string, newFirstName: string, newLastName: string): Promise<void> {
@@ -160,6 +181,23 @@ export async function updateEmploymentStatus(employeeID: string, lastActiveDate:
     if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to modify employee status (missing message).");
 }
 
+export async function addHearingScreening(employeeID: string, screening: HearingScreening, doModify: boolean): Promise<void> {
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('screening', JSON.stringify(screening));
+    formData.append('doModify', doModify.toString());
+
+    const response = await fetch('/dashboard?/addHearingScreening', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to add hearing screening data (missing message).");
+}
+
 export async function updateAdminPermissions(adminID: string, isOperator: boolean): Promise<void> {
     const formData = new FormData();
     formData.append('adminID', adminID);
@@ -206,4 +244,39 @@ export async function removeAdmins(adminIDs: string[]): Promise<void> {
     const serverResponse = await response.json();
 
     if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to remove admins (missing message).");
+}
+
+export async function createEmployee(firstName: string, lastName: string, email: string, dateOfBirth: string, sex: PersonSex, lastActive: string = ""): Promise<void> {
+    const validDate = /^\d{4}-\d{2}-\d{2}$/;
+    if (!lastActive.match(validDate) && lastActive !== "") {
+        // only throw error if lastActive is not empty and invalid
+        throw new Error("The date of last activity is invalid!");
+    }
+
+    if (!dateOfBirth.match(validDate)) {
+        throw new Error("The date of birth is invalid");
+    }
+
+    // create form data and populate it with the necessary fields
+    const formData = new FormData();
+    formData.append('firstName', firstName);
+    formData.append('lastName', lastName);
+    formData.append('email', email);
+    formData.append('dateOfBirth', dateOfBirth);
+    formData.append('sex', PersonSex[sex].toLowerCase());
+    formData.append('isInactive', (lastActive === "").toString());
+
+    if (lastActive != "") {
+        formData.append('lastActive', lastActive);
+    }
+
+    const response = await fetch('/dashboard?/addEmployee', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to add employee (missing message).");
 }

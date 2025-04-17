@@ -2,6 +2,7 @@
 // Contains server functions pertaining to adding employees
 
 import { insertEmployeeIntoDatabase } from '$lib/server/databasefunctions';
+import { error } from '@sveltejs/kit';
 
 export async function addEmployee(request: Request) {
     const formData = await request.formData();
@@ -17,14 +18,10 @@ export async function addEmployee(request: Request) {
         // Insert new employee into the database
         await insertEmployeeIntoDatabase(firstName, lastName, email, dateOfBirth, sex, lastActive);
     } 
-    catch (error: any) {
+    catch (e: any) {
         const errorMessage = "Error in database when adding employee: " 
-            + (error.message ?? "no error message provided by server");
+            + (e.message ?? "no error message provided by server");
         console.error(errorMessage);
-        return JSON.stringify({ success: false, message: errorMessage });
+        error(404, { message: errorMessage });
     }
-
-    return JSON.stringify({
-        success: true,
-    });
 }
