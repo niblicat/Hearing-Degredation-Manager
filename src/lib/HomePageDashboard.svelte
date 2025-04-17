@@ -1,6 +1,6 @@
 <script>
-    import Information from "./Information.svelte";
-    import PageTitle from "./PageTitle.svelte";
+    import Information from "$lib/Information/Information.svelte";
+    import PageTitle from "$lib/Miscellaneous/PageTitle.svelte";
 </script>
 
 <PageTitle>

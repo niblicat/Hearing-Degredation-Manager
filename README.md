@@ -121,7 +121,7 @@ If you want to make something a bit more advanced, you can modify the code of [H
 This is the page you see after logging in!
 
 #### Information
-To extend the information shown on the dashboard homepage, modify the contents of [the information JSON file](src/lib/information.json).
+To extend the information shown on the dashboard homepage, modify the contents of [the information JSON file](src/lib/Information/information.json).
 
 #### Advanced Dashboard Homepage
 If you want to do something different with the dashboard homepage, you can modify the code of [HomePageDashboard.svelte](src/lib/HomePageDashboard.svelte).

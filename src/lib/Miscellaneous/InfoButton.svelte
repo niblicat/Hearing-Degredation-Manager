@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Button } from "flowbite-svelte";
-    import { PageCategory } from "./MyTypes";
+    import { PageCategory } from "../MyTypes";
     import { InfoCircleSolid } from "flowbite-svelte-icons";
     import { Tooltip } from "flowbite-svelte"
 

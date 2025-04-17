@@ -1,11 +1,11 @@
 <script lang="ts">
     import { ButtonGroup, Button, Footer, Spinner, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
-    import type { Employee, HearingHistory } from './MyTypes';
-    import { AnomalyStatus } from "./interpret";
-    import PageTitle from './PageTitle.svelte';
-    import ErrorMessage from './ErrorMessage.svelte';
-    import { calculateSTSClientSide } from './utility';
-	import { getAllEmployeeHearingHistories } from './client/postrequests';
+    import type { Employee, HearingHistory } from '../MyTypes';
+    import { AnomalyStatus } from "../interpret";
+    import PageTitle from '../Miscellaneous/PageTitle.svelte';
+    import ErrorMessage from '../Miscellaneous/ErrorMessage.svelte';
+    import { calculateSTSClientSide } from '../utility';
+	import { getAllEmployeeHearingHistories } from '../client/postrequests';
 
     interface Props {
         employees: Array<Employee>;
