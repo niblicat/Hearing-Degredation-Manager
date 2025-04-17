@@ -235,6 +235,8 @@
     // Function that updates the graph data from cached data
     function updateHearingDataDisplay(year: string): void {
         try {
+            console.log("updateHearingDataDisplay called with year:", year);
+            
             // Clear previous data
             resetData();
 
@@ -251,7 +253,7 @@
             // Get baseline year data for left and right ears
             const leftBaselineYear = selectedYearReport.leftBaselineYear.toString();
             const rightBaselineYear = selectedYearReport.rightBaselineYear.toString();
-            
+
             // Get current year data
             const currentYearData = allYearScreenings[year];
             
@@ -260,7 +262,7 @@
                 return;
             }
 
-            // Extract data for the graphs
+            // Extract data for the graphs - NO FILTERING (important!)
             if (leftBaselineYear && allYearScreenings[leftBaselineYear]?.left) {
                 leftBaselineHearingData = [
                     allYearScreenings[leftBaselineYear].left.hz500,
@@ -270,7 +272,7 @@
                     allYearScreenings[leftBaselineYear].left.hz4000,
                     allYearScreenings[leftBaselineYear].left.hz6000,
                     allYearScreenings[leftBaselineYear].left.hz8000,
-                ].filter(value => value !== null);
+                ];
             }
 
             if (rightBaselineYear && allYearScreenings[rightBaselineYear]?.right) {
@@ -282,7 +284,7 @@
                     allYearScreenings[rightBaselineYear].right.hz4000,
                     allYearScreenings[rightBaselineYear].right.hz6000,
                     allYearScreenings[rightBaselineYear].right.hz8000,
-                ].filter(value => value !== null);
+                ];
             }
 
             // Current year data
@@ -295,7 +297,7 @@
                     currentYearData.left.hz4000,
                     currentYearData.left.hz6000,
                     currentYearData.left.hz8000,
-                ].filter(value => value !== null);
+                ];
             }
 
             if (currentYearData.right) {
@@ -307,8 +309,16 @@
                     currentYearData.right.hz4000,
                     currentYearData.right.hz6000,
                     currentYearData.right.hz8000,
-                ].filter(value => value !== null);
+                ];
             }
+            
+            // Log final data arrays
+            console.log("Final data arrays:", {
+                leftBaselineHearingData,
+                rightBaselineHearingData,
+                leftNewHearingData,
+                rightNewHearingData
+            });
         }
         catch (error) {
             console.error('Error updating hearing data display:', error);

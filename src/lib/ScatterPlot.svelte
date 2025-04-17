@@ -6,18 +6,23 @@
 
     
     interface Props {
-        // Export properties if needed
-        baselineHearingData: number[];
-        newHearingData: number[];
+        rightBaselineData: Array<number | string>;
+        rightNewData: Array<number | string>;
+        leftBaselineData: Array<number | string>;
+        leftNewData: Array<number | string>;
         plotTitle: string;
-        labels: string[];
+        showRight?: boolean;
+        showLeft?: boolean;
     }
 
     let {
-        baselineHearingData,
-        newHearingData,
-        plotTitle,
-        labels
+        rightBaselineData = [],
+        rightNewData = [],
+        leftBaselineData = [],
+        leftNewData = [],
+        plotTitle = "Audiogram",
+        showRight = true,
+        showLeft = true
     }: Props = $props();
 
     let chart: any;
@@ -25,12 +30,6 @@
     // Custom tick values
     const customTicksX = [500, 1000, 2000, 3000, 4000, 6000, 8000];
     const customTicksY = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0, -10];
-
-    // Add padding for x-axis to ensure points are fully visible
-    const xAxisPadding = {
-        min: 300,  // Padding before 500 Hz
-        max: 8500  // Padding after 8000 Hz
-    };
 
     function getPointStyle(label: string) {
         if (label.includes("Right Baseline")) return "rect";
@@ -53,65 +52,141 @@
         if (label.includes("Left New")) return 'rgba(54, 162, 235, 1)';
     }
 
+    // Helper function to convert "CNT" to null but preserve array structure
+    function cleanHearingData(data: Array<any>): Array<number | null> {
+        // Ensure we have exactly 7 elements (for each frequency)
+        const result = new Array(7).fill(null);
+        
+        for (let i = 0; i < 7; i++) {
+            const val = i < data.length ? data[i] : null;
+            if (val === "CNT" || val === null || val === undefined || val === "") {
+                result[i] = null;
+            } else {
+                // Make sure we're returning a number
+                const numVal = Number(val);
+                result[i] = isNaN(numVal) ? null : numVal;
+            }
+        }
+        
+        return result;
+    }
+
+    // Create data points maintaining positions even for null values
+    function createDataPoints(data: Array<number | null>): Array<{x: number, y: number | null}> {
+        return customTicksX.map((freq, i) => ({
+            x: i,
+            y: i < data.length ? data[i] : null
+        }));
+    }
+
+    // Function to build datasets based on which ears to show
+    function buildDatasets() {
+        const datasets = [];
+        
+        if (showRight) {
+            // Process Right Baseline data
+            const cleanedRightBaseline = cleanHearingData(rightBaselineData);
+            console.log("Cleaned Right Baseline:", cleanedRightBaseline);
+            
+            // Right Baseline dataset
+            datasets.push({
+                label: 'Right Baseline',
+                data: createDataPoints(cleanedRightBaseline),
+                pointStyle: getPointStyle('Right Baseline'),
+                pointRadius: getPointRadius('Right Baseline'),
+                pointHoverRadius: getPointRadius('Right Baseline'),
+                backgroundColor: getColor('Right Baseline'),
+                borderColor: getColor('Right Baseline'),
+                borderWidth: 2,
+                showLine: true,
+                fill: false,
+                lineTension: 0,
+                spanGaps: true, // Connect points even with gaps
+            });
+            
+            // Process Right New data
+            const cleanedRightNew = cleanHearingData(rightNewData);
+            console.log("Cleaned Right New:", cleanedRightNew);
+            
+            // Right New dataset
+            datasets.push({
+                label: 'Right New',
+                data: createDataPoints(cleanedRightNew),
+                pointStyle: getPointStyle('Right New'),
+                pointRadius: getPointRadius('Right New'),
+                pointHoverRadius: getPointRadius('Right New'),
+                backgroundColor: getColor('Right New'),
+                borderColor: getColor('Right New'),
+                borderWidth: 2,
+                showLine: true,
+                fill: false,
+                lineTension: 0,
+                spanGaps: true, // Connect points even with gaps
+            });
+        }
+        
+        if (showLeft) {
+            // Process Left Baseline data
+            const cleanedLeftBaseline = cleanHearingData(leftBaselineData);
+            console.log("Cleaned Left Baseline:", cleanedLeftBaseline);
+            
+            // Left Baseline dataset
+            datasets.push({
+                label: 'Left Baseline',
+                data: createDataPoints(cleanedLeftBaseline),
+                pointStyle: getPointStyle('Left Baseline'),
+                pointRadius: getPointRadius('Left Baseline'),
+                pointHoverRadius: getPointRadius('Left Baseline'),
+                backgroundColor: getColor('Left Baseline'),
+                borderColor: getColor('Left Baseline'),
+                borderWidth: 2,
+                showLine: true,
+                fill: false,
+                lineTension: 0,
+                spanGaps: true, // Connect points even with gaps
+            });
+            
+            // Process Left New data
+            const cleanedLeftNew = cleanHearingData(leftNewData);
+            console.log("Cleaned Left New:", cleanedLeftNew);
+            
+            // Left New dataset
+            datasets.push({
+                label: 'Left New',
+                data: createDataPoints(cleanedLeftNew),
+                pointStyle: getPointStyle('Left New'),
+                pointRadius: getPointRadius('Left New'),
+                pointHoverRadius: getPointRadius('Left New'),
+                backgroundColor: getColor('Left New'),
+                borderColor: getColor('Left New'),
+                borderWidth: 2,
+                showLine: true,
+                fill: false,
+                lineTension: 0,
+                spanGaps: true, // Connect points even with gaps
+            });
+        }
+        
+        return datasets;
+    }
+
     onMount(() => {
-        Chart.register(...registerables); // Register all necessary components
+        Chart.register(...registerables);
 
         const ctx = document.getElementById("scatterPlot") as HTMLCanvasElement;
+        
+        // Log the data being used to create the chart
+        console.log("Chart data:", {
+            rightBaselineData,
+            rightNewData,
+            leftBaselineData,
+            leftNewData
+        });
+        
         chart = new Chart(ctx, {
             type: "scatter",
             data: {
-                datasets: [{
-                        label: labels[0],
-                        data: customTicksX.map((p, i) => ({ x: p, y: baselineHearingData[i] })),
-                        pointStyle: getPointStyle(labels[0]),
-                        pointRadius: getPointRadius(labels[0]),
-                        pointHoverRadius: getPointRadius(labels[0]),  // Match hover radius with normal radius
-                        backgroundColor: getColor(labels[0]),
-                        borderColor: getColor(labels[0]),
-                        borderWidth: 2,
-                        showLine: true,
-                        fill: false,
-                        lineTension: 0
-                    },
-                    {
-                        label: labels[1],
-                        data: customTicksX.map((p, i) => ({ x: p, y: newHearingData[i] })),
-                        pointStyle: getPointStyle(labels[1]),
-                        pointRadius: getPointRadius(labels[1]),
-                        pointHoverRadius: getPointRadius(labels[1]),  // Match hover radius with normal radius
-                        backgroundColor: getColor(labels[1]),
-                        borderColor: getColor(labels[1]),
-                        borderWidth: 2,
-                        showLine: true,
-                        fill: false,
-                        lineTension: 0
-                    },
-                    labels.length > 2 && {
-                        label: labels[2],
-                        data: customTicksX.map((p, i) => ({ x: p, y: baselineHearingData[baselineHearingData.length / 2 + i] })),
-                        pointStyle: getPointStyle(labels[2]),
-                        pointRadius: getPointRadius(labels[2]),
-                        pointHoverRadius: getPointRadius(labels[2]),  // Match hover radius with normal radius
-                        backgroundColor: getColor(labels[2]),
-                        borderColor: getColor(labels[2]),
-                        borderWidth: 2,
-                        showLine: true,
-                        fill: false,
-                        lineTension: 0
-                    },
-                    labels.length > 2 && {
-                        label: labels[3],
-                        data: customTicksX.map((p, i) => ({ x: p, y: newHearingData[newHearingData.length / 2 + i] })),
-                        pointStyle: getPointStyle(labels[3]),
-                        pointRadius: getPointRadius(labels[3]),
-                        pointHoverRadius: getPointRadius(labels[3]),  // Match hover radius with normal radius
-                        backgroundColor: getColor(labels[3]),
-                        borderColor: getColor(labels[3]),
-                        borderWidth: 2,
-                        showLine: true,
-                        fill: false,
-                        lineTension: 0
-                    }].filter(dataset => dataset !== false)
+                datasets: buildDatasets()
             },
             options: {
                 responsive: true,
@@ -121,7 +196,7 @@
                 },
                 scales: {
                     x: {
-                        type: 'linear',
+                        type: 'category',
                         position: 'bottom',
                         title: {
                             display: true,
@@ -130,21 +205,13 @@
                                 size: 16
                             }
                         },
-                        min: xAxisPadding.min,  // Use padding to ensure points at 500 Hz are fully visible
-                        max: xAxisPadding.max,  // Use padding to ensure points at 8000 Hz are fully visible
-                        ticks: {
-                            // Explicitly provide the values we want displayed
-                            callback: function(value) {
-                                // Only show tick labels for our specific frequencies
-                                if (customTicksX.includes(value as number)) {
-                                    return value;
-                                }
-                                return null;
-                            },
-                            // Explicitly set ticks to our custom values
-                            stepSize: 1,
-                            autoSkip: false,  // Ensure no ticks are skipped
-                        }
+                        labels: customTicksX.map(x => x.toString()),
+                    
+                        // Add padding on left and right sides
+                        afterFit: function(scaleInstance) {
+                            scaleInstance.paddingLeft = 15;
+                            scaleInstance.paddingRight = 15;
+                        },
                     },
                     y: {
                         title: {
@@ -180,6 +247,18 @@
                             font: {
                                 size: 14
                             }
+                        },
+                        // Only show legend items for displayed data
+                        labels: {
+                            filter: function(item, chart) {
+                                if (!showRight && (item.text === 'Right Baseline' || item.text === 'Right New')) {
+                                    return false;
+                                }
+                                if (!showLeft && (item.text === 'Left Baseline' || item.text === 'Left New')) {
+                                    return false;
+                                }
+                                return true;
+                            }
                         }
                     }
                 }
@@ -190,64 +269,14 @@
     // Reactive block to update chart data dynamically
     $effect(() => {
         if (chart) {
-            //update chart title
+            // Update chart title
             chart.options.plugins.title.text = plotTitle;
 
             // Dynamically update datasets
-            chart.data.datasets = [
-                {
-                    label: labels[0],
-                    data: customTicksX.map((p, i) => ({ x: p, y: baselineHearingData[i] })),
-                    pointStyle: getPointStyle(labels[0]),
-                    pointRadius: getPointRadius(labels[0]),
-                    pointHoverRadius: getPointRadius(labels[0]),
-                    backgroundColor: getColor(labels[0]),
-                    borderColor: getColor(labels[0]),
-                    borderWidth: 2,
-                    showLine: true,
-                    fill: false,
-                    lineTension: 0
-                },
-                {
-                    label: labels[1],
-                    data: customTicksX.map((p, i) => ({ x: p, y: newHearingData[i] })),
-                    pointStyle: getPointStyle(labels[1]),
-                    pointRadius: getPointRadius(labels[1]),
-                    pointHoverRadius: getPointRadius(labels[1]),
-                    backgroundColor: getColor(labels[1]),
-                    borderColor: getColor(labels[1]),
-                    borderWidth: 2,
-                    showLine: true,
-                    fill: false,
-                    lineTension: 0
-                },
-                labels.length > 2 && {
-                    label: labels[2],
-                    data: customTicksX.map((p, i) => ({ x: p, y: baselineHearingData[baselineHearingData.length / 2 + i] })),
-                    pointStyle: getPointStyle(labels[2]),
-                    pointRadius: getPointRadius(labels[2]),
-                    pointHoverRadius: getPointRadius(labels[2]),
-                    backgroundColor: getColor(labels[2]),
-                    borderColor: getColor(labels[2]),
-                    borderWidth: 2,
-                    showLine: true,
-                    fill: false,
-                    lineTension: 0
-                },
-                labels.length > 2 && {
-                    label: labels[3],
-                    data: customTicksX.map((p, i) => ({ x: p, y: newHearingData[newHearingData.length / 2 + i] })),
-                    pointStyle: getPointStyle(labels[3]),
-                    pointRadius: getPointRadius(labels[3]),
-                    pointHoverRadius: getPointRadius(labels[3]),
-                    backgroundColor: getColor(labels[3]),
-                    borderColor: getColor(labels[3]),
-                    borderWidth: 2,
-                    showLine: true,
-                    fill: false,
-                    lineTension: 0
-                },
-            ].filter(Boolean);
+            chart.data.datasets = buildDatasets();
+
+            // Log updated chart data
+            console.log("Updated chart datasets:", chart.data.datasets);
 
             chart.update(); // Ensure the chart reflects the updated data
         }
