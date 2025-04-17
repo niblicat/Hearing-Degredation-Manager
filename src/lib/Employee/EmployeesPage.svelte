@@ -38,7 +38,7 @@
     let selectedStatus = $state("No data selected");
     let STSstatusRight = $state("No data selected");
     let STSstatusLeft = $state("No data selected");
-    let selectedSex = $state("No data selected");
+    let selectedSex = $state("No data selected"); // ! is this supposed to be unused? shows undefined on load
 
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
@@ -523,20 +523,18 @@
 
 <!-- TITLE PAGE SECTION -->
 <div class="relative w-full">
-    <div class="flex flex-col items-center justify-center">
-        <PageTitle>
-            Employee Data Management
-            {#snippet caption()}
-                View employee information and data.
-            {/snippet}
-        </PageTitle>
-        <ErrorMessage class="mx-10 mb-4 w-full" {success} {errorMessage} />
-    </div>
+    <PageTitle>
+        Employee Data Management
+        {#snippet caption()}
+            View employee information and data.
+        {/snippet}
+    </PageTitle>
+    <ErrorMessage {success} {errorMessage} />
 </div>
 
 <div class="w-full px-4">
     <!-- DROPDOWN MENU SECTION BEGINS -->
-    <div class="mb-4 flex gap-4 md:ms-13">
+    <div class="mb-4 flex flex-wrap justify-center gap-4 md:justify-start">
         <Button class="cursor-pointer w-64 h-12" color="primary">
             {selectedEmployee.name}
             <ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" />
@@ -592,7 +590,7 @@
     <!-- DROPDOWN MENU SECTION ENDS -->
 
     <!-- INFORMATION DISPLAY SECTION BEGINS -->
-    <div class="mb-4">
+    <div class="pb-4">
         <EmployeeData 
             {selectedYear}
             {selectedEmployee}

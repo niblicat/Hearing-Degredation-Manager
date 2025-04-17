@@ -226,8 +226,8 @@
     async function downloadTemplate(): Promise<void> {
         loadingTemplate = true;
         const a = document.createElement('a');
-        a.href = "/SLHC Email Template.docx";
-        a.download = "SLHC Email Template.docx";
+        a.href = "/EmailTemplate.docx";
+        a.download = "EmailTemplate.docx";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -236,18 +236,16 @@
 </script>
 
 <div class="relative w-full">
-    <div class="flex flex-col items-center justify-center">
-        <PageTitle >
-            Mail Merge Management
-            {#snippet caption()}
-                Begin the process of mailing out status notifications.
-            {/snippet}
-        </PageTitle>
-        <ErrorMessage class="mx-10 mb-4 w-full" {success} {errorMessage} />
-    </div>
+    <PageTitle>
+        Mail Merge Management
+        {#snippet caption()}
+            Begin the process of mailing out status notifications.
+        {/snippet}
+    </PageTitle>
+    <ErrorMessage {success} {errorMessage} />
 </div>
 
-<div class="flex-column justify-center mx-4">
+<div class="flex-column justify-center mx-4 lg:mx-36">
     <Table hoverable={true} class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 z-20">
         <TableHead>
             <TableHeadCell>Name</TableHeadCell>
@@ -281,13 +279,13 @@
 </div>
 
 <Footer class="sticky bottom-0 w-full bg-white dark:bg-gray-900">
-    <hr class="my-6 border-gray-200 sm:mx-auto dark:border-gray-700 lg:my-8" />
-    <div class="sm:flex sm:items-center sm:justify-between">
-        <ButtonGroup class="*:!ring-primary-700" style="width:100%">
-            <Button disabled={loadingCSV} color="primary" class="w-[50%] {loadingCSV ? "" : "cursor-pointer"}" on:click={handleExport}>
+    <hr class="my-4 border-gray-200 sm:mx-auto dark:border-gray-700 lg:my-6" />
+    <div class="h-full">
+        <ButtonGroup class="w-full">
+            <Button size="lg" disabled={loadingCSV} color="primary" class="w-[50%] !rounded-none {loadingCSV ? "" : "cursor-pointer"}" on:click={handleExport}>
                 {#if loadingCSV}<Spinner class="me-3" size="4" color="white" />{/if}Export to CSV
             </Button>
-            <Button disabled={loadingTemplate} color="primary" class="w-[50%] {loadingTemplate ? "" : "cursor-pointer"}" on:click={downloadTemplate}>
+            <Button size="lg" disabled={loadingTemplate} color="primary" class="w-[50%] !rounded-none {loadingTemplate ? "" : "cursor-pointer"}" on:click={downloadTemplate}>
                 {#if loadingTemplate}<Spinner class="me-3" size="4" color="white" />{/if}Download Template
             </Button>
         </ButtonGroup>

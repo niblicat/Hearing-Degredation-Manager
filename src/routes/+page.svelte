@@ -42,7 +42,7 @@
 
 <CustomNavbar {user} sidebarOpen={sidebarOpen} toggle={toggleSidebar} />
 
-<main class="min-h-dvh w-full bg-gray-100 dark:bg-gray-900 pt-24 px-4">
+<main class="min-h-dvh w-full bg-gray-100 dark:bg-gray-900 pt-24">
     <ErrorMessage success={loginStatus === LoginStatus.None} type={badLogin ? "error" : "notice"}
         errorMessage={loginMessages[loginStatus]} />
 
