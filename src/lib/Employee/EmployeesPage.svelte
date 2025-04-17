@@ -10,7 +10,7 @@
     import PageTitle from '$lib/Miscellaneous/PageTitle.svelte';
     import ErrorMessage from '$lib/Miscellaneous/ErrorMessage.svelte';
     import EmployeeData from '$lib/Employee/EmployeeData.svelte';
-	import { getEmployeeHearingHistory, updateEmployeeDOB, updateEmployeeEmail, updateEmployeeName, updateEmployeeSex, updateEmploymentStatus } from '$lib/client/postrequests';
+    import { getEmployeeHearingHistory, updateEmployeeDOB, updateEmployeeEmail, updateEmployeeName, updateEmployeeSex, updateEmploymentStatus } from '$lib/client/postrequests';
 
     interface Props {
         employees: Array<Employee>;
@@ -38,7 +38,7 @@
     let selectedStatus = $state("No data selected");
     let STSstatusRight = $state("No data selected");
     let STSstatusLeft = $state("No data selected");
-    let selectedSex = $state("No data selected");
+    let selectedSex = $state("No data selected"); // ! is this meant to be unused?
 
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
@@ -103,6 +103,7 @@
         STSstatusRight = "No data selected";
         STSstatusLeft = "No data selected";
     }
+
     function resetData() {
         // Clear previous data
         rightBaselineHearingData.length = 0;
@@ -185,7 +186,7 @@
 
                 // select latest year
                 if (hearingHistory.length !== 0) {
-                    selectYear(hearingHistory[0].year)
+                    await selectYear(hearingHistory[0].year)
                 }
             }
         }

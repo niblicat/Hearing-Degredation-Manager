@@ -281,7 +281,7 @@
             },
         ].filter(Boolean);
 
-
+        chart.update(); // Ensure the chart reflects the updated data
     });
 
     // separate effect so datapoints don't animate with theme change

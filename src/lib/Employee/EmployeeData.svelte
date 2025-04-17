@@ -191,7 +191,14 @@
         <div class="flex justify-center">
             <Card padding="sm" class="w-full max-w-xl">
                 <div class="bg-primary-700 text-white py-2 px-3 text-center">
-                    <div class="text-lg font-bold">Audiogram for {selectedYear}</div>
+                    
+                    <div class="text-lg font-bold"> 
+                        {#if selectedYear !== "No year selected"}
+                            Statuses for {selectedYear}
+                        {:else}
+                            Empty Statuses
+                        {/if}
+                    </div>
                 </div>
                 
                 <table class="w-full border-collapse">

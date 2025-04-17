@@ -22,6 +22,8 @@
         onEarSelectionChange = () => {}
     }: Props = $props();
 
+    let plotTitle: string = $derived((selectedYear === "No year selected") ? "Empty Audiogram" : `Audiogram for ${selectedYear}`);
+
     // Chart Selection
     let isRightEar = $state(false);
     let showBoth = $state(true);
@@ -42,21 +44,21 @@
 <div class="chart-container w-full max-w-xl">
     {#if showBoth}
         <ScatterPlot 
-            plotTitle={`Audiogram for ${selectedYear}`}
+            {plotTitle}
             baselineHearingData={rightBaselineHearingData.concat(leftBaselineHearingData)}
             newHearingData={rightNewHearingData.concat(leftNewHearingData)}
             labels={['Right Baseline', 'Right New', 'Left Baseline', 'Left New']}
         />
     {:else if isRightEar}
         <ScatterPlot 
-            plotTitle={`Audiogram for ${selectedYear}`}
+            {plotTitle}
             baselineHearingData={rightBaselineHearingData} 
             newHearingData={rightNewHearingData} 
             labels={['Right Baseline', 'Right New']}
         />
     {:else}
         <ScatterPlot 
-            plotTitle={`Audiogram for ${selectedYear}`}
+            {plotTitle}
             baselineHearingData={leftBaselineHearingData} 
             newHearingData={leftNewHearingData} 
             labels={['Left Baseline', 'Left New']}
