@@ -77,6 +77,27 @@ export async function getEmployeeHearingScreening(employeeID: string, year: stri
     return result;
 }
 
+export async function checkEmployeeHearingScreening(employeeID: string, year: string): Promise<boolean> {
+    // create form data and populate it with the necessary fields
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('year', year);
+
+    const response = await fetch('/dashboard?/checkEmployeeHearingScreening', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to extract employee hearing screening (missing message).");
+
+    // parse the data in the response and return it
+    const result: boolean = JSON.parse(JSON.parse(serverResponse["data"]));
+    return result;
+}
+
 // SETTERS
 
 export async function updateEmployeeName(employeeID: string, newFirstName: string, newLastName: string): Promise<void> {
@@ -158,6 +179,23 @@ export async function updateEmploymentStatus(employeeID: string, lastActiveDate:
     const serverResponse = await response.json();
 
     if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to modify employee status (missing message).");
+}
+
+export async function addHearingScreening(employeeID: string, screening: HearingScreening, doModify: boolean): Promise<void> {
+    const formData = new FormData();
+    formData.append('employeeID', employeeID);
+    formData.append('screening', JSON.stringify(screening));
+    formData.append('doModify', doModify.toString());
+
+    const response = await fetch('/dashboard?/addHearingScreening', {
+        method: 'POST',
+        body: formData,
+    });
+
+    // intepret the response as JSON
+    const serverResponse = await response.json();
+
+    if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? "Failed to add hearing screening data (missing message).");
 }
 
 export async function updateAdminPermissions(adminID: string, isOperator: boolean): Promise<void> {

@@ -69,8 +69,9 @@
             await invalidateAll();
         }
         catch (error: any) {
-            let errorMessage = error.message;
-            displayError(errorMessage ?? "An error occurred when modifying admin permissions");
+            const errorMessage: string = 'Error when adding employee: ' +
+                (error.message ?? 'no defined error message');
+            displayError(errorMessage);
         }
     }
 

@@ -80,6 +80,18 @@ export function convertHearingDataOneEarToStrings(data: HearingDataOneEar): Hear
     }
 }
 
+export function convertStringsToHearingDataOneEar(data: HearingDataOneEarString): HearingDataOneEar {
+    return {
+        hz500: data.hz500 === "CNT" ? null : parseInt(data.hz500),
+        hz1000: data.hz1000 === "CNT" ? null : parseInt(data.hz1000),
+        hz2000: data.hz2000 === "CNT" ? null : parseInt(data.hz2000),
+        hz3000: data.hz3000 === "CNT" ? null : parseInt(data.hz3000),
+        hz4000: data.hz4000 === "CNT" ? null : parseInt(data.hz4000),
+        hz6000: data.hz6000 === "CNT" ? null : parseInt(data.hz6000),
+        hz8000: data.hz8000 === "CNT" ? null : parseInt(data.hz8000)
+    }
+}
+
 export type HearingScreening = {
     year: number;
     leftEar: HearingDataOneEar;

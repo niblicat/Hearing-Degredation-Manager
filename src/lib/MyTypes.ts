@@ -48,23 +48,6 @@ export type UserSimple = {
     avatar: string
 }
 
-export type HearingDataSingle = {
-    hz500: string,
-    hz1000: string,
-    hz2000: string,
-    hz3000: string,
-    hz4000: string,
-    hz6000: string,
-    hz8000: string
-}
-
-export type HearingData = {
-    year: number;
-    ear: string;
-    leftData: HearingDataSingle,
-    rightData: HearingDataSingle
-}
-
 export type HearingHistory = {
     employee: EmployeeInfo,
     screenings: HearingScreening[]

@@ -1,8 +1,8 @@
 import type { Session } from "@auth/sveltekit";
 import { redirect, type RequestEvent, type Server, type ServerLoadEvent } from "@sveltejs/kit"
 import { sql, type QueryResult, type QueryResultRow } from "@vercel/postgres";
-import { PageCategory, type HearingDataSingle, type HearingHistory } from "./MyTypes";
-import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, type EarAnomalyStatus, PersonSex } from './interpret';
+import { PageCategory, type HearingHistory } from "./MyTypes";
+import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, type EarAnomalyStatus, PersonSex, type HearingDataOneEarString } from './interpret';
 
 export function isNumber(value?: string | number): boolean {
     return ((value != null) &&
@@ -134,8 +134,8 @@ export async function turnAwayNonAdmins(event: ServerLoadEvent) {
     }
 }
 
-export async function getHearingDataFromDatabaseRow(row: QueryResultRow): Promise<HearingDataSingle> {
-    const parsedHearingData: HearingDataSingle = {
+export async function getHearingDataFromDatabaseRow(row: QueryResultRow): Promise<HearingDataOneEarString> {
+    const parsedHearingData: HearingDataOneEarString = {
         hz500: row["hz_500"] ?? "CNT",
         hz1000: row["hz_1000"] ?? "CNT",
         hz2000: row["hz_2000"] ?? "CNT",
@@ -161,8 +161,8 @@ export function validateFrequencies(frequencies: Record<string, string | number>
     );
 }
 
-export function validateFrequenciesLocally(frequenciesLeft: HearingDataSingle, frequenciesRight: HearingDataSingle): boolean {
-    const validateFrequencies = (freqs: HearingDataSingle) =>
+export function validateFrequenciesLocally(frequenciesLeft: HearingDataOneEarString, frequenciesRight: HearingDataOneEarString): boolean {
+    const validateFrequencies = (freqs: HearingDataOneEarString) =>
         Object.values(freqs).every(value => 
             value === "CNT" || 
             (!isNaN(parseInt(value as string, 10)) && parseInt(value as string, 10) >= -10 && parseInt(value as string, 10) <= 90)
@@ -191,53 +191,7 @@ export function calculateSTSClientSide(hearingData: HearingHistory): EarAnomalyS
         throw Error("Hearing data could not be interpreted-is null.");
     }
 
-    let screenings: HearingScreening[];
-
-    // Check if screenings is already an array
-    if (Array.isArray(hearingData.screenings)) {
-        screenings = hearingData.screenings;
-    } 
-    else {
-        // Handle the case where screenings is an object with year keys
-        screenings = Object.entries(hearingData.screenings)
-            .map(([year, data]: [string, any]) => {
-                try {
-                    const leftEarData = data.left;
-                    const rightEarData = data.right;
-
-                    // Populate left and right ear hearing data
-                    const leftEar: HearingDataOneEar = {
-                        hz500: leftEarData["hz500"] ?? null,
-                        hz1000: leftEarData["hz1000"] ?? null,
-                        hz2000: leftEarData["hz2000"] ?? null,
-                        hz3000: leftEarData["hz3000"] ?? null,
-                        hz4000: leftEarData["hz4000"] ?? null,
-                        hz6000: leftEarData["hz6000"] ?? null,
-                        hz8000: leftEarData["hz8000"] ?? null
-                    };
-
-                    const rightEar: HearingDataOneEar = {
-                        hz500: rightEarData["hz500"] ?? null,
-                        hz1000: rightEarData["hz1000"] ?? null,
-                        hz2000: rightEarData["hz2000"] ?? null,
-                        hz3000: rightEarData["hz3000"] ?? null,
-                        hz4000: rightEarData["hz4000"] ?? null,
-                        hz6000: rightEarData["hz6000"] ?? null,
-                        hz8000: rightEarData["hz8000"] ?? null
-                    };
-
-                    return {
-                        year: Number(year),
-                        leftEar,
-                        rightEar
-                    };
-                } catch (err) {
-                    console.error(`Error parsing screening data for year ${year}:`, err);
-                    return null;
-                }
-            })
-            .filter((screening): screening is HearingScreening => screening !== null);
-    }
+    let screenings: HearingScreening[] = hearingData.screenings;
     
     // Sort screenings by year
     screenings.sort((a, b) => a.year - b.year);

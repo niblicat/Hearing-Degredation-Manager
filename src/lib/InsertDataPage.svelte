@@ -5,14 +5,15 @@
     import { ChevronDownOutline } from 'flowbite-svelte-icons';
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
 
-    import type { Employee, EmployeeSearchable, HearingDataSingle } from './MyTypes';
+    import type { Employee, EmployeeSearchable } from './MyTypes';
     import { invalidateAll } from '$app/navigation';
     import ErrorMessage from './ErrorMessage.svelte';
     import SuccessMessage from './SuccessMessage.svelte';
     import { isNumber, validateFrequenciesLocally } from './utility';
 	import PageTitle from './PageTitle.svelte';
-	import { convertHearingDataOneEarToStrings, type HearingDataOneEarString, type HearingScreening } from './interpret';
-	import { getEmployeeHearingScreening } from './client/postrequests';
+	import { convertHearingDataOneEarToStrings, convertStringsToHearingDataOneEar, type HearingDataOneEarString, type HearingScreening } from './interpret';
+	import { addHearingScreening, checkEmployeeHearingScreening, getEmployeeHearingScreening } from './client/postrequests';
+	import { EARLIEST_SCREENING_YEAR } from './strings';
 
     interface Props {
         employees?: Array<Employee>,
@@ -68,7 +69,7 @@
     let nameMenuOpen = $state(false);
 
     let inputValueYear = $state("");
-    const blankFrequencies: HearingDataSingle = {
+    const blankFrequencies: HearingDataOneEarString = {
         hz500: "",
         hz1000: "",
         hz2000: "",
@@ -78,8 +79,8 @@
         hz8000: ""
     };
 
-    let leftFrequencies = $state(blankFrequencies);
-    let rightFrequencies = $state(blankFrequencies);
+    let leftFrequencies: HearingDataOneEarString = $state(blankFrequencies);
+    let rightFrequencies: HearingDataOneEarString = $state(blankFrequencies);
 
     $effect(() => {
         // need to get hearing data for both ears ear
@@ -98,14 +99,13 @@
         lastPulledRightFrequencies = rightEar;
     }
 
-    function compareFrequencieEquality(freq1: HearingDataSingle, freq2: HearingDataSingle): boolean {
+    function compareFrequencyEquality(freq1: HearingDataOneEarString, freq2: HearingDataOneEarString): boolean {
         // Iterate through each frequency key and check if they are the same in both sets
         return Object.keys(freq1).every((key) => {
             // Type assertion to tell TypeScript the key is a valid key of HearingDataSingle
-            return freq1[key as keyof HearingDataSingle] === freq2[key as keyof HearingDataSingle];
+            return freq1[key as keyof HearingDataOneEarString] === freq2[key as keyof HearingDataOneEarString];
         });
     }
-
 
     async function fetchHearingDataForYearFromServer(employeeID: string, year: string) {
         try {
@@ -135,120 +135,91 @@
         success = true;
     }
 
-    function preprocessFrequencies(frequencies: Record<string, string>) {
-        return Object.fromEntries(
-            Object.entries(frequencies).map(([key, value]) => [
-                key, 
-                typeof value === 'string' && value.trim().toUpperCase() === "CNT" ? null : value
-            ])
-        );
-    }
-
     async function checkYearAvailabilityKeydown(e: KeyboardEvent) {
         if (e.key == "Enter") {
             await checkYearAvailability();
         }
     }
 
-    const earliestYear = 1957;
-
     async function checkYearAvailability() {
-        // Some checks to see if our ducks are in a row
-        if (!employee && selectedEmployee == undefinedEmployeeSearchable) {
-            displayError("No employee was selected!");
-            return;
-        }
-        if (!isNumber(inputValueYear)) {
-            displayError("The year is not a number...");
-            return;
-        }
-        const yearAsInteger = parseInt(inputValueYear);
-        if (yearAsInteger < earliestYear) {
-            displayError(`The selected year is before ${earliestYear}. Please choose a valid year.`);
-            return;
-        }
-        const currentYear = new Date().getFullYear();
-        if (yearAsInteger > currentYear) {
-            displayError(`The selected year is after ${currentYear}. Please choose a valid year.`);
-            return;
-        }
-        
-        const formData = new FormData();
-
-        const appendedEmployeeID = employee ? employee.employeeID : selectedEmployee.data.employeeID;
-        formData.append('id', appendedEmployeeID); // Pass id
-        const appendedYear = year ? year : inputValueYear;
-        formData.append('year', appendedYear); // Year of data
-
-        const response = await fetch('/dashboard?/checkYearAvailability', {
-            method: 'POST',
-            body: formData,
-        });
-        showDataFields = false;
         try {
-            console.log('Raw server response:', response);
-            const serverResponse = await response.json()
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
+            // Some checks to see if our ducks are in a row
+            // check if employee is selected
+            if (!employee && selectedEmployee == undefinedEmployeeSearchable) throw new Error("No employee was selected!");
+            // check if year is valid
 
-            if (result["success"]) {
-                success = true;
-                showDataFields = true;
-            } else {
-                displayError(result["message"] ?? "Failed to add check available years.");
+            const appendedEmployeeID = employee ? employee.employeeID : selectedEmployee.data.employeeID;
+            const appendedYear: string = (() => {
+                if (year) return year;
                 
+                if (!isNumber(inputValueYear)) throw new Error("The year is not a number...");
+                const yearAsInteger = parseInt(inputValueYear);
+
+                // check if year is within range
+                if (yearAsInteger < EARLIEST_SCREENING_YEAR) throw new Error(`The selected year is before ${EARLIEST_SCREENING_YEAR}. Please choose a valid year.`);
+                const currentYear = new Date().getFullYear();
+                if (yearAsInteger > currentYear) throw new Error(`The selected year is after ${currentYear}. Please choose a valid year.`);
+
+                return inputValueYear;
+            })();
+            const dataExistsForYear: boolean = await checkEmployeeHearingScreening(appendedEmployeeID, appendedYear);
+
+            if (!dataExistsForYear) {
+                success = true
+                showDataFields = true;
             }
-        } 
+            else throw new Error("There already exists hearing data for the provided year.");
+        }
         catch (error: any) {
-            console.error('Error during fetch or JSON parsing: ', error.message ?? 'no defined error message');
-            displayError(error.message ?? 'An error occurred');
+            showDataFields = false;
+            const errorMessage: string = 'Error when checking if a hearing screening occurred on the provided year: ' +
+                (error.message ?? 'no defined error message');
+            displayError(errorMessage);
         }
     }
 
     async function addHearingData() {
-        if (compareFrequencieEquality(lastPulledLeftFrequencies, leftFrequencies) && compareFrequencieEquality(lastPulledRightFrequencies, rightFrequencies)) {
-            displayError("There were no changes to push!");
-            return;
-        }
-        if (!validateFrequenciesLocally(leftFrequencies, rightFrequencies)) {
-            displayError("The values you submitted are out of range or invalid. Choose values between -10 and 90 or 'CNT'.")
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('leftEarFrequencies', JSON.stringify(preprocessFrequencies(leftFrequencies))); // Left ear data
-        formData.append('rightEarFrequencies', JSON.stringify(preprocessFrequencies(rightFrequencies))); // Right ear data
-
-        const appendedEmployeeID = employee ? employee.employeeID : selectedEmployee.data.employeeID;
-        formData.append('id', appendedEmployeeID); // Pass id
-        const appendedYear = year ? year : inputValueYear;
-        formData.append('year', appendedYear); // Year of data
-
-        // Debug: Log form data
-        console.log('Form data to be sent:', Object.fromEntries(formData.entries()));
-
-        const location = allowModify ? '/dashboard?/modifyHearingData' : '/dashboard?/addHearingData';
-
-        const response = await fetch(location, {
-            method: 'POST',
-            body: formData,
-        });
-
         try {
-            // Debug: Log raw response
-            console.log('Raw server response:', response);
-            const serverResponse = await response.json()
-            const result = JSON.parse(JSON.parse(serverResponse.data)[0]);
-
-            if (result["success"]) {
-                displaySuccess("Successfully pushed changes to database.");
-                await invalidateAll();
-            } else {
-                displayError(result["message"] ?? "Failed to add employee data.");
+            if (compareFrequencyEquality(lastPulledLeftFrequencies, leftFrequencies)
+                && compareFrequencyEquality(lastPulledRightFrequencies, rightFrequencies)) {
+                throw new Error("There were no changes to push!");
             }
-        } 
+            if (!validateFrequenciesLocally(leftFrequencies, rightFrequencies)) {
+                throw new Error("The values you submitted are out of range or invalid. Choose values between -10 and 90 or 'CNT'.")
+            }
+
+            const appendedEmployeeID = employee ? employee.employeeID : selectedEmployee.data.employeeID;
+            const appendedYear: number = (() => {
+                if (year) return parseInt(year);
+                
+                if (!isNumber(inputValueYear)) throw new Error("The year is not a number...");
+                const yearAsInteger = parseInt(inputValueYear);
+
+                // check if year is within range
+                if (yearAsInteger < EARLIEST_SCREENING_YEAR) throw new Error(`The selected year is before ${EARLIEST_SCREENING_YEAR}. Please choose a valid year.`);
+                const currentYear = new Date().getFullYear();
+                if (yearAsInteger > currentYear) throw new Error(`The selected year is after ${currentYear}. Please choose a valid year.`);
+
+                return yearAsInteger;
+            })();
+
+            const newScreening: HearingScreening = (() => {
+                return {
+                    year: appendedYear,
+                    leftEar: convertStringsToHearingDataOneEar(leftFrequencies),
+                    rightEar: convertStringsToHearingDataOneEar(rightFrequencies),
+                }
+            })();
+
+            await addHearingScreening(appendedEmployeeID, newScreening, allowModify);
+            displaySuccess("Successfully pushed changes to database.");
+            await invalidateAll();
+            showDataFields = false;
+        }
         catch (error: any) {
-            console.error('Error during fetch or JSON parsing: ', error.message ?? 'no defined error message');
-            displayError(error.message ?? 'An error occurred');
+            const errorMessage: string = 'Error when pushing hearing data: ' +
+                (error.message ?? 'no defined error message');
+            displayError(errorMessage);
         }
     }
 
