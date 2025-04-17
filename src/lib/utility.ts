@@ -1,8 +1,8 @@
 import type { Session } from "@auth/sveltekit";
-import { redirect, type RequestEvent, type Server, type ServerLoadEvent } from "@sveltejs/kit"
-import { sql, type QueryResult, type QueryResultRow } from "@vercel/postgres";
+import { redirect, type RequestEvent, type ServerLoadEvent } from "@sveltejs/kit"
+import { sql, type QueryResultRow } from "@vercel/postgres";
 import { PageCategory, type HearingHistory } from "./MyTypes";
-import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, type EarAnomalyStatus, PersonSex, type HearingDataOneEarString } from './interpret';
+import { UserHearingScreeningHistory, type HearingScreening, type EarAnomalyStatus, type HearingDataOneEarString } from './interpret';
 
 export function isNumber(value?: string | number): boolean {
     return ((value != null) &&

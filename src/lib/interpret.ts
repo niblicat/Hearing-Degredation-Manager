@@ -1,9 +1,8 @@
 // interpret.ts
 // Used to interpret user data and detect if there has been STS
 
-import { error } from "@sveltejs/kit";
 import { AGE_CORRECTION_TABLE_MALE, AGE_CORRECTION_TABLE_FEMALE } from './agetable'
-import type {HertzCorrectionForAge} from './agetable'
+import type { HertzCorrectionForAge } from './agetable'
 
 export function getPersonSexFromString(val: string) {
     const lowered: string = val.toLowerCase();
