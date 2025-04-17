@@ -7,8 +7,8 @@
     
     interface Props {
         // Export properties if needed
-        baselineHearingData: number[];
-        newHearingData: number[];
+        baselineHearingData: (number | null)[];
+        newHearingData: (number | null)[];
         plotTitle: string;
         labels: string[];
     }
@@ -24,16 +24,16 @@
 
     // Custom tick values
     const customTicksX = [500, 1000, 2000, 3000, 4000, 6000, 8000];
-    const customTicksY = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0, -10];
+    const customTicksY = [120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0, -10];
 
     // Add padding for x-axis to ensure points are fully visible
     const xAxisPadding = {
-        min: 300,  // Padding before 500 Hz
+        min: 450,  // Padding before 500 Hz
         max: 8500  // Padding after 8000 Hz
     };
 
     function getPointStyle(label: string) {
-        if (label.includes("Right Baseline")) return "rect";
+        if (label.includes("Right Baseline")) return "triangle";
         if (label.includes("Left Baseline")) return "rect";
         if (label.includes("Right New")) return "circle";
         if (label.includes("Left New")) return "crossRot";
@@ -47,10 +47,18 @@
     }
 
     function getColor(label: string) {
+        if (label.includes("Right Baseline")) return 'rgba(166, 5, 39, 0)';
+        if (label.includes("Left Baseline")) return 'rgba(10, 81, 128, 0)';
+        if (label.includes("Right New")) return 'rgba(255, 99, 132, 0)';
+        if (label.includes("Left New")) return 'rgba(54, 162, 235, 0)';
+        return 'rgba(255, 0, 255, 1)'; // return strong magenta
+    }
+    function getBorderColor(label: string) {
         if (label.includes("Right Baseline")) return 'rgba(166, 5, 39, 1)';
         if (label.includes("Left Baseline")) return 'rgba(10, 81, 128, 1)';
         if (label.includes("Right New")) return 'rgba(255, 99, 132, 1)';
         if (label.includes("Left New")) return 'rgba(54, 162, 235, 1)';
+        return 'rgba(255, 0, 255, 1)'; // return strong magenta
     }
 
     onMount(() => {
@@ -67,7 +75,7 @@
                         pointRadius: getPointRadius(labels[0]),
                         pointHoverRadius: getPointRadius(labels[0]),  // Match hover radius with normal radius
                         backgroundColor: getColor(labels[0]),
-                        borderColor: getColor(labels[0]),
+                        borderColor: getBorderColor(labels[0]),
                         borderWidth: 2,
                         showLine: true,
                         fill: false,
@@ -80,7 +88,7 @@
                         pointRadius: getPointRadius(labels[1]),
                         pointHoverRadius: getPointRadius(labels[1]),  // Match hover radius with normal radius
                         backgroundColor: getColor(labels[1]),
-                        borderColor: getColor(labels[1]),
+                        borderColor: getBorderColor(labels[1]),
                         borderWidth: 2,
                         showLine: true,
                         fill: false,
@@ -93,7 +101,7 @@
                         pointRadius: getPointRadius(labels[2]),
                         pointHoverRadius: getPointRadius(labels[2]),  // Match hover radius with normal radius
                         backgroundColor: getColor(labels[2]),
-                        borderColor: getColor(labels[2]),
+                        borderColor: getBorderColor(labels[2]),
                         borderWidth: 2,
                         showLine: true,
                         fill: false,
@@ -106,7 +114,7 @@
                         pointRadius: getPointRadius(labels[3]),
                         pointHoverRadius: getPointRadius(labels[3]),  // Match hover radius with normal radius
                         backgroundColor: getColor(labels[3]),
-                        borderColor: getColor(labels[3]),
+                        borderColor: getBorderColor(labels[3]),
                         borderWidth: 2,
                         showLine: true,
                         fill: false,
@@ -121,7 +129,7 @@
                 },
                 scales: {
                     x: {
-                        type: 'linear',
+                        type: 'logarithmic',
                         position: 'bottom',
                         title: {
                             display: true,
@@ -142,7 +150,6 @@
                                 return null;
                             },
                             // Explicitly set ticks to our custom values
-                            stepSize: 1,
                             autoSkip: false,  // Ensure no ticks are skipped
                         }
                     },
@@ -179,7 +186,8 @@
                         labels: {
                             font: {
                                 size: 14
-                            }
+                            },
+                            usePointStyle: true
                         }
                     }
                 }
@@ -202,7 +210,7 @@
                     pointRadius: getPointRadius(labels[0]),
                     pointHoverRadius: getPointRadius(labels[0]),
                     backgroundColor: getColor(labels[0]),
-                    borderColor: getColor(labels[0]),
+                    borderColor: getBorderColor(labels[0]),
                     borderWidth: 2,
                     showLine: true,
                     fill: false,
@@ -215,7 +223,7 @@
                     pointRadius: getPointRadius(labels[1]),
                     pointHoverRadius: getPointRadius(labels[1]),
                     backgroundColor: getColor(labels[1]),
-                    borderColor: getColor(labels[1]),
+                    borderColor: getBorderColor(labels[1]),
                     borderWidth: 2,
                     showLine: true,
                     fill: false,
@@ -228,7 +236,7 @@
                     pointRadius: getPointRadius(labels[2]),
                     pointHoverRadius: getPointRadius(labels[2]),
                     backgroundColor: getColor(labels[2]),
-                    borderColor: getColor(labels[2]),
+                    borderColor: getBorderColor(labels[2]),
                     borderWidth: 2,
                     showLine: true,
                     fill: false,
@@ -241,7 +249,7 @@
                     pointRadius: getPointRadius(labels[3]),
                     pointHoverRadius: getPointRadius(labels[3]),
                     backgroundColor: getColor(labels[3]),
-                    borderColor: getColor(labels[3]),
+                    borderColor: getBorderColor(labels[3]),
                     borderWidth: 2,
                     showLine: true,
                     fill: false,
