@@ -3,8 +3,8 @@
     import { Chart, registerables } from 'chart.js';
     import { InfoCircleSolid } from "flowbite-svelte-icons";
     import { Tooltip } from 'flowbite-svelte';
+	import { isDark } from "$lib/globals.svelte";
 
-    
     interface Props {
         // Export properties if needed
         baselineHearingData: (number | null)[];
@@ -53,12 +53,23 @@
         if (label.includes("Left New")) return 'rgba(54, 162, 235, 0)';
         return 'rgba(255, 0, 255, 1)'; // return strong magenta
     }
+
     function getBorderColor(label: string) {
         if (label.includes("Right Baseline")) return 'rgba(166, 5, 39, 1)';
         if (label.includes("Left Baseline")) return 'rgba(10, 81, 128, 1)';
         if (label.includes("Right New")) return 'rgba(255, 99, 132, 1)';
         if (label.includes("Left New")) return 'rgba(54, 162, 235, 1)';
         return 'rgba(255, 0, 255, 1)'; // return strong magenta
+    }
+
+    function getTextColor() {
+        if ($isDark) return '#fff';
+        else return '#666';
+    }
+
+    function getGridColor() {
+        if ($isDark) return '#444';
+        else return '#ddd';
     }
 
     onMount(() => {
@@ -136,7 +147,11 @@
                             text: 'Frequency (Hz)',
                             font: {
                                 size: 16
-                            }
+                            },
+                            color: getTextColor()
+                        },
+                        grid: {
+                            color: getGridColor()
                         },
                         min: xAxisPadding.min,  // Use padding to ensure points at 500 Hz are fully visible
                         max: xAxisPadding.max,  // Use padding to ensure points at 8000 Hz are fully visible
@@ -149,6 +164,7 @@
                                 }
                                 return null;
                             },
+                            color: getTextColor(),
                             // Explicitly set ticks to our custom values
                             autoSkip: false,  // Ensure no ticks are skipped
                         }
@@ -159,13 +175,18 @@
                             text: 'Hearing Level (dB)',
                             font: {
                                 size: 16
-                            }
+                            },
+                            color: getTextColor()
+                        },
+                        grid: {
+                            color: getGridColor()
                         },
                         min: Math.min(...customTicksY),
                         max: Math.max(...customTicksY),
                         ticks: {
                             callback: (value) => (customTicksY.includes(value as number) ? value : null),
                             autoSkip: false,
+                            color: getTextColor(),
                         },
                         reverse: true
                     }
@@ -180,13 +201,15 @@
                         padding: {
                             top: 20,
                             bottom: 0
-                        }
+                        },
+                        color: getTextColor()
                     },
                     legend: {
                         labels: {
                             font: {
                                 size: 14
                             },
+                            color: getTextColor(),
                             usePointStyle: true
                         }
                     }
@@ -197,68 +220,84 @@
 
     // Reactive block to update chart data dynamically
     $effect(() => {
-        if (chart) {
-            //update chart title
-            chart.options.plugins.title.text = plotTitle;
+        if (!chart) return;
 
-            // Dynamically update datasets
-            chart.data.datasets = [
-                {
-                    label: labels[0],
-                    data: customTicksX.map((p, i) => ({ x: p, y: baselineHearingData[i] })),
-                    pointStyle: getPointStyle(labels[0]),
-                    pointRadius: getPointRadius(labels[0]),
-                    pointHoverRadius: getPointRadius(labels[0]),
-                    backgroundColor: getColor(labels[0]),
-                    borderColor: getBorderColor(labels[0]),
-                    borderWidth: 2,
-                    showLine: true,
-                    fill: false,
-                    lineTension: 0
-                },
-                {
-                    label: labels[1],
-                    data: customTicksX.map((p, i) => ({ x: p, y: newHearingData[i] })),
-                    pointStyle: getPointStyle(labels[1]),
-                    pointRadius: getPointRadius(labels[1]),
-                    pointHoverRadius: getPointRadius(labels[1]),
-                    backgroundColor: getColor(labels[1]),
-                    borderColor: getBorderColor(labels[1]),
-                    borderWidth: 2,
-                    showLine: true,
-                    fill: false,
-                    lineTension: 0
-                },
-                labels.length > 2 && {
-                    label: labels[2],
-                    data: customTicksX.map((p, i) => ({ x: p, y: baselineHearingData[baselineHearingData.length / 2 + i] })),
-                    pointStyle: getPointStyle(labels[2]),
-                    pointRadius: getPointRadius(labels[2]),
-                    pointHoverRadius: getPointRadius(labels[2]),
-                    backgroundColor: getColor(labels[2]),
-                    borderColor: getBorderColor(labels[2]),
-                    borderWidth: 2,
-                    showLine: true,
-                    fill: false,
-                    lineTension: 0
-                },
-                labels.length > 2 && {
-                    label: labels[3],
-                    data: customTicksX.map((p, i) => ({ x: p, y: newHearingData[newHearingData.length / 2 + i] })),
-                    pointStyle: getPointStyle(labels[3]),
-                    pointRadius: getPointRadius(labels[3]),
-                    pointHoverRadius: getPointRadius(labels[3]),
-                    backgroundColor: getColor(labels[3]),
-                    borderColor: getBorderColor(labels[3]),
-                    borderWidth: 2,
-                    showLine: true,
-                    fill: false,
-                    lineTension: 0
-                },
-            ].filter(Boolean);
+        //update chart title
+        chart.options.plugins.title.text = plotTitle;
 
-            chart.update(); // Ensure the chart reflects the updated data
-        }
+        // Dynamically update datasets
+        chart.data.datasets = [
+            {
+                label: labels[0],
+                data: customTicksX.map((p, i) => ({ x: p, y: baselineHearingData[i] })),
+                pointStyle: getPointStyle(labels[0]),
+                pointRadius: getPointRadius(labels[0]),
+                pointHoverRadius: getPointRadius(labels[0]),
+                backgroundColor: getColor(labels[0]),
+                borderColor: getBorderColor(labels[0]),
+                borderWidth: 2,
+                showLine: true,
+                fill: false,
+                lineTension: 0
+            },
+            {
+                label: labels[1],
+                data: customTicksX.map((p, i) => ({ x: p, y: newHearingData[i] })),
+                pointStyle: getPointStyle(labels[1]),
+                pointRadius: getPointRadius(labels[1]),
+                pointHoverRadius: getPointRadius(labels[1]),
+                backgroundColor: getColor(labels[1]),
+                borderColor: getBorderColor(labels[1]),
+                borderWidth: 2,
+                showLine: true,
+                fill: false,
+                lineTension: 0
+            },
+            labels.length > 2 && {
+                label: labels[2],
+                data: customTicksX.map((p, i) => ({ x: p, y: baselineHearingData[baselineHearingData.length / 2 + i] })),
+                pointStyle: getPointStyle(labels[2]),
+                pointRadius: getPointRadius(labels[2]),
+                pointHoverRadius: getPointRadius(labels[2]),
+                backgroundColor: getColor(labels[2]),
+                borderColor: getBorderColor(labels[2]),
+                borderWidth: 2,
+                showLine: true,
+                fill: false,
+                lineTension: 0
+            },
+            labels.length > 2 && {
+                label: labels[3],
+                data: customTicksX.map((p, i) => ({ x: p, y: newHearingData[newHearingData.length / 2 + i] })),
+                pointStyle: getPointStyle(labels[3]),
+                pointRadius: getPointRadius(labels[3]),
+                pointHoverRadius: getPointRadius(labels[3]),
+                backgroundColor: getColor(labels[3]),
+                borderColor: getBorderColor(labels[3]),
+                borderWidth: 2,
+                showLine: true,
+                fill: false,
+                lineTension: 0
+            },
+        ].filter(Boolean);
+
+
+    });
+
+    // separate effect so datapoints don't animate with theme change
+    $effect(() => {
+        const textColor = getTextColor();
+        const gridColor = getGridColor();
+        chart.options.scales.x.title.color = textColor;
+        chart.options.scales.y.title.color = textColor;
+        chart.options.scales.x.ticks.color = textColor;
+        chart.options.scales.y.ticks.color = textColor;
+        chart.options.scales.x.grid.color = gridColor;
+        chart.options.scales.y.grid.color = gridColor;
+        chart.options.plugins.title.color = textColor;
+        chart.options.plugins.legend.labels.color = textColor;
+
+        chart.update(); // Ensure the chart reflects the updated data
     });
 
 </script>
