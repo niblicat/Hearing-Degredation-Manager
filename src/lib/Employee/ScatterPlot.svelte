@@ -20,7 +20,7 @@
         labels
     }: Props = $props();
 
-    let chart: any = $state();
+    let chart: any;
 
     // Custom tick values
     const customTicksX = [500, 1000, 2000, 3000, 4000, 6000, 8000];
@@ -281,6 +281,11 @@
             },
         ].filter(Boolean);
 
+
+    });
+
+    // separate effect so datapoints don't animate with theme change
+    $effect(() => {
         const textColor = getTextColor();
         const gridColor = getGridColor();
         chart.options.scales.x.title.color = textColor;
