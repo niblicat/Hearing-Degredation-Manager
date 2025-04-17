@@ -45,6 +45,8 @@
         editstatus = () => {}
     }: Props = $props();
 
+    let employeeAge = $derived(calculateAge(selectedEmployee.data.dob))
+
     function showNameChangeModal() {
         editname(selectedEmployee.data);
     }
@@ -226,8 +228,12 @@
             <Card padding="sm" class="w-full max-w-xl">
                 <div class="bg-primary-700 text-white py-2 px-3 text-center">
                     <div class="text-lg font-bold">Hearing History</div>
-                    {#if selectedYear !== "No year selected" && selectedYear != hearingHistory[hearingHistory.length - 1].year}
-                        <div class="text-sm">Calculations were performed using age-corrected values for age {calculateAge(selectedEmployee.data.dob)}</div>
+                    {#if selectedYear !== "No year selected"
+                        && selectedYear != hearingHistory[hearingHistory.length - 1].year
+                        && employeeAge > 19}
+                        <div class="text-sm">
+                            Calculations were performed using age-corrected values for age {employeeAge}
+                        </div>
                     {/if}
                 </div>
                 <table class="w-full border-collapse">
