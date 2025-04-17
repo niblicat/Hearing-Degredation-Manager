@@ -13,7 +13,7 @@
         selectedStatus: string,
         STSstatusLeft: string,
         STSstatusRight: string,
-        hearingHistory: Array<{year: string, leftStatus: string, rightStatus: string, leftBaseline: string,rightBaseline: string}>
+        hearingHistory: Array<{year: string, leftStatus: string, rightStatus: string, leftBaseline: string, rightBaseline: string}>
         rightBaselineHearingData: Array<number>,
         rightNewHearingData: Array<number>,
         leftBaselineHearingData: Array<number>,
@@ -226,7 +226,9 @@
             <Card padding="sm" class="w-full max-w-xl">
                 <div class="bg-primary-700 text-white py-2 px-3 text-center">
                     <div class="text-lg font-bold">Hearing History</div>
-                    <div class="text-sm">Calculations were performed using age-corrected values for age {calculateAge(selectedEmployee.data.dob)}</div>
+                    {#if selectedYear !== "No year selected" && selectedYear != hearingHistory[hearingHistory.length - 1].year}
+                        <div class="text-sm">Calculations were performed using age-corrected values for age {calculateAge(selectedEmployee.data.dob)}</div>
+                    {/if}
                 </div>
                 <table class="w-full border-collapse">
                     <tbody>

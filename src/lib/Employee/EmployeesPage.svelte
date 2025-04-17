@@ -182,6 +182,11 @@
                 
                 // Sort by year (newest first)
                 hearingHistory.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+
+                // select latest year
+                if (hearingHistory.length !== 0) {
+                    selectYear(hearingHistory[0].year)
+                }
             }
         }
         catch (error: any) {
