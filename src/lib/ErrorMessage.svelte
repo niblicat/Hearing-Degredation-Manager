@@ -2,7 +2,7 @@
     import { Alert } from "flowbite-svelte";
 
     const defaultMessage: string = "Error message is currently not being passed into ErrorMessage component";
-    const defaultClass: string = "mx-10";
+    const defaultClass: string = "mx-10 mb-4";
 
     interface Props {
         success: boolean,
