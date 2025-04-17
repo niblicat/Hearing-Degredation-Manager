@@ -1,5 +1,5 @@
 <script>
-    import PageTitle from '$lib/PageTitle.svelte';
+    import PageTitle from '$lib/Miscellaneous/PageTitle.svelte';
     import { STRING_ALT_TEXT_LOGO, STRING_INDEX_CAPTION, STRING_INDEX_WELCOME } from '$lib/strings.js';
 </script>
 

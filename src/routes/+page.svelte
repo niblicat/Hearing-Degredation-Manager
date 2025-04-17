@@ -1,7 +1,7 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import CustomNavbar from '$lib/CustomNavbar.svelte';
-    import ErrorMessage from '$lib/ErrorMessage.svelte';
+    import CustomNavbar from '$lib/Navigation/CustomNavbar.svelte';
+    import ErrorMessage from '$lib/Miscellaneous/ErrorMessage.svelte';
     import HomePage from '$lib/HomePage.svelte';
     import type { UserSimple } from '$lib/MyTypes';
 	import { STRING_HEADER_TITLE } from '$lib/strings.js';

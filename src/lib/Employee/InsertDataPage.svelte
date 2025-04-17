@@ -5,15 +5,15 @@
     import { ChevronDownOutline } from 'flowbite-svelte-icons';
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
 
-    import type { Employee, EmployeeSearchable } from './MyTypes';
+    import type { Employee, EmployeeSearchable } from '../MyTypes';
     import { invalidateAll } from '$app/navigation';
-    import ErrorMessage from './ErrorMessage.svelte';
-    import SuccessMessage from './SuccessMessage.svelte';
-    import { isNumber, validateFrequenciesLocally } from './utility';
-	import PageTitle from './PageTitle.svelte';
-	import { convertHearingDataOneEarToStrings, convertStringsToHearingDataOneEar, type HearingDataOneEarString, type HearingScreening } from './interpret';
-	import { addHearingScreening, checkEmployeeHearingScreening, getEmployeeHearingScreening } from './client/postrequests';
-	import { EARLIEST_SCREENING_YEAR } from './strings';
+    import ErrorMessage from '../Miscellaneous/ErrorMessage.svelte';
+    import SuccessMessage from '../Miscellaneous/SuccessMessage.svelte';
+    import { isNumber, validateFrequenciesLocally } from '../utility';
+	import PageTitle from '../Miscellaneous/PageTitle.svelte';
+	import { convertHearingDataOneEarToStrings, convertStringsToHearingDataOneEar, type HearingDataOneEarString, type HearingScreening } from '../interpret';
+	import { addHearingScreening, checkEmployeeHearingScreening, getEmployeeHearingScreening } from '../client/postrequests';
+	import { EARLIEST_SCREENING_YEAR } from '../strings';
 
     interface Props {
         employees?: Array<Employee>,

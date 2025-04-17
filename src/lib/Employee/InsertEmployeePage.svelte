@@ -1,12 +1,11 @@
 <script lang="ts">
     import { Label, Input, Radio, Button } from 'flowbite-svelte';
     import { invalidateAll } from '$app/navigation';
-    import ErrorMessage from './ErrorMessage.svelte';
-    import SuccessMessage from './SuccessMessage.svelte';
-	import { isDate } from './utility';
-	import PageTitle from './PageTitle.svelte';
-	import { createEmployee } from './client/postrequests';
-	import { getPersonSexFromString, PersonSex } from './interpret';
+    import ErrorMessage from '$lib/Miscellaneous/ErrorMessage.svelte';
+    import SuccessMessage from '$lib/Miscellaneous/SuccessMessage.svelte';
+	import PageTitle from '$lib/Miscellaneous/PageTitle.svelte';
+	import { createEmployee } from '$lib/client/postrequests';
+	import { getPersonSexFromString, PersonSex } from '$lib/interpret';
 
     let firstName = $state("");
     let lastName = $state("");

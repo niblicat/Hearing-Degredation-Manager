@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Accordion, AccordionItem, Li, List } from "flowbite-svelte";
-    import { PageCategory } from "./MyTypes";
+    import { PageCategory } from "$lib/MyTypes";
     import { getInformationPerCategory, type InformationPerCategory } from "./infopercategory.svelte";
 
     interface Props {

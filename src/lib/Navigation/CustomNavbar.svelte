@@ -1,13 +1,13 @@
 <script lang="ts">
     import { DarkMode, Modal, Navbar, NavBrand } from 'flowbite-svelte';
     import { Button } from 'flowbite-svelte';
-    import CustomAvatar from './CustomAvatar.svelte';
-    import { PageCategory, type UserSimple } from './MyTypes';
+    import CustomAvatar from '../Miscellaneous/CustomAvatar.svelte';
+    import { PageCategory, type UserSimple } from '../MyTypes';
     import { BarsOutline, CloseOutline } from 'flowbite-svelte-icons';
     import { page } from '$app/state';
-	import InfoButton from './InfoButton.svelte';
-	import Information from './Information.svelte';
-	import { STRING_HEADER_TITLE } from './strings';
+	import InfoButton from '../Miscellaneous/InfoButton.svelte';
+	import Information from '$lib/Information/Information.svelte';
+	import { STRING_HEADER_TITLE } from '../strings';
 
     let activeURLHash = $derived(page.url.hash);
 
