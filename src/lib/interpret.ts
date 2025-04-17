@@ -1,9 +1,8 @@
 // interpret.ts
 // Used to interpret user data and detect if there has been STS
 
-import { error } from "@sveltejs/kit";
 import { AGE_CORRECTION_TABLE_MALE, AGE_CORRECTION_TABLE_FEMALE } from './agetable'
-import type {HertzCorrectionForAge} from './agetable'
+import type { HertzCorrectionForAge } from './agetable'
 
 export function getPersonSexFromString(val: string) {
     const lowered: string = val.toLowerCase();
@@ -77,6 +76,18 @@ export function convertHearingDataOneEarToStrings(data: HearingDataOneEar): Hear
         hz4000: data.hz4000?.toString() ?? "CNT",
         hz6000: data.hz6000?.toString() ?? "CNT",
         hz8000: data.hz8000?.toString() ?? "CNT"
+    }
+}
+
+export function convertStringsToHearingDataOneEar(data: HearingDataOneEarString): HearingDataOneEar {
+    return {
+        hz500: data.hz500 === "CNT" ? null : parseInt(data.hz500),
+        hz1000: data.hz1000 === "CNT" ? null : parseInt(data.hz1000),
+        hz2000: data.hz2000 === "CNT" ? null : parseInt(data.hz2000),
+        hz3000: data.hz3000 === "CNT" ? null : parseInt(data.hz3000),
+        hz4000: data.hz4000 === "CNT" ? null : parseInt(data.hz4000),
+        hz6000: data.hz6000 === "CNT" ? null : parseInt(data.hz6000),
+        hz8000: data.hz8000 === "CNT" ? null : parseInt(data.hz8000)
     }
 }
 

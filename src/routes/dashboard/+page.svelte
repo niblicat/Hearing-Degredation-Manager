@@ -1,14 +1,14 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import CustomNavbar from '$lib/CustomNavbar.svelte';
-    import CustomSidebar from '$lib/CustomSidebar.svelte';
-    import EmployeesPage from '$lib/EmployeesPage.svelte';
-    import MailingPage from '$lib/MailingPage.svelte';
-    import AdminPage from '$lib/AdminPage.svelte';
+    import CustomNavbar from '$lib/Navigation/CustomNavbar.svelte';
+    import CustomSidebar from '$lib/Navigation/CustomSidebar.svelte';
+    import EmployeesPage from '$lib/Employee/EmployeesPage.svelte';
+    import MailingPage from '$lib/Mailing/MailingPage.svelte';
+    import AdminPage from '$lib/Admin/AdminPage.svelte';
     import type { Admin, UserSimple } from '$lib/MyTypes.js';
 	import { STRING_HEADER_TITLE } from '$lib/strings.js';
 	import HomePageDashboard from '$lib/HomePageDashboard.svelte';
-	import Debug from '$lib/Dashboard/Debug.svelte';
+	import Debug from '$lib/Miscellaneous/Debug.svelte';
     let { data } = $props();
 
     let activeURL = $derived(page.url.pathname);
@@ -44,7 +44,7 @@
 <CustomSidebar sidebarOpen={sidebarOpen}
     activeUrl={activeURLHash} toggle={toggleSidebar} />
 
-<main class="min-h-dvh w-full bg-gray-100 dark:bg-gray-900 pt-24 px-4">
+<main class="min-h-dvh w-full bg-gray-100 dark:bg-gray-900 pt-24">
     {#if debug}
         <Debug />
     {:else if activeURLHash == "#employees"}

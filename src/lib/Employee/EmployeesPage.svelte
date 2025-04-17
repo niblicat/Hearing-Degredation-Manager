@@ -2,15 +2,15 @@
 
     import { Button, Search, Modal, Label, Input, Radio, Tooltip, Dropdown } from 'flowbite-svelte';
     import { ChevronDownOutline, UserAddSolid, CirclePlusSolid, EditSolid } from 'flowbite-svelte-icons';
-    import { AnomalyStatus, getPersonSexFromString, type EarAnomalyStatus} from "./interpret";
-    import type { Employee, EmployeeInfo, EmployeeSearchable, HearingHistory } from './MyTypes';
+    import { AnomalyStatus, getPersonSexFromString, type EarAnomalyStatus} from "$lib/interpret";
+    import type { Employee, EmployeeInfo, EmployeeSearchable, HearingHistory } from '$lib/MyTypes';
     import InsertEmployeePage from './InsertEmployeePage.svelte';
-    import { calculateSTSClientSide } from './utility';
-    import InsertDataPage from './InsertDataPage.svelte';
-    import PageTitle from './PageTitle.svelte';
-    import ErrorMessage from './ErrorMessage.svelte';
-    import EmployeeData from './EmployeeData.svelte';
-	import { getEmployeeHearingHistory, updateEmployeeDOB, updateEmployeeEmail, updateEmployeeName, updateEmployeeSex, updateEmploymentStatus } from './client/postrequests';
+    import { calculateSTSClientSide } from '$lib/utility';
+    import InsertDataPage from '$lib/Employee/InsertDataPage.svelte';
+    import PageTitle from '$lib/Miscellaneous/PageTitle.svelte';
+    import ErrorMessage from '$lib/Miscellaneous/ErrorMessage.svelte';
+    import EmployeeData from '$lib/Employee/EmployeeData.svelte';
+	import { getEmployeeHearingHistory, updateEmployeeDOB, updateEmployeeEmail, updateEmployeeName, updateEmployeeSex, updateEmploymentStatus } from '$lib/client/postrequests';
 
     interface Props {
         employees: Array<Employee>;
@@ -38,7 +38,7 @@
     let selectedStatus = $state("No data selected");
     let STSstatusRight = $state("No data selected");
     let STSstatusLeft = $state("No data selected");
-    let selectedSex = $state("No data selected");
+    let selectedSex = $state("No data selected"); // ! is this supposed to be unused? shows undefined on load
 
     let inputValueName: string = $state("");
     let inputValueYear = $state("");
@@ -533,20 +533,18 @@
 
 <!-- TITLE PAGE SECTION -->
 <div class="relative w-full">
-    <div class="flex flex-col items-center justify-center">
-        <PageTitle>
-            Employee Data Management
-            {#snippet caption()}
-                View employee information and data.
-            {/snippet}
-        </PageTitle>
-        <ErrorMessage class="mx-10 mb-4 w-full" {success} {errorMessage} />
-    </div>
+    <PageTitle>
+        Employee Data Management
+        {#snippet caption()}
+            View employee information and data.
+        {/snippet}
+    </PageTitle>
+    <ErrorMessage {success} {errorMessage} />
 </div>
 
 <div class="w-full px-4">
     <!-- DROPDOWN MENU SECTION BEGINS -->
-    <div class="mb-4 flex gap-4 md:ms-13">
+    <div class="mb-4 flex flex-wrap justify-center gap-4 md:justify-start">
         <Button class="cursor-pointer w-64 h-12" color="primary">
             {selectedEmployee.name}
             <ChevronDownOutline class="w-6 h-6 ms-2 text-white dark:text-white" />
@@ -602,7 +600,7 @@
     <!-- DROPDOWN MENU SECTION ENDS -->
 
     <!-- INFORMATION DISPLAY SECTION BEGINS -->
-    <div class="mb-4">
+    <div class="pb-4">
         <EmployeeData 
             {selectedYear}
             {selectedEmployee}

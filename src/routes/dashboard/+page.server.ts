@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { turnAwayNonAdmins } from '$lib/utility';
-import { addHearingData, checkYearAvailability, modifyHearingData } from '$lib/server/actionshearingdata';
-import { modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory, extractAllEmployeeHearingHistories, extractEmployeeHearingScreening } from '$lib/server/actionsemployees';
+import { addHearingScreening } from '$lib/server/actionshearingdata';
+import { modifyEmployeeDOB, modifyEmployeeEmail, modifyEmployeeName, modifyEmployeeStatus, modifyEmployeeSex, extractEmployeeHearingScreenings, extractEmployeeInfo, extractEmployeeHearingHistory, extractAllEmployeeHearingHistories, extractEmployeeHearingScreening, checkEmployeeHearingScreening } from '$lib/server/actionsemployees';
 import { addEmployee } from '$lib/server/actionsemployeeadd';
 import { deleteAdmins, modifyAdminName, modifyAdminPermissions } from '$lib/server/actionsadmins';
 import { getAdminsFromDatabase, getEmployeesFromDatabase, isEmailAnAdmin } from '$lib/server/databasefunctions';
@@ -53,20 +53,10 @@ export const actions: Actions = {
     // ================================================
 
     // actionshearingdata.ts
-    checkYearAvailability: async ({ request, locals }) => {
+    addHearingScreening: async ({ request, locals }) => {
         const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);
         if (!sessionIsValid) return fail(401, {message});
-        return checkYearAvailability(request);
-    },
-    addHearingData: async ({ request, locals }) => {
-        const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);
-        if (!sessionIsValid) return fail(401, {message});
-        return addHearingData(request);
-    },
-    modifyHearingData: async ({ request, locals }) => {
-        const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);
-        if (!sessionIsValid) return fail(401, {message});
-        return modifyHearingData(request);
+        return addHearingScreening(request);
     },
     // ================================================
 
@@ -105,6 +95,11 @@ export const actions: Actions = {
         const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);
         if (!sessionIsValid) return fail(401, {message});
         return extractEmployeeHearingScreening(request);
+    },
+    checkEmployeeHearingScreening: async ({ request, locals }) => {
+        const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);
+        if (!sessionIsValid) return fail(401, {message});
+        return checkEmployeeHearingScreening(request);
     },
     extractEmployeeHearingScreenings: async ({ request, locals }) => {
         const [sessionIsValid, message]: [boolean, string | undefined] = await validSession(locals);

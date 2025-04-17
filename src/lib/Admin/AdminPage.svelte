@@ -4,11 +4,11 @@
     import { Input, Label } from 'flowbite-svelte';
     import { invalidateAll } from '$app/navigation';
 
-    import type { Admin, AdminSelectable } from './MyTypes.ts';
+    import type { Admin, AdminSelectable } from '../MyTypes.js';
     import { EditOutline, InfoCircleOutline } from 'flowbite-svelte-icons';
-    import ErrorMessage from './ErrorMessage.svelte';
-    import PageTitle from './PageTitle.svelte';
-	import { updateAdminName, updateAdminPermissions, removeAdmins } from './client/postrequests.js';
+    import ErrorMessage from '../Miscellaneous/ErrorMessage.svelte';
+    import PageTitle from '../Miscellaneous/PageTitle.svelte';
+	import { updateAdminName, updateAdminPermissions, removeAdmins } from '../client/postrequests.js';
 
     interface Props {
         admins: Array<Admin>;
@@ -204,18 +204,16 @@
 </Modal>
 
 <div class="relative w-full">
-    <div class="flex flex-col items-center justify-center">
-        <PageTitle>
-            Admin Management
-            {#snippet caption()}
-                Modify the privileges of anyone who has attempted to sign in.
-            {/snippet}
-        </PageTitle>
-        <ErrorMessage class="mx-10 mb-4 w-full" {success} {errorMessage} />
-    </div>
+    <PageTitle>
+        Admin Management
+        {#snippet caption()}
+            Modify the privileges of anyone who has attempted to sign in.
+        {/snippet}
+    </PageTitle>
+    <ErrorMessage {success} {errorMessage} />
 </div>
 
-<div class="flex-column justify-center mx-4">
+<div class="flex-column justify-center mx-4 lg:mx-36">
     <Table hoverable={true} class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
         <TableHead>
             <TableHeadCell class="!p-4">
