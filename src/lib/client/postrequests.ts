@@ -29,8 +29,6 @@ export async function getEmployeeHearingHistory(employeeID: string): Promise<Hea
     // intepret the response as JSON
     const serverResponse = await response.json();
 
-    console.log(serverResponse);
-
     const unknownMessage: string = "Failed to extract employee hearing history (missing message).";
     if (serverResponse["type"] == "error") throw new Error(serverResponse["error"]["message"] ?? unknownMessage);
     else if (serverResponse["type"] == "failure") throw new Error(JSON.parse(serverResponse["data"])[1] ?? unknownMessage);

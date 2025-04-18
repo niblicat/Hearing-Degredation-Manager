@@ -3,7 +3,7 @@
 
 import { sql } from '@vercel/postgres';
 import { error } from '@sveltejs/kit';
-import { UserHearingScreeningHistory, type HearingScreening, type HearingDataOneEar, PersonSex } from "$lib/interpret";
+import { type HearingScreening } from "$lib/interpret";
 import { DatabaseError, type EmployeeInfo, type HearingHistory } from '$lib/MyTypes';
 import { checkEmployeeExists, checkEmployeeHearingScreeningFromDatabase, extractEmployeeHearingHistoryFromDatabase, extractEmployeeHearingScreeningFromDatabase, extractEmployeeHearingScreeningsFromDatabase, extractEmployeeInfoFromDatabase, extractEmployeeInfosFromDatabase } from './databasefunctions';
 
