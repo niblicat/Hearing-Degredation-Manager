@@ -261,7 +261,7 @@ export async function extractAllEmployeeHearingHistories(request: Request) {
         const rawHistories: (HearingHistory | null)[] = await Promise.all(
             employeeInfos.map(async (employeeInfo) => {
                 // Skip inactive employees if omitInactive is true
-                if (!employeeInfo.lastActive && omitInactive) return null;  // Skip this iteration
+                if (employeeInfo.lastActive && omitInactive) return null;  // Skip this iteration
 
                 // Get employee hearing screenings from database
                 let history: HearingHistory | null;
