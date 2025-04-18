@@ -245,7 +245,7 @@
     <ErrorMessage {success} {errorMessage} />
 </div>
 
-<div class="flex-column justify-center mx-4 lg:mx-36">
+<div class="flex-column mb-24 justify-center mx-4 lg:mx-36">
     <Table hoverable={true} class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 z-20">
         <TableHead>
             <TableHeadCell>Name</TableHeadCell>
@@ -261,7 +261,7 @@
                         {employee.firstName} {employee.lastName}
                     </TableBodyCell>
                     <TableBodyCell>
-                        {employee.activeStatus !== null ? "Current" : "Former"}
+                        {employee.activeStatus === null ? "Current" : "Former"}
                     </TableBodyCell>
                     <TableBodyCell>
                         {employee.email}
@@ -278,7 +278,7 @@
     </Table>
 </div>
 
-<Footer class="sticky bottom-0 w-full bg-white dark:bg-gray-900">
+<Footer class="fixed bottom-0 w-full bg-white dark:bg-gray-900">
     <hr class="my-4 border-gray-200 sm:mx-auto dark:border-gray-700 lg:my-6" />
     <div class="h-full">
         <ButtonGroup class="w-full">

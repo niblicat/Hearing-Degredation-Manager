@@ -230,7 +230,6 @@ export async function extractEmployeeHearingScreeningsFromDatabase(employeeID: s
         }
     
         const frequencies = [
-            Number(row.hz_500) ?? null,
             row.hz_500 === null ? null : Number(row.hz_500),
             row.hz_1000 === null ? null : Number(row.hz_1000),
             row.hz_2000 === null ? null : Number(row.hz_2000),
