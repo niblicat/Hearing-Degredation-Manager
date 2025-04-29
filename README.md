@@ -240,3 +240,9 @@ Now run the project!
 ```
 vercel dev
 ```
+### Mail Merge Functionality
+If you have not mail merged using Microsoft Word and Outlook before, please go to the link provide below and we will show you how the process should work on the Hearing Degredation Manager site.
+
+*Note: You will be unable to mail merge if you do not have Outlook set as your default mailing application, so ensure that it is set as defualt before tryign to mail merge.*
+
+[Mail Merge Tutorial] (https://youtu.be/elT_4n58i4Y)
