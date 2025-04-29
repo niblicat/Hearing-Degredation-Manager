@@ -18,6 +18,7 @@ Manage employee hearing data and communicate changes to employees!
     1. [Setup](#setup)
     2. [Environment Variables](#environment-variables)
     3. [Locally Run](#locally-run)
+6. [Mail Merge Functionality](#mail-merge-functionality)
 
 ## Limitations
 - Only allows for yearly hearing screenings (multiple screenings in the same year is not possible).
@@ -240,3 +241,8 @@ Now run the project!
 ```
 vercel dev
 ```
+
+## Mail Merge Functionality
+If you have not mail merged using Microsoft Word and Outlook before, checkout our [Mail Merge Tutorial](https://youtu.be/elT_4n58i4Y) and we will show you how to mail merge!
+
+*Note: You will be unable to mail merge if you do not have Outlook set as your default mailing application, so ensure that it is set as default before trying to mail merge.*
