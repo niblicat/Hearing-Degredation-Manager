@@ -240,6 +240,7 @@ Now run the project!
 ```
 vercel dev
 ```
+
 ### Mail Merge Functionality
 If you have not mail merged using Microsoft Word and Outlook before, please go to the link provide below and we will show you how the process should work on the Hearing Degredation Manager site.
 
