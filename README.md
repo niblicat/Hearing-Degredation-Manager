@@ -243,6 +243,6 @@ vercel dev
 ```
 
 ## Mail Merge Functionality
-If you have not mail merged using Microsoft Word and Outlook before, checkout our [Mail Merge Tutorial](https://youtu.be/elT_4n58i4Y) and we will show you how to mail merge!
+If you have not mail merged using Microsoft Word and Outlook before, check out our [Mail Merge Tutorial](https://youtu.be/elT_4n58i4Y) and we will show you how to mail merge!
 
 *Note: You will be unable to mail merge if you do not have Outlook set as your default mailing application, so ensure that it is set as default before trying to mail merge.*
