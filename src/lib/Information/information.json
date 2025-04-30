@@ -23,7 +23,6 @@
                 "category": "insert",
                 "header": "Adding New Employees",
                 "points": [
-
                     "Click the button to the right of the year dropdown menu (a person icon with a plus symbol).",
                     "Enter the employee's first name, last name, SIUE email, date of birth, sex, and employment status.",
                     "If the employee is no longer employed, an additional field will appear to input their last employment date.",
@@ -68,6 +67,7 @@
         "category": "mailing",
         "header": "Learn about the Mailings Page",
         "points": [
+            "Check out our video tutorial! \n<iframe width=\"560\" height=\"315\" src=\"https://www.youtube.com/embed/elT_4n58i4Y?si=xVVJoVXxRDlp5KOD\" title=\"YouTube video player\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen></iframe>",
             "All employees are listed by their database-assigned Employee ID.",
             "Before starting your mail merge, ensure that your default email reader is set to <em>Outlook<em>.",
             "Below the employee information, you will find two buttons: \"Create CSV\" and \"Download Template.\"",
