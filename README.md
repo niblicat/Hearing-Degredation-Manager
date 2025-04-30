@@ -2,6 +2,8 @@
 Manage employee hearing data and communicate changes to employees!
 
 **Table of contents**
+
+*Note: This guide is primarily intended for non-programmers. However, there are instructions on how to modify the code in your local environment in [Section 5: Running Locally](#running-locally).*
 1. [Limitations](#limitations)
 2. [Requirements to Deploy](#requirements-to-deploy)
 3. [Setting up Your Project](#setting-up-your-project)
@@ -22,6 +24,8 @@ Manage employee hearing data and communicate changes to employees!
 
 ## Limitations
 - Only allows for yearly hearing screenings (multiple screenings in the same year is not possible).
+- Does not have built in functionality to send emails. Instead, it provides documents to assist with completing a [mail merge](https://en.wikipedia.org/wiki/Mail_merge).
+- No native log in (email & password). Instead, it relies on external providers like Google for authentication. 
 
 ## Requirements to Deploy
 - Git CLI or GitHub Desktop
@@ -34,19 +38,13 @@ This will describe how to set up a new hearing degredation manager from scratch.
 ### Repository Setup
 First, we will create a new repository from this one for your own version of the portal. With GitHub, we can [import a repository](https://docs.github.com/en/migrations/importing-source-code/using-github-importer/about-github-importer).
 
-The URL for the source repository is `https://github.com/niblicat/slhc-software.git`. You should not require credentials to import it. Name it whatever you wish. Once you are done, copy your new repository's HTTPS web URL. You can find it after clicking "Code" on your repository's main page.
-![Red box and arrow indication of where to find the HTTPS web URL on GitHub](readme-resources/readme_upstream_url.png)
-
-In the command line/terminal, you should now clone your new repository using your new repository's link.
-```git
-git remote set-url origin {YOUR NEW REPOSITORY'S LINK}
-```
+The URL for the source repository is `https://github.com/niblicat/slhc-software.git`. You should not require credentials to import it. Name it whatever you wish. Once you are done, your repository should look like [the repository you imported from](https://github.com/niblicat/Hearing-Degredation-Manager/), but with perhaps a different name. In the next step, we will deploy a new website using your copied repository.
 
 ### Vercel Setup
 If you do not have a Vercel account already, I recommend that you create one using the repository service account that you're using for this project for easy project linking.
 
 [Add a new Vercel project using your Git repository](https://vercel.com/docs/git).
-Navigate to the 'Storage' tab. [Add a Postgres database to your Vercel project](https://vercel.com/docs/postgres). We used Neon.
+Navigate to the 'Storage' tab. [Add a Postgres database to your Vercel project](https://vercel.com/docs/postgres). For this guide, we are using Neon.
 
 Once it has been created, click 'Open in Neon' in the 'Storage' tab.
 ![Red box and arrow indication of where to click on Vercel to open Neon](readme-resources/readme_open_neon.png)
@@ -55,10 +53,10 @@ In Neon, navigate to the SQL Editor. Here, copy and paste the contents of [the P
 ![Red box and arrow indication of where to click on Neon to find the SQL Editor](readme-resources/readme_sql_editor.png)
 
 ### OAuth Setup
-Note that you only need one authentication method to use this project, but you will still see both login with Google and Github buttons unless you configure your project otherwise (see the [Simple Website Modification](#simple-website-modification) section to change that or to learn how to add other authenticaton providers).
+Note that you only need one authentication method to use this project, but you will still see both login with Google and Github buttons unless you configure your project otherwise. See the [Simple Website Modification](#simple-website-modification) section to remove or add other authenticaton providers.
 
 #### Authorization Secret
-You need an authorization secret. View the [Auth.js guide](https://authjs.dev/guides/environment-variables#auth-secret) on how to generate one (you will need [NPM](https://nodejs.org/en/download/)). Alternatively, you can [generate one online](https://auth-secret-gen.vercel.app), but it's not recommended. Make sure to record the value that is generated for later.
+You need an authorization secret. View the [Auth.js guide](https://authjs.dev/guides/environment-variables#auth-secret) on how to generate one (you will need [NPM](https://nodejs.org/en/download/)). Alternatively, you can [generate one online](https://auth-secret-gen.vercel.app), but this method is not recommended due to security concerns. Make sure to record the value that is generated for later.
 
 #### Authorization Platforms
 On the project tab of Vercel, you can find your project's deployment domain. If you have your own domain that you want to use, you can set it up in Vercel's settings. This will be important for setting up authentication. Let's assume your website is `https://example.vercel.app` for the following steps.
@@ -122,7 +120,7 @@ If you want to make something a bit more advanced, you can modify the code of [H
 This is the page you see after logging in!
 
 #### Information
-To extend the information shown on the dashboard homepage, modify the contents of [the information JSON file](src/lib/Information/information.json).
+To extend or modify the information shown on the dashboard homepage, modify the contents of [the information JSON file](src/lib/Information/information.json).
 
 #### Advanced Dashboard Homepage
 If you want to do something different with the dashboard homepage, you can modify the code of [HomePageDashboard.svelte](src/lib/HomePageDashboard.svelte).
@@ -245,4 +243,4 @@ vercel dev
 ## Mail Merge Functionality
 If you have not mail merged using Microsoft Word and Outlook before, check out our [Mail Merge Tutorial](https://youtu.be/elT_4n58i4Y) and we will show you how to mail merge!
 
-*Note: You will be unable to mail merge if you do not have Outlook set as your default mailing application, so ensure that it is set as default before trying to mail merge.*
+*Note: You may be unable to mail merge if you do not have Outlook set as your default mailing application, so ensure that it is set as default before trying to mail merge.*
