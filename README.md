@@ -1,4 +1,4 @@
-# Hearing Degredation Manager
+# Hearing Degradation Manager
 Manage employee hearing data and communicate changes to employees!
 
 **Table of contents**
@@ -33,12 +33,12 @@ Manage employee hearing data and communicate changes to employees!
 - Vercel account
 
 ## Setting Up Your Project
-This will describe how to set up a new hearing degredation manager from scratch.
+This will describe how to set up a new hearing degradation manager from scratch.
 
 ### Repository Setup
 First, we will create a new repository from this one for your own version of the portal. With GitHub, we can [import a repository](https://docs.github.com/en/migrations/importing-source-code/using-github-importer/about-github-importer).
 
-The URL for the source repository is `https://github.com/niblicat/slhc-software.git`. You should not require credentials to import it. Name it whatever you wish. Once you are done, your repository should look like [the repository you imported from](https://github.com/niblicat/Hearing-Degredation-Manager/), but with perhaps a different name. In the next step, we will deploy a new website using your copied repository.
+The URL for the source repository is `https://github.com/niblicat/slhc-software.git`. You should not require credentials to import it. Name it whatever you wish. Once you are done, your repository should look like [the repository you imported from](https://github.com/niblicat/Hearing-Degradation-Manager/), but with perhaps a different name. In the next step, we will deploy a new website using your copied repository.
 
 ### Vercel Setup
 If you do not have a Vercel account already, I recommend that you create one using the repository service account that you're using for this project for easy project linking.
@@ -99,7 +99,7 @@ It should deploy correctly if you have done everything correctly. When you try t
 To give yourself administrator permissions, return to your Neon database page. Navigate to Tables > administrator. Double click the 'FALSE' value for the 'isop' cell for your account and change that to 'TRUE'.
 ![Red box and arrow indication of where to find the operator permission on Neon](readme-resources/readme_set_permissions.png)
 
-Now, you should be able to use your very own Hearing Degredation Manager. To modify your website to suit your needs, see the next section, [Simple Website Modification](#simple-website-modification).
+Now, you should be able to use your very own Hearing Degradation Manager. To modify your website to suit your needs, see the next section, [Simple Website Modification](#simple-website-modification).
 
 ## Simple Website Modification
 You now have a website, but it's not really customized to your needs just yet. Let's change that!
@@ -190,7 +190,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 To learn more about adding authentication providers and which ones are available, [check out the Auth.js docs on OAuth providers](https://authjs.dev/getting-started/authentication/oauth).
 
 ## Running Locally
-This section is intended for developers to extend and modify the Hearing Degredation Manager. It is assumed that you have already deployed your website to Vercel using the steps above. This project uses Sveltekit. To learn more, [check out the documentation on the Svelte website](https://svelte.dev/docs).
+This section is intended for developers to extend and modify the Hearing Degradation Manager. It is assumed that you have already deployed your website to Vercel using the steps above. This project uses Sveltekit. To learn more, [check out the documentation on the Svelte website](https://svelte.dev/docs).
 
 ### Requirements
 To run the project locally, you'll need the following:
